@@ -3,20 +3,87 @@
 import { useState, useCallback } from 'react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
-import { Upload, X, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Upload, X, Loader2, AlertCircle, ChevronLeft, ChevronRight, CheckSquare, Trash2, Eye } from 'lucide-react';
 
-export default function PhotoUploader({ galleryId, onUploadComplete }) {
+export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, onUploadComplete }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
   const [uploadErrors, setUploadErrors] = useState({});
   const [previewPage, setPreviewPage] = useState(0);
-  const PREVIEWS_PER_PAGE = 20;
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedPreviews, setSelectedPreviews] = useState(new Set());
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const PREVIEWS_PER_PAGE = 30;
 
   const startIdx = previewPage * PREVIEWS_PER_PAGE;
   const endIdx = startIdx + PREVIEWS_PER_PAGE;
   const previewsToShow = selectedFiles.slice(startIdx, endIdx);
   const totalPages = Math.ceil(selectedFiles.length / PREVIEWS_PER_PAGE);
+
+  // Generar nombre bonito basado en slug/título de galería
+  const generatePrettyFileName = (index) => {
+    // Usar slug si existe, sino crear uno del título
+    const baseName = gallerySlug || galleryTitle
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Quitar acentos
+      .replace(/[^a-z0-9]+/g, '-') // Reemplazar espacios y caracteres especiales con guiones
+      .replace(/^-+|-+$/g, ''); // Quitar guiones al inicio/fin
+
+    // Número con padding (001, 002, etc)
+    const paddedNumber = String(index + 1).padStart(3, '0');
+    
+    return `${baseName}-${paddedNumber}.webp`;
+  };
+
+  const togglePreviewSelection = (fileId) => {
+    setSelectedPreviews(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(fileId)) {
+        newSet.delete(fileId);
+      } else {
+        newSet.add(fileId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedPreviews.size === previewsToShow.length) {
+      setSelectedPreviews(new Set());
+    } else {
+      setSelectedPreviews(new Set(previewsToShow.map(f => f.id)));
+    }
+  };
+
+  const removeSelectedPreviews = () => {
+    setSelectedFiles(prev => {
+      const toRemove = prev.filter(f => selectedPreviews.has(f.id));
+      toRemove.forEach(f => URL.revokeObjectURL(f.preview));
+      return prev.filter(f => !selectedPreviews.has(f.id));
+    });
+    setSelectedPreviews(new Set());
+    setSelectionMode(false);
+  };
+
+  const openLightbox = (index) => {
+    setLightboxIndex(startIdx + index);
+    setLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+  };
+
+  const nextPhoto = () => {
+    setLightboxIndex((prev) => (prev + 1) % selectedFiles.length);
+  };
+
+  const prevPhoto = () => {
+    setLightboxIndex((prev) => (prev - 1 + selectedFiles.length) % selectedFiles.length);
+  };
 
   const optimizeImage = async (file) => {
     return new Promise((resolve, reject) => {
@@ -144,15 +211,19 @@ export default function PhotoUploader({ galleryId, onUploadComplete }) {
       }));
 
       const optimizedBlob = await optimizeImage(file);
+      
+      // Generar nombre bonito basado en galería + número
+      const prettyFileName = generatePrettyFileName(index);
+      
       const optimizedFile = new File(
         [optimizedBlob],
-        `${name.split('.')[0]}.webp`,
+        prettyFileName,
         { type: 'image/webp' }
       );
 
       if (process.env.NODE_ENV === 'development') {
         const reduction = ((1 - optimizedBlob.size / file.size) * 100).toFixed(1);
-        console.log(`📸 ${name}: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(optimizedBlob.size / 1024).toFixed(0)}KB (-${reduction}%)`);
+        console.log(`📸 ${name} → ${prettyFileName}: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(optimizedBlob.size / 1024).toFixed(0)}KB (-${reduction}%)`);
       }
 
       setUploadProgress(prev => ({
@@ -190,7 +261,7 @@ export default function PhotoUploader({ galleryId, onUploadComplete }) {
         .insert({
           gallery_id: galleryId,
           file_path: result.url,
-          file_name: optimizedFile.name,
+          file_name: prettyFileName, // Usar nombre bonito
           file_size: optimizedBlob.size,
           display_order: index,
         });
@@ -202,7 +273,6 @@ export default function PhotoUploader({ galleryId, onUploadComplete }) {
         [id]: { status: 'completed', progress: 100 }
       }));
 
-      // ✅ Liberar preview inmediatamente
       URL.revokeObjectURL(fileData.preview);
 
       return { success: true, id };
@@ -243,24 +313,18 @@ export default function PhotoUploader({ galleryId, onUploadComplete }) {
       );
     }
 
-    // ✅ FIX: Limpiar TODO después de terminar
-    const allFileIds = selectedFiles.map(f => f.id);
-    
-    // Liberar TODAS las URLs
     selectedFiles.forEach(f => {
       if (f.preview) {
         URL.revokeObjectURL(f.preview);
       }
     });
 
-    // Limpiar estados INMEDIATAMENTE
     setSelectedFiles([]);
     setUploadProgress({});
     setUploadErrors({});
     setPreviewPage(0);
     setUploading(false);
 
-    // Notificar al padre para refrescar galería
     if (onUploadComplete) {
       onUploadComplete();
     }
@@ -268,7 +332,6 @@ export default function PhotoUploader({ galleryId, onUploadComplete }) {
 
   return (
     <div className="space-y-4">
-      {/* ✅ Placeholder de drag & drop - SOLO si NO hay fotos seleccionadas */}
       {selectedFiles.length === 0 && (
         <div
           onDragOver={handleDragOver}
@@ -298,7 +361,6 @@ export default function PhotoUploader({ galleryId, onUploadComplete }) {
         </div>
       )}
 
-      {/* Preview de archivos seleccionados */}
       {selectedFiles.length > 0 && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -332,89 +394,139 @@ export default function PhotoUploader({ galleryId, onUploadComplete }) {
               )}
             </div>
 
-            {!uploading && (
-              <button
-                onClick={handleUploadAll}
-                className="px-4 sm:px-6 py-2 sm:py-2.5 bg-[#79502A] hover:bg-[#8B5A2F] text-white rounded-lg transition-colors font-fira text-sm font-semibold flex items-center gap-2 justify-center"
-                type="button"
-              >
-                <Upload size={16} />
-                Subir {selectedFiles.length}
-              </button>
-            )}
+            <div className="flex gap-2">
+              {!uploading && !selectionMode && (
+                <>
+                  <button
+                    onClick={() => setSelectionMode(true)}
+                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-fira text-xs sm:text-sm font-medium flex items-center gap-2"
+                    type="button"
+                  >
+                    <CheckSquare size={14} />
+                    Seleccionar
+                  </button>
+                  <button
+                    onClick={handleUploadAll}
+                    className="px-4 sm:px-6 py-2 bg-[#79502A] hover:bg-[#8B5A2F] text-white rounded-lg transition-colors font-fira text-sm font-semibold flex items-center gap-2"
+                    type="button"
+                  >
+                    <Upload size={16} />
+                    Subir {selectedFiles.length}
+                  </button>
+                </>
+              )}
+
+              {selectionMode && (
+                <>
+                  <button
+                    onClick={toggleSelectAll}
+                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-fira text-xs sm:text-sm font-medium"
+                    type="button"
+                  >
+                    {selectedPreviews.size === previewsToShow.length ? 'Deseleccionar' : 'Todo'}
+                  </button>
+                  <button
+                    onClick={removeSelectedPreviews}
+                    disabled={selectedPreviews.size === 0}
+                    className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-fira text-xs sm:text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                    type="button"
+                  >
+                    <Trash2 size={14} />
+                    Eliminar {selectedPreviews.size > 0 && `(${selectedPreviews.size})`}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectionMode(false);
+                      setSelectedPreviews(new Set());
+                    }}
+                    className="px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors font-fira text-xs sm:text-sm font-medium"
+                    type="button"
+                  >
+                    Cancelar
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
-          {/* Grid previews */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
-            {previewsToShow.map((fileData) => {
+          {/* Grid previews más pequeños */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-1 sm:gap-2">
+            {previewsToShow.map((fileData, index) => {
               const progress = uploadProgress[fileData.id];
+              const isSelected = selectedPreviews.has(fileData.id);
 
               return (
                 <div
                   key={fileData.id}
-                  className="relative group aspect-square bg-gray-100 rounded-lg overflow-hidden"
+                  onClick={() => selectionMode && togglePreviewSelection(fileData.id)}
+                  className={`relative group aspect-square bg-gray-100 rounded overflow-hidden cursor-pointer ${
+                    isSelected ? 'ring-2 ring-[#79502A]' : ''
+                  }`}
                 >
                   <Image
                     src={fileData.preview}
                     alt={fileData.name}
                     fill
                     className="object-cover"
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                    sizes="(max-width: 640px) 33vw, 10vw"
                   />
 
-                  {/* Estados */}
                   {progress && (
                     <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center">
                       {progress.status === 'optimizing' && (
-                        <>
-                          <Loader2 className="text-white animate-spin mb-2" size={28} />
-                          <p className="font-fira text-xs text-white font-medium">Optimizando...</p>
-                        </>
+                        <Loader2 className="text-white animate-spin" size={20} />
                       )}
                       {progress.status === 'uploading' && (
-                        <>
-                          <Loader2 className="text-white animate-spin mb-2" size={28} />
-                          <p className="font-fira text-xs text-white font-medium">Subiendo...</p>
-                        </>
+                        <Loader2 className="text-white animate-spin" size={20} />
                       )}
                       {progress.status === 'saving' && (
-                        <>
-                          <Loader2 className="text-white animate-spin mb-2" size={28} />
-                          <p className="font-fira text-xs text-white font-medium">Guardando...</p>
-                        </>
+                        <Loader2 className="text-white animate-spin" size={20} />
                       )}
                       {progress.status === 'error' && (
-                        <>
-                          <AlertCircle className="text-red-400 mb-2" size={28} />
-                          <p className="font-fira text-xs text-white px-2">Error</p>
-                        </>
+                        <AlertCircle className="text-red-400" size={20} />
                       )}
                     </div>
                   )}
 
-                  {/* Botón eliminar */}
-                  {!progress && !uploading && (
-                    <button
-                      onClick={() => removeFile(fileData.id)}
-                      className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-black rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      type="button"
-                    >
-                      <X size={12} className="text-white" />
-                    </button>
+                  {selectionMode && !progress && (
+                    <div className="absolute top-1 left-1 z-10">
+                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                        isSelected ? 'bg-[#79502A] border-[#79502A]' : 'bg-white/90 border-gray-300'
+                      }`}>
+                        {isSelected && <CheckSquare size={10} className="text-white" strokeWidth={3} />}
+                      </div>
+                    </div>
                   )}
 
-                  {/* Info */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                    <p className="font-fira text-[9px] sm:text-[10px] text-white truncate">
-                      {fileData.name}
-                    </p>
-                  </div>
+                  {!progress && !uploading && !selectionMode && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFile(fileData.id);
+                        }}
+                        className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-black rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        type="button"
+                      >
+                        <X size={10} className="text-white" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openLightbox(index);
+                        }}
+                        className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
+                        type="button"
+                      >
+                        <Eye size={16} className="text-white" />
+                      </button>
+                    </>
+                  )}
                 </div>
               );
             })}
           </div>
 
-          {/* Progreso global */}
           {uploading && (
             <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
               <div className="flex justify-between text-sm mb-2">
@@ -438,6 +550,48 @@ export default function PhotoUploader({ galleryId, onUploadComplete }) {
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {lightboxOpen && (
+        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center">
+          <button
+            onClick={closeLightbox}
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+          >
+            <X size={24} className="text-white" />
+          </button>
+
+          <button
+            onClick={prevPhoto}
+            className="absolute left-4 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+          >
+            <ChevronLeft size={32} className="text-white" />
+          </button>
+
+          <button
+            onClick={nextPhoto}
+            className="absolute right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+          >
+            <ChevronRight size={32} className="text-white" />
+          </button>
+
+          <div className="relative w-full h-full max-w-6xl max-h-[90vh] p-8">
+            <Image
+              src={selectedFiles[lightboxIndex].preview}
+              alt={selectedFiles[lightboxIndex].name}
+              fill
+              className="object-contain"
+              sizes="100vw"
+            />
+          </div>
+
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/70 rounded-full">
+            <p className="font-fira text-sm text-white">
+              {lightboxIndex + 1} / {selectedFiles.length}
+            </p>
+          </div>
         </div>
       )}
     </div>

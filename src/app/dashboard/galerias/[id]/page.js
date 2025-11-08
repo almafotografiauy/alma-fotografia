@@ -46,6 +46,7 @@ async function GalleryContent({ galleryId }) {
         cover_image,
         is_public,
         views_count,
+        service_type,
         created_at,
         photos:photos(
           id,

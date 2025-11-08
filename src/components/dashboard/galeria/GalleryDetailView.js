@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
@@ -41,13 +42,16 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import ShareGalleryModal from './ShareGalleryModal';
+import EditGalleryModal from './EditGalleryModal';
 import PhotoUploader from './PhotoUploader';
 import Modal from '@/components/ui/Modal';
+import Lightbox from '@/components/ui/Lightbox';
 import { useModal } from '@/hooks/useModal';
 import { createClient } from '@/lib/supabaseClient';
+import { iconMap } from '@/lib/validations/gallery';
 
 // Componente SortablePhoto para drag & drop
-function SortablePhoto({ photo, photoIndex, isCover, isReorderMode, handleSetAsCover, changingCover, showModal }) {
+function SortablePhoto({ photo, photoIndex, isCover, isReorderMode, handleSetAsCover, changingCover, openLightbox }) {
   const {
     attributes,
     listeners,
@@ -122,11 +126,7 @@ function SortablePhoto({ photo, photoIndex, isCover, isReorderMode, handleSetAsC
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  showModal({
-                    title: 'Próximamente',
-                    message: 'El visor de fotos estará disponible pronto.',
-                    type: 'info'
-                  });
+                  openLightbox(photoIndex);
                 }}
                 className="flex-1 py-1 sm:py-1.5 bg-white/95 hover:bg-white rounded text-[9px] sm:text-[10px] font-fira font-bold text-black flex items-center justify-center gap-1"
               >
@@ -153,6 +153,7 @@ function SortablePhoto({ photo, photoIndex, isCover, isReorderMode, handleSetAsC
 export default function GalleryDetailView({ gallery }) {
   const router = useRouter();
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [photosPage, setPhotosPage] = useState(0);
   const [selectionMode, setSelectionMode] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
@@ -161,12 +162,13 @@ export default function GalleryDetailView({ gallery }) {
   const [changingCover, setChangingCover] = useState(false);
   const [localPhotos, setLocalPhotos] = useState(gallery.photos);
   const [savingOrder, setSavingOrder] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [deletingGallery, setDeletingGallery] = useState(false);
+  const [serviceIcon, setServiceIcon] = useState(null);
+  const [serviceName, setServiceName] = useState(null);
+  const [coverImageSize, setCoverImageSize] = useState(0);
   const { modalState, showModal, closeModal } = useModal();
-
-  // Sincronizar localPhotos cuando gallery.photos cambie (después de refresh)
-  useEffect(() => {
-    setLocalPhotos(gallery.photos);
-  }, [gallery.photos]);
 
   // Sensores para drag & drop (desktop + mobile)
   const sensors = useSensors(
@@ -203,7 +205,8 @@ export default function GalleryDetailView({ gallery }) {
   // Usar localPhotos para permitir reordenar antes de guardar
   const workingPhotos = localPhotos;
 
-  const totalSize = workingPhotos?.reduce((sum, photo) => sum + (photo.file_size || 0), 0) || 0;
+  const photosSize = workingPhotos?.reduce((sum, photo) => sum + (photo.file_size || 0), 0) || 0;
+  const totalSize = photosSize + coverImageSize;
   const totalSizeMB = (totalSize / 1024 / 1024).toFixed(1);
 
   const formattedEventDate = event_date
@@ -221,6 +224,63 @@ export default function GalleryDetailView({ gallery }) {
       year: 'numeric',
     })
     : null;
+
+  // Sincronizar localPhotos cuando gallery.photos cambie (después de refresh)
+  useEffect(() => {
+    setLocalPhotos(gallery.photos);
+  }, [gallery.photos]);
+
+  // Cargar ícono del servicio si existe
+  useEffect(() => {
+    if (service_type) {
+      loadServiceIcon();
+    }
+  }, [service_type]);
+
+  // Calcular tamaño de portada si es independiente
+  useEffect(() => {
+    if (cover_image) {
+      const isGalleryPhoto = workingPhotos.some(p => p.file_path === cover_image);
+      if (!isGalleryPhoto) {
+        // Portada independiente, obtener su tamaño
+        getCoverImageSize();
+      } else {
+        setCoverImageSize(0); // Ya está contada en las fotos
+      }
+    } else {
+      setCoverImageSize(0);
+    }
+  }, [cover_image, workingPhotos]);
+
+  const getCoverImageSize = async () => {
+    try {
+      // Intentar obtener el tamaño desde el header de la imagen
+      const response = await fetch(cover_image, { method: 'HEAD' });
+      const size = parseInt(response.headers.get('content-length') || '0');
+      setCoverImageSize(size);
+    } catch (err) {
+      console.error('Error getting cover image size:', err);
+      setCoverImageSize(0);
+    }
+  };
+
+  const loadServiceIcon = async () => {
+    try {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from('service_types')
+        .select('icon_name, name')
+        .eq('slug', service_type)
+        .maybeSingle();
+
+      if (!error && data) {
+        setServiceIcon(data.icon_name);
+        setServiceName(data.name);
+      }
+    } catch (err) {
+      console.error('Error loading service icon:', err);
+    }
+  };
 
   const handleUploadComplete = () => router.refresh();
 
@@ -295,6 +355,153 @@ export default function GalleryDetailView({ gallery }) {
   const cancelReorder = () => {
     setLocalPhotos(gallery.photos); // Restaurar orden original
     setReorderMode(false);
+  };
+
+  // Lightbox controls
+  const openLightbox = (index) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+  };
+
+  const nextPhoto = () => {
+    setLightboxIndex((prev) => (prev + 1) % workingPhotos.length);
+  };
+
+  const prevPhoto = () => {
+    setLightboxIndex((prev) => (prev - 1 + workingPhotos.length) % workingPhotos.length);
+  };
+
+  // Eliminar galería completa
+  const handleDeleteGallery = () => {
+    showModal({
+      title: '¿Eliminar galería completa?',
+      message: `Esta acción eliminará permanentemente la galería "${title}" con todas sus ${workingPhotos.length} fotos. Esta acción NO se puede deshacer.`,
+      type: 'warning',
+      confirmText: 'Eliminar galería',
+      cancelText: 'Cancelar',
+      onConfirm: confirmDeleteGallery
+    });
+  };
+
+  const confirmDeleteGallery = async () => {
+    setDeletingGallery(true);
+
+    try {
+      const supabase = await createClient();
+
+      console.log('🗑️ Iniciando eliminación de galería:', id);
+      console.log('📸 Total fotos a eliminar:', workingPhotos.length);
+      console.log('🖼️ Portada:', cover_image);
+
+      // 1. Eliminar carpeta completa de Cloudinary (más eficiente)
+      const folderPath = `galleries/${id}`;
+      console.log('📁 Eliminando carpeta completa:', folderPath);
+
+      try {
+        const deleteFolderResponse = await fetch('/api/cloudinary/delete-folder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ folder: folderPath })
+        });
+
+        if (!deleteFolderResponse.ok) {
+          console.warn('⚠️ No se pudo eliminar carpeta, eliminando archivos individualmente...');
+          
+          // Fallback: eliminar archivos uno por uno
+          const deletePromises = workingPhotos.map(photo => {
+            const publicId = extractPublicIdFromUrl(photo.file_path);
+            console.log('🔍 Foto:', photo.file_name, '→ PublicID:', publicId);
+            if (publicId) {
+              return fetch('/api/cloudinary/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ publicId })
+              }).catch(err => {
+                console.error('❌ Error eliminando foto:', err);
+                return null;
+              });
+            }
+            return Promise.resolve();
+          });
+
+          await Promise.all(deletePromises);
+        } else {
+          console.log('✅ Carpeta eliminada de Cloudinary');
+        }
+      } catch (err) {
+        console.error('❌ Error eliminando carpeta:', err);
+      }
+
+      // 2. Eliminar portada si es independiente (fuera de la carpeta de galería)
+      if (cover_image) {
+        const isGalleryPhoto = workingPhotos.some(p => p.file_path === cover_image);
+        const isInGalleryFolder = cover_image.includes(`galleries/${id}`);
+        
+        console.log('🖼️ Portada es foto de galería?', isGalleryPhoto);
+        console.log('🖼️ Portada está en carpeta de galería?', isInGalleryFolder);
+        
+        if (!isGalleryPhoto && !isInGalleryFolder) {
+          const publicId = extractPublicIdFromUrl(cover_image);
+          console.log('🔍 Portada independiente → PublicID:', publicId);
+          
+          if (publicId) {
+            try {
+              await fetch('/api/cloudinary/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ publicId })
+              });
+              console.log('✅ Portada independiente eliminada');
+            } catch (err) {
+              console.error('❌ Error eliminando portada:', err);
+            }
+          }
+        }
+      }
+
+      // 3. Eliminar registros de fotos de la BD
+      console.log('🗄️ Eliminando registros de fotos de BD...');
+      const { error: photosError } = await supabase
+        .from('photos')
+        .delete()
+        .eq('gallery_id', id);
+
+      if (photosError) {
+        console.error('❌ Error eliminando fotos de BD:', photosError);
+      } else {
+        console.log('✅ Fotos eliminadas de BD');
+      }
+
+      // 4. Eliminar galería de la BD
+      console.log('🗄️ Eliminando galería de BD...');
+      const { error: galleryError } = await supabase
+        .from('galleries')
+        .delete()
+        .eq('id', id);
+
+      if (galleryError) {
+        console.error('❌ Error eliminando galería:', galleryError);
+        throw galleryError;
+      }
+
+      console.log('✅ Galería eliminada completamente');
+
+      // 5. Redirect al listado de galerías
+      router.push('/dashboard/galerias');
+
+    } catch (error) {
+      console.error('❌ Error general eliminando galería:', error);
+      showModal({
+        title: 'Error',
+        message: 'No se pudo eliminar la galería completamente. Algunos archivos pueden quedar huérfanos.',
+        type: 'error'
+      });
+      setDeletingGallery(false);
+    }
   };
 
   const extractPublicIdFromUrl = (url) => {
@@ -683,8 +890,15 @@ export default function GalleryDetailView({ gallery }) {
                   <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-white/60">
                     {service_type && (
                       <div className="flex items-center gap-2">
-                        <Briefcase size={14} className="text-white/40 flex-shrink-0" />
-                        <span className="font-fira">{service_type}</span>
+                        {serviceIcon && iconMap[serviceIcon] ? (
+                          React.createElement(iconMap[serviceIcon], {
+                            size: 14,
+                            className: "text-white/40 flex-shrink-0"
+                          })
+                        ) : (
+                          <Briefcase size={14} className="text-white/40 flex-shrink-0" />
+                        )}
+                        <span className="font-fira">{serviceName || service_type}</span>
                       </div>
                     )}
                     {formattedEventDate && (
@@ -717,15 +931,18 @@ export default function GalleryDetailView({ gallery }) {
                     <span>Compartir</span>
                   </button>
                   <button
-                    onClick={() => showModal({
-                      title: 'Próximamente',
-                      message: 'La función de editar estará disponible pronto.',
-                      type: 'info'
-                    })}
+                    onClick={() => setShowEditModal(true)}
                     className="!text-white flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors font-fira text-xs sm:text-sm font-semibold flex items-center justify-center gap-2"
                   >
                     <Edit size={16} />
                     <span>Editar</span>
+                  </button>
+                  <button
+                    onClick={handleDeleteGallery}
+                    className="!text-white flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 bg-red-600 hover:bg-red-700 rounded-lg transition-colors font-fira text-xs sm:text-sm font-semibold flex items-center justify-center gap-2"
+                  >
+                    <Trash2 size={16} />
+                    <span className="hidden sm:inline">Eliminar</span>
                   </button>
                 </div>
               </div>
@@ -761,6 +978,25 @@ export default function GalleryDetailView({ gallery }) {
                   <p className="font-fira text-xs text-white/60">Tamaño</p>
                 </div>
               </div>
+
+              {serviceName && (
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-white/10 rounded-lg">
+                    {serviceIcon && iconMap[serviceIcon] ? (
+                      React.createElement(iconMap[serviceIcon], {
+                        size: 18,
+                        className: "text-[#79502A]"
+                      })
+                    ) : (
+                      <Briefcase className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-[#79502A]" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-fira text-base sm:text-lg font-semibold">{serviceName}</p>
+                    <p className="font-fira text-xs text-white/60">Servicio</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -845,7 +1081,12 @@ export default function GalleryDetailView({ gallery }) {
                 Subir fotos
               </h2>
             </div>
-            <PhotoUploader galleryId={id} onUploadComplete={handleUploadComplete} />
+            <PhotoUploader 
+              galleryId={id} 
+              gallerySlug={slug}
+              galleryTitle={title}
+              onUploadComplete={handleUploadComplete} 
+            />
           </div>
 
           {/* Grid de fotos con MASONRY */}
@@ -993,7 +1234,7 @@ export default function GalleryDetailView({ gallery }) {
                           isReorderMode={true}
                           handleSetAsCover={handleSetAsCover}
                           changingCover={changingCover}
-                          showModal={showModal}
+                          openLightbox={openLightbox}
                         />
                       ))}
                     </div>
@@ -1064,7 +1305,7 @@ export default function GalleryDetailView({ gallery }) {
                       isReorderMode={false}
                       handleSetAsCover={handleSetAsCover}
                       changingCover={changingCover}
-                      showModal={showModal}
+                      openLightbox={() => openLightbox(startIdx + index)}
                     />
                   ))}
                 </div>
@@ -1086,11 +1327,43 @@ export default function GalleryDetailView({ gallery }) {
         </div>
       )}
 
+      {deletingGallery && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-3 shadow-2xl max-w-sm mx-4">
+            <Loader2 size={32} className="text-red-600 animate-spin" />
+            <p className="font-fira text-sm text-black font-medium text-center">
+              Eliminando galería y todas sus fotos...
+            </p>
+            <p className="font-fira text-xs text-gray-500 text-center">
+              Esto puede tardar unos segundos
+            </p>
+          </div>
+        </div>
+      )}
+
       {showShareModal && (
         <ShareGalleryModal
           galleryId={id}
           gallerySlug={slug}
           onClose={() => setShowShareModal(false)}
+        />
+      )}
+
+      {showEditModal && (
+        <EditGalleryModal
+          gallery={gallery}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => router.refresh()}
+        />
+      )}
+
+      {lightboxOpen && (
+        <Lightbox
+          photos={workingPhotos}
+          currentIndex={lightboxIndex}
+          onClose={closeLightbox}
+          onNext={nextPhoto}
+          onPrev={prevPhoto}
         />
       )}
 
