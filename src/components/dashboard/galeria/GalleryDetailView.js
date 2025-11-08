@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
@@ -23,25 +23,167 @@ import {
   Download,
   Star,
   Loader2,
-  Briefcase
+  Briefcase,
+  GripVertical
 } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  rectSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import ShareGalleryModal from './ShareGalleryModal';
 import PhotoUploader from './PhotoUploader';
 import Modal from '@/components/ui/Modal';
 import { useModal } from '@/hooks/useModal';
 import { createClient } from '@/lib/supabaseClient';
 
+// Componente SortablePhoto para drag & drop
+function SortablePhoto({ photo, photoIndex, isCover, isReorderMode, handleSetAsCover, changingCover, showModal }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: photo.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group relative mb-0.5 sm:mb-2 break-inside-avoid ${
+        isReorderMode ? 'cursor-move' : 'cursor-pointer'
+      }`}
+    >
+      <div className="relative w-full bg-gray-100 overflow-hidden">
+        <Image
+          src={photo.file_path}
+          alt={photo.file_name || `Foto ${photoIndex + 1}`}
+          width={800}
+          height={800}
+          className="w-full h-auto"
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+        />
+
+        {/* Drag handle - solo en modo reordenar */}
+        {isReorderMode && (
+          <div
+            {...attributes}
+            {...listeners}
+            className="absolute top-2 left-2 p-2 bg-black/70 backdrop-blur-sm rounded-lg cursor-grab active:cursor-grabbing z-10"
+          >
+            <GripVertical size={20} className="text-white" />
+          </div>
+        )}
+
+        {/* Badge de portada */}
+        {isCover && !isReorderMode && (
+          <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-black/70 backdrop-blur-sm rounded">
+            <span className="font-fira text-[8px] sm:text-[9px] font-bold text-white flex items-center gap-1">
+              <Star size={8} className="sm:w-[10px] sm:h-[10px] fill-[#79502A] text-[#79502A]" />
+              PORTADA
+            </span>
+          </div>
+        )}
+
+        {/* Botones hover - solo cuando NO está en modo reordenar */}
+        {!isReorderMode && (
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200">
+            <div className="absolute bottom-0 left-0 right-0 p-1 sm:p-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+              {!isCover && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSetAsCover(photo.file_path);
+                  }}
+                  disabled={changingCover}
+                  className="flex-1 py-1 sm:py-1.5 bg-white/95 hover:bg-white rounded text-[9px] sm:text-[10px] font-fira font-bold text-black flex items-center justify-center gap-1 disabled:opacity-50"
+                >
+                  <Star size={10} />
+                  <span className="hidden sm:inline">PORTADA</span>
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  showModal({
+                    title: 'Próximamente',
+                    message: 'El visor de fotos estará disponible pronto.',
+                    type: 'info'
+                  });
+                }}
+                className="flex-1 py-1 sm:py-1.5 bg-white/95 hover:bg-white rounded text-[9px] sm:text-[10px] font-fira font-bold text-black flex items-center justify-center gap-1"
+              >
+                <Eye size={10} />
+                VER
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Número de foto */}
+        {!isReorderMode && (
+          <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 px-1 sm:px-1.5 py-0.5 bg-black/70 backdrop-blur-sm rounded">
+            <span className="font-fira text-[8px] sm:text-[9px] font-bold text-white">
+              #{photoIndex + 1}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function GalleryDetailView({ gallery }) {
   const router = useRouter();
   const [showShareModal, setShowShareModal] = useState(false);
   const [photosPage, setPhotosPage] = useState(0);
   const [selectionMode, setSelectionMode] = useState(false);
+  const [reorderMode, setReorderMode] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState(new Set());
   const [deletingPhotos, setDeletingPhotos] = useState(false);
   const [changingCover, setChangingCover] = useState(false);
+  const [localPhotos, setLocalPhotos] = useState(gallery.photos);
+  const [savingOrder, setSavingOrder] = useState(false);
   const { modalState, showModal, closeModal } = useModal();
 
-  const PHOTOS_PER_PAGE = 48;
+  // Sincronizar localPhotos cuando gallery.photos cambie (después de refresh)
+  useEffect(() => {
+    setLocalPhotos(gallery.photos);
+  }, [gallery.photos]);
+
+  // Sensores para drag & drop (desktop + mobile)
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 8,
+      },
+    })
+  );
+
+  const PHOTOS_PER_PAGE = 30;
 
   const {
     id,
@@ -55,10 +197,13 @@ export default function GalleryDetailView({ gallery }) {
     views_count,
     photos,
     created_at,
-    service_type, // Agregar servicio si existe en tu DB
+    service_type,
   } = gallery;
 
-  const totalSize = photos?.reduce((sum, photo) => sum + (photo.file_size || 0), 0) || 0;
+  // Usar localPhotos para permitir reordenar antes de guardar
+  const workingPhotos = localPhotos;
+
+  const totalSize = workingPhotos?.reduce((sum, photo) => sum + (photo.file_size || 0), 0) || 0;
   const totalSizeMB = (totalSize / 1024 / 1024).toFixed(1);
 
   const formattedEventDate = event_date
@@ -78,6 +223,79 @@ export default function GalleryDetailView({ gallery }) {
     : null;
 
   const handleUploadComplete = () => router.refresh();
+
+  // Manejar drag and drop
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = workingPhotos.findIndex((p) => p.id === active.id);
+    const newIndex = workingPhotos.findIndex((p) => p.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Reordenar array localmente
+    const newPhotos = [...workingPhotos];
+    const [movedPhoto] = newPhotos.splice(oldIndex, 1);
+    newPhotos.splice(newIndex, 0, movedPhoto);
+
+    setLocalPhotos(newPhotos);
+  };
+
+  // Guardar nuevo orden en BD - OPTIMIZADO con Promise.all
+  const saveNewOrder = async () => {
+    setSavingOrder(true);
+
+    try {
+      const supabase = await createClient();
+
+      // Crear array de promesas - se ejecutan en paralelo
+      const updatePromises = workingPhotos.map((photo, index) => 
+        supabase
+          .from('photos')
+          .update({ display_order: index + 1 })
+          .eq('id', photo.id)
+      );
+
+      // Ejecutar todas las actualizaciones en paralelo (mucho más rápido que secuencial)
+      const results = await Promise.all(updatePromises);
+
+      // Verificar si hubo errores
+      const errors = results.filter(r => r.error);
+      if (errors.length > 0) {
+        console.error('Errores en actualización:', errors);
+        throw new Error('Algunas fotos no se pudieron actualizar');
+      }
+
+      showModal({
+        title: '¡Orden guardado!',
+        message: 'El nuevo orden de las fotos se ha guardado exitosamente.',
+        type: 'success'
+      });
+
+      setReorderMode(false);
+      router.refresh();
+
+    } catch (error) {
+      console.error('Error guardando orden:', error);
+      showModal({
+        title: 'Error',
+        message: 'No se pudo guardar el nuevo orden.',
+        type: 'error'
+      });
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
+  // Cancelar reordenamiento
+  const cancelReorder = () => {
+    setLocalPhotos(gallery.photos); // Restaurar orden original
+    setReorderMode(false);
+  };
 
   const extractPublicIdFromUrl = (url) => {
     if (!url) return null;
@@ -131,7 +349,7 @@ export default function GalleryDetailView({ gallery }) {
     setDeletingPhotos(true);
 
     try {
-      const photosToDelete = photos.filter(p => selectedPhotos.has(p.id));
+      const photosToDelete = workingPhotos.filter(p => selectedPhotos.has(p.id));
       const supabase = await createClient();
 
       const { error: dbError } = await supabase
@@ -182,9 +400,8 @@ export default function GalleryDetailView({ gallery }) {
 
       if (error) throw error;
 
-      // ✅ Eliminar portada anterior SOLO si no es una foto de la galería
       if (previousCoverUrl) {
-        const isGalleryPhoto = photos.some(p => p.file_path === previousCoverUrl);
+        const isGalleryPhoto = workingPhotos.some(p => p.file_path === previousCoverUrl);
 
         if (!isGalleryPhoto) {
           const publicId = extractPublicIdFromUrl(previousCoverUrl);
@@ -229,14 +446,12 @@ export default function GalleryDetailView({ gallery }) {
     });
   };
 
-  // ✅ Nueva función para confirmar y ejecutar eliminación
   const confirmRemoveCover = async () => {
     setChangingCover(true);
 
     try {
       const imageToDelete = cover_image;
 
-      // 1. Actualizar Supabase primero
       const supabase = await createClient();
       const { error } = await supabase
         .from('galleries')
@@ -245,12 +460,9 @@ export default function GalleryDetailView({ gallery }) {
 
       if (error) throw error;
 
-      // 2. Eliminar de Cloudinary SOLO si no es una foto de la galería
       if (imageToDelete) {
-        // Verificar si la portada es una foto de la galería
-        const isGalleryPhoto = photos.some(p => p.file_path === imageToDelete);
+        const isGalleryPhoto = workingPhotos.some(p => p.file_path === imageToDelete);
 
-        // Solo eliminar de Cloudinary si NO es una foto de la galería
         if (!isGalleryPhoto) {
           const publicId = extractPublicIdFromUrl(imageToDelete);
           if (publicId) {
@@ -287,12 +499,10 @@ export default function GalleryDetailView({ gallery }) {
     }
   };
 
-  // Subir portada desde placeholder
   const handleUploadCoverFromPlaceholder = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validaciones
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
       showModal({
@@ -322,7 +532,6 @@ export default function GalleryDetailView({ gallery }) {
         throw new Error('Configuración de Cloudinary incompleta');
       }
 
-      // Optimizar imagen antes de subir
       const optimizedBlob = await optimizeImageForCover(file);
       const optimizedFile = new File(
         [optimizedBlob],
@@ -347,7 +556,6 @@ export default function GalleryDetailView({ gallery }) {
 
       const data = await response.json();
 
-      // Guardar en Supabase
       const supabase = await createClient();
       const { error } = await supabase
         .from('galleries')
@@ -370,7 +578,6 @@ export default function GalleryDetailView({ gallery }) {
     }
   };
 
-  // Función auxiliar para optimizar imagen de portada
   const optimizeImageForCover = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -382,7 +589,6 @@ export default function GalleryDetailView({ gallery }) {
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
 
-          // Dimensiones para portada (más grande que fotos normales)
           const MAX_WIDTH = 2000;
           const MAX_HEIGHT = 2000;
           let width = img.width;
@@ -418,7 +624,7 @@ export default function GalleryDetailView({ gallery }) {
               }
             },
             'image/webp',
-            0.90 // Calidad 90% para portadas
+            0.90
           );
         };
 
@@ -431,20 +637,19 @@ export default function GalleryDetailView({ gallery }) {
     });
   };
 
-  const totalPages = Math.ceil(photos.length / PHOTOS_PER_PAGE);
+  const totalPages = Math.ceil(workingPhotos.length / PHOTOS_PER_PAGE);
   const startIdx = photosPage * PHOTOS_PER_PAGE;
   const endIdx = startIdx + PHOTOS_PER_PAGE;
-  const photosToShow = photos.slice(startIdx, endIdx);
+  const photosToShow = workingPhotos.slice(startIdx, endIdx);
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
       <div className="max-w-[2000px] mx-auto">
 
-        {/* Header oscuro - PADDING MÍNIMO en mobile */}
+        {/* Header oscuro */}
         <div className="bg-[#2d2d2d] text-white rounded-xl">
           <div className="px-5 sm:px-6 lg:px-8 py-4 sm:py-6">
 
-            {/* Breadcrumb */}
             <button
               onClick={() => router.push('/dashboard/galerias')}
               className="flex items-center gap-2 text-white/60 hover:text-white transition-colors font-fira text-sm mb-4"
@@ -453,10 +658,8 @@ export default function GalleryDetailView({ gallery }) {
               <span>Volver</span>
             </button>
 
-            {/* Título y acciones */}
             <div className="flex flex-col gap-4 mb-6">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
                     <h1 className="font-voga text-xl sm:text-2xl lg:text-3xl break-words">
@@ -471,14 +674,12 @@ export default function GalleryDetailView({ gallery }) {
                     </span>
                   </div>
 
-                  {/* Descripción */}
                   {description && (
                     <p className="font-fira text-sm text-white/80 leading-relaxed mb-3">
                       {description}
                     </p>
                   )}
 
-                  {/* Metadata */}
                   <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-white/60">
                     {service_type && (
                       <div className="flex items-center gap-2">
@@ -507,7 +708,6 @@ export default function GalleryDetailView({ gallery }) {
                   </div>
                 </div>
 
-                {/* Botones */}
                 <div className="flex gap-2 flex-shrink-0">
                   <button
                     onClick={() => setShowShareModal(true)}
@@ -531,14 +731,13 @@ export default function GalleryDetailView({ gallery }) {
               </div>
             </div>
 
-            {/* Stats */}
             <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-6 pt-4 border-t border-white/10">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-white/10 rounded-lg">
                   <ImageIcon className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-[#79502A]" />
                 </div>
                 <div>
-                  <p className="font-fira text-base sm:text-lg font-semibold">{photos.length}</p>
+                  <p className="font-fira text-base sm:text-lg font-semibold">{workingPhotos.length}</p>
                   <p className="font-fira text-xs text-white/60">Fotos</p>
                 </div>
               </div>
@@ -569,7 +768,7 @@ export default function GalleryDetailView({ gallery }) {
         {/* Contenido principal */}
         <div className="space-y-1">
 
-          {/* Portada con placeholder */}
+          {/* Portada */}
           {cover_image ? (
             <div className="bg-white py-4 sm:py-6 px-2 sm:px-6 lg:px-8 border-b border-gray-200">
               <div className="relative w-full max-w-2xl mx-auto aspect-[3/2] bg-gray-200 rounded-lg overflow-hidden shadow-md">
@@ -612,9 +811,7 @@ export default function GalleryDetailView({ gallery }) {
                   Sube una imagen o selecciona una de la galería
                 </p>
 
-                {/* Botones de acción */}
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  {/* Subir desde equipo */}
                   <label className="flex-1 sm:flex-none px-6 py-3 bg-[#79502A] hover:bg-[#8B5A2F] text-white rounded-lg transition-colors font-fira text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer">
                     <Upload size={16} />
                     Subir portada
@@ -626,7 +823,6 @@ export default function GalleryDetailView({ gallery }) {
                     />
                   </label>
 
-                  {/* Usar foto existente */}
                   {photos.length > 0 && (
                     <button
                       onClick={() => handleSetAsCover(photos[0].file_path)}
@@ -652,26 +848,39 @@ export default function GalleryDetailView({ gallery }) {
             <PhotoUploader galleryId={id} onUploadComplete={handleUploadComplete} />
           </div>
 
-          {/* Grid de fotos */}
+          {/* Grid de fotos con MASONRY */}
           <div className="bg-white">
             {/* Toolbar */}
             <div className="py-4 sm:py-6 px-2 sm:px-6 lg:px-8 border-b border-gray-200">
               <div className="flex flex-col gap-3">
                 <h2 className="font-fira text-base sm:text-lg font-semibold text-black flex items-center gap-2">
                   <ImageIcon size={18} className="text-gray-400" />
-                  {photos.length} {photos.length === 1 ? 'foto' : 'fotos'}
+                  {workingPhotos.length} {workingPhotos.length === 1 ? 'foto' : 'fotos'}
                 </h2>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  {!selectionMode ? (
-                    <button
-                      onClick={() => setSelectionMode(true)}
-                      className="!text-white px-3 sm:px-4 py-2 bg-[#8b5a2fff] hover:bg-[#9c6b3fff] rounded-lg transition-colors font-fira text-xs sm:text-sm font-medium flex items-center gap-2"
-                    >
-                      <CheckSquare size={16} />
-                      <span>Seleccionar</span>
-                    </button>
-                  ) : (
+                  {!selectionMode && !reorderMode && (
+                    <>
+                      <button
+                        onClick={() => setSelectionMode(true)}
+                        className="!text-white px-3 sm:px-4 py-2 bg-[#8b5a2fff] hover:bg-[#9c6b3fff] rounded-lg transition-colors font-fira text-xs sm:text-sm font-medium flex items-center gap-2"
+                      >
+                        <CheckSquare size={16} />
+                        <span>Seleccionar</span>
+                      </button>
+                      {workingPhotos.length > 1 && (
+                        <button
+                          onClick={() => setReorderMode(true)}
+                          className="!text-white px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors font-fira text-xs sm:text-sm font-medium flex items-center gap-2"
+                        >
+                          <GripVertical size={16} />
+                          <span>Reordenar</span>
+                        </button>
+                      )}
+                    </>
+                  )}
+                  
+                  {selectionMode && (
                     <>
                       <button
                         onClick={toggleSelectAll}
@@ -704,7 +913,34 @@ export default function GalleryDetailView({ gallery }) {
                     </>
                   )}
 
-                  {photos.length > PHOTOS_PER_PAGE && (
+                  {reorderMode && (
+                    <>
+                      <button
+                        onClick={saveNewOrder}
+                        disabled={savingOrder}
+                        className="!text-white px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors font-fira text-xs sm:text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {savingOrder ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <CheckSquare size={14} />
+                        )}
+                        <span>Guardar orden</span>
+                      </button>
+                      <button
+                        onClick={cancelReorder}
+                        disabled={savingOrder}
+                        className="px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors font-fira text-xs sm:text-sm font-medium disabled:opacity-50"
+                      >
+                        Cancelar
+                      </button>
+                      <span className="font-fira text-xs text-gray-500 ml-2">
+                        Arrastra las fotos para cambiar el orden
+                      </span>
+                    </>
+                  )}
+
+                  {workingPhotos.length > PHOTOS_PER_PAGE && !reorderMode && (
                     <div className="flex items-center gap-2 ml-auto">
                       <button
                         onClick={() => setPhotosPage(p => Math.max(0, p - 1))}
@@ -729,15 +965,45 @@ export default function GalleryDetailView({ gallery }) {
               </div>
             </div>
 
-            {/* Grid */}
-            {photos.length === 0 ? (
+            {/* 🎨 MASONRY LAYOUT con Drag & Drop */}
+            {workingPhotos.length === 0 ? (
               <div className="py-12 px-2 text-center">
                 <ImageIcon size={40} className="sm:w-12 sm:h-12 text-gray-300 mx-auto mb-3" />
                 <p className="font-fira text-sm text-gray-500">No hay fotos en esta galería</p>
               </div>
-            ) : (
+            ) : reorderMode ? (
+              /* Modo reordenar: Drag & Drop activo */
               <div className="px-0 sm:px-2 lg:px-4 py-2 sm:py-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-0.5 sm:gap-2">
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={workingPhotos.map(p => p.id)}
+                    strategy={rectSortingStrategy}
+                  >
+                    <div className="columns-2 sm:columns-3 md:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6 gap-0.5 sm:gap-2">
+                      {workingPhotos.map((photo, index) => (
+                        <SortablePhoto
+                          key={photo.id}
+                          photo={photo}
+                          photoIndex={index}
+                          isCover={cover_image === photo.file_path}
+                          isReorderMode={true}
+                          handleSetAsCover={handleSetAsCover}
+                          changingCover={changingCover}
+                          showModal={showModal}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              </div>
+            ) : selectionMode ? (
+              /* Modo selección: checkboxes */
+              <div className="px-0 sm:px-2 lg:px-4 py-2 sm:py-4">
+                <div className="columns-2 sm:columns-3 md:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6 gap-0.5 sm:gap-2">
                   {photosToShow.map((photo, index) => {
                     const photoIndex = startIdx + index;
                     const isSelected = selectedPhotos.has(photo.id);
@@ -746,82 +1012,61 @@ export default function GalleryDetailView({ gallery }) {
                     return (
                       <div
                         key={photo.id}
-                        onClick={() => selectionMode && togglePhotoSelection(photo.id)}
-                        className={`group relative aspect-square bg-gray-100 overflow-hidden cursor-pointer transition-all ${selectionMode ? 'hover:opacity-80' : ''
-                          } ${isSelected ? 'ring-2 sm:ring-4 ring-[#79502A]' : ''}`}
+                        onClick={() => togglePhotoSelection(photo.id)}
+                        className={`group relative mb-0.5 sm:mb-2 break-inside-avoid cursor-pointer transition-all hover:opacity-80 ${
+                          isSelected ? 'ring-2 sm:ring-4 ring-[#79502A]' : ''
+                        }`}
                       >
-                        <Image
-                          src={photo.file_path}
-                          alt={photo.file_name || `Foto ${photoIndex + 1}`}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                        />
+                        <div className="relative w-full bg-gray-100 overflow-hidden">
+                          <Image
+                            src={photo.file_path}
+                            alt={photo.file_name || `Foto ${photoIndex + 1}`}
+                            width={800}
+                            height={800}
+                            className="w-full h-auto"
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                          />
 
-                        {selectionMode && (
                           <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 z-10">
-                            <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded border-2 flex items-center justify-center transition-colors ${isSelected
-                              ? 'bg-[#79502A] border-[#79502A]'
-                              : 'bg-white/90 border-gray-300'
-                              }`}>
+                            <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                              isSelected
+                                ? 'bg-[#79502A] border-[#79502A]'
+                                : 'bg-white/90 border-gray-300'
+                            }`}>
                               {isSelected && <CheckSquare size={14} className="sm:w-4 sm:h-4 text-white" strokeWidth={3} />}
                             </div>
                           </div>
-                        )}
 
-                        {isCover && !selectionMode && (
-                          <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-black/70 backdrop-blur-sm rounded">
-                            <span className="font-fira text-[8px] sm:text-[9px] font-bold text-white flex items-center gap-1">
-                              <Star size={8} className="sm:w-[10px] sm:h-[10px] fill-[#79502A] text-[#79502A]" />
-                              PORTADA
-                            </span>
-                          </div>
-                        )}
-
-                        {!selectionMode && (
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200">
-                            <div className="absolute bottom-0 left-0 right-0 p-1 sm:p-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                              {!isCover && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSetAsCover(photo.file_path);
-                                  }}
-                                  disabled={changingCover}
-                                  className="flex-1 py-1 sm:py-1.5 bg-white/95 hover:bg-white rounded text-[9px] sm:text-[10px] font-fira font-bold text-black flex items-center justify-center gap-1 disabled:opacity-50"
-                                >
-                                  <Star size={10} />
-                                  <span className="hidden sm:inline">PORTADA</span>
-                                </button>
-                              )}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  showModal({
-                                    title: 'Próximamente',
-                                    message: 'El visor de fotos estará disponible pronto.',
-                                    type: 'info'
-                                  });
-                                }}
-                                className="flex-1 py-1 sm:py-1.5 bg-white/95 hover:bg-white rounded text-[9px] sm:text-[10px] font-fira font-bold text-black flex items-center justify-center gap-1"
-                              >
-                                <Eye size={10} />
-                                VER
-                              </button>
+                          {isCover && (
+                            <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-black/70 backdrop-blur-sm rounded">
+                              <span className="font-fira text-[8px] sm:text-[9px] font-bold text-white flex items-center gap-1">
+                                <Star size={8} className="sm:w-[10px] sm:h-[10px] fill-[#79502A] text-[#79502A]" />
+                                PORTADA
+                              </span>
                             </div>
-                          </div>
-                        )}
-
-                        {!selectionMode && (
-                          <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 px-1 sm:px-1.5 py-0.5 bg-black/70 backdrop-blur-sm rounded">
-                            <span className="font-fira text-[8px] sm:text-[9px] font-bold text-white">
-                              #{photoIndex + 1}
-                            </span>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            ) : (
+              /* Modo normal: solo visualización con paginación */
+              <div className="px-0 sm:px-2 lg:px-4 py-2 sm:py-4">
+                <div className="columns-2 sm:columns-3 md:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6 gap-0.5 sm:gap-2">
+                  {photosToShow.map((photo, index) => (
+                    <SortablePhoto
+                      key={photo.id}
+                      photo={photo}
+                      photoIndex={startIdx + index}
+                      isCover={cover_image === photo.file_path}
+                      isReorderMode={false}
+                      handleSetAsCover={handleSetAsCover}
+                      changingCover={changingCover}
+                      showModal={showModal}
+                    />
+                  ))}
                 </div>
               </div>
             )}
@@ -830,7 +1075,6 @@ export default function GalleryDetailView({ gallery }) {
         </div>
       </div>
 
-      {/* Loading overlay para cambio de portada */}
       {changingCover && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-3 shadow-2xl">
