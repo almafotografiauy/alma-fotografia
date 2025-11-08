@@ -94,7 +94,7 @@ async function DashboardStats() {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8 ">
         {stats.map((stat, index) => (
           <AnimatedSection key={stat.id} delay={index * 0.1}>
             <DashboardStatCard stat={stat} />

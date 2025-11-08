@@ -199,7 +199,7 @@ export default function DashboardLayoutClient({ children, userName }) {
               </div>
 
               {/* Navegación */}
-              <nav className="flex-1 p-6 space-y-2">
+              <nav className="flex-1 p-6 space-y-2 !text-white">
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = pathname === item.href ||

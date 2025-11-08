@@ -68,7 +68,7 @@ export default function DashboardSidebar({ user }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 !text-white">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
