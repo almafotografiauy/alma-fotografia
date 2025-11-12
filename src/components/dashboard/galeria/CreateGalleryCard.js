@@ -26,7 +26,7 @@ export default function CreateGalleryCard() {
         
         {/* Ícono grande */}
         <div className="mb-4 p-6 bg-white/5 rounded-full group-hover:bg-white/10 transition-all duration-300">
-          <Plus size={40} className="text-[#79502A]" strokeWidth={1.5} />
+          <Plus size={40} className="text-[#caad81]" strokeWidth={1.5} />
         </div>
 
         {/* Texto */}

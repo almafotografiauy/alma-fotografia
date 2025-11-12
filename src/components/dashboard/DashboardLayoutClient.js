@@ -100,8 +100,8 @@ export default function DashboardLayoutClient({ children, userName }) {
                   className={`
                     absolute left-0 top-0 bottom-0 w-[3px] transition-all duration-300
                     ${isActive
-                      ? 'bg-white scale-y-100'
-                      : 'bg-white scale-y-0 group-hover:scale-y-100'
+                      ? 'bg-[#caad81] scale-y-100'
+                      : 'bg-[#caad8166] scale-y-0 group-hover:scale-y-100'
                     }
                   `}
                   style={{ transformOrigin: 'top' }}
@@ -112,8 +112,8 @@ export default function DashboardLayoutClient({ children, userName }) {
                   className={`
                     absolute inset-0 transition-all duration-300
                     ${isActive
-                      ? 'bg-white/10 scale-x-100'
-                      : 'bg-white/5 scale-x-0 group-hover:scale-x-100'
+                      ? 'bg-[#caad8166] scale-x-100'
+                      : 'bg-[#caad8122] scale-x-0 group-hover:scale-x-100'
                     }
                   `}
                   style={{ transformOrigin: 'left' }}
@@ -239,8 +239,8 @@ export default function DashboardLayoutClient({ children, userName }) {
                         className={`
                           absolute left-0 top-0 bottom-0 w-[3px] transition-all duration-300
                           ${isActive
-                            ? 'bg-white scale-y-100'
-                            : 'bg-white scale-y-0 group-hover:scale-y-100'
+                            ? 'bg-[#caad81] scale-y-100'
+                            : 'bg-[#caad8166] scale-y-0 group-hover:scale-y-100'
                           }
                         `}
                         style={{ transformOrigin: 'top' }}
@@ -251,8 +251,8 @@ export default function DashboardLayoutClient({ children, userName }) {
                         className={`
                           absolute inset-0 transition-all duration-300
                           ${isActive
-                            ? 'bg-white/10 scale-x-100'
-                            : 'bg-white/5 scale-x-0 group-hover:scale-x-100'
+                            ? 'bg-[#caad8166] scale-x-100'
+                            : 'bg-[#caad8122] scale-x-0 group-hover:scale-x-100'
                           }
                         `}
                         style={{ transformOrigin: 'left' }}
@@ -271,7 +271,7 @@ export default function DashboardLayoutClient({ children, userName }) {
                           `}
                           strokeWidth={1.5}
                         />
-                        <span className="font-fira font-medium text-sm">
+                        <span className="!text-white font-fira font-medium text-sm">
                           {item.label}
                         </span>
                       </div>

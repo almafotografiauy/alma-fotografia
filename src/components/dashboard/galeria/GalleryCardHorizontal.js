@@ -304,7 +304,7 @@ export default function GalleryCardHorizontal({
             {/* Fotos */}
             <div className="flex items-center gap-1">
               <div className="p-0.5 sm:p-1 bg-white/10 rounded">
-                <ImageIcon size={10} className="sm:w-3 sm:h-3 text-[#79502A]" />
+                <ImageIcon size={10} className="sm:w-3 sm:h-3 text-[#caad81]" />
               </div>
               <span className="font-fira text-[10px] sm:text-xs font-semibold text-white">
                 {photoCount}
@@ -347,7 +347,7 @@ export default function GalleryCardHorizontal({
             <button
               onClick={handleShare}
               disabled={isArchived}
-              className={`py-1 sm:py-1.5 md:py-2 rounded-lg transition-colors font-fira text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1 ${
+              className={`py-1 !text-white sm:py-1.5 md:py-2 rounded-lg transition-colors font-fira text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1 ${
                 isArchived
                   ? 'bg-white/5 text-white/30 cursor-not-allowed'
                   : 'bg-[#79502A] hover:bg-[#8B5A2F] text-white'
@@ -360,7 +360,7 @@ export default function GalleryCardHorizontal({
             {/* Editar */}
             <button
               onClick={handleEdit}
-              className="py-1 sm:py-1.5 md:py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors font-fira text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1"
+              className="py-1 !text-white sm:py-1.5 md:py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors font-fira text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1"
               aria-label="Editar galería"
             >
               <Edit size={10} className="sm:w-3 sm:h-3" />
@@ -370,7 +370,7 @@ export default function GalleryCardHorizontal({
             <button
               onClick={handleFavorites}
               disabled={favorites_count === 0}
-              className={`py-1 sm:py-1.5 md:py-2 rounded-lg transition-colors font-fira text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1 ${
+              className={`py-1 !text-pink-400 sm:py-1.5 md:py-2 rounded-lg transition-colors font-fira text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1 ${
                 favorites_count > 0
                   ? 'bg-pink-500/20 hover:bg-pink-500/30 text-pink-300'
                   : 'bg-white/5 text-white/30 cursor-not-allowed'

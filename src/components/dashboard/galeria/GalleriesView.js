@@ -376,7 +376,7 @@ export default function GalleriesView({ galleries, serviceTypes }) {
         </div>
 
         {selectionMode && selectedGalleries.size > 0 && (
-          <div className="mb-4 p-4 bg-[#79502A] rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="mb-4 p-4 bg-[#2d2d2d] border-[#C6A97D] border rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <span className="font-fira text-sm font-semibold text-white">
               {selectedGalleries.size} {selectedGalleries.size === 1 ? 'galería seleccionada' : 'galerías seleccionadas'}
             </span>
@@ -393,7 +393,7 @@ export default function GalleriesView({ galleries, serviceTypes }) {
               ) : selectedGalleriesData.hasArchived ? (
                 <button 
                   onClick={() => setShowRestoreModal(true)}
-                  className="flex-1 sm:flex-none px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-fira text-sm font-semibold flex items-center justify-center gap-2"
+                  className="flex-1 sm:flex-none px-4 !text-white  py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-fira text-sm font-semibold flex items-center justify-center gap-2"
                 >
                   <ArchiveRestore size={16} />
                   <span>Desarchivar</span>
@@ -401,7 +401,7 @@ export default function GalleriesView({ galleries, serviceTypes }) {
               ) : (
                 <button 
                   onClick={() => setShowArchiveModal(true)}
-                  className="flex-1 sm:flex-none px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-fira text-sm font-semibold flex items-center justify-center gap-2"
+                  className="!text-white flex-1 sm:flex-none px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-fira text-sm font-semibold flex items-center justify-center gap-2"
                 >
                   <Archive size={16} />
                   <span>Archivar</span>
@@ -410,7 +410,7 @@ export default function GalleriesView({ galleries, serviceTypes }) {
 
               <button 
                 onClick={() => setShowDeleteModal(true)}
-                className="flex-1 sm:flex-none px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-fira text-sm font-semibold flex items-center justify-center gap-2"
+                className="!text-white flex-1 sm:flex-none px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-fira text-sm font-semibold flex items-center justify-center gap-2"
               >
                 <Trash2 size={16} />
                 <span>Eliminar</span>
@@ -448,9 +448,9 @@ export default function GalleriesView({ galleries, serviceTypes }) {
         ) : (
           <div className="hidden lg:block space-y-4">
             <Link href="/dashboard/galerias/new">
-              <div className="bg-[#2d2d2d] rounded-xl p-6 cursor-pointer hover:shadow-lg transition-all duration-300 active:scale-[0.99]">
+              <div className="bg-[#2d2d2d] mb-4 rounded-xl p-6 cursor-pointer hover:shadow-lg transition-all duration-300 active:scale-[0.99]">
                 <div className="flex items-center gap-3 text-white">
-                  <ImageIcon size={20} className="text-[#79502A]" />
+                  <ImageIcon size={20} className="text-[#caad81]" />
                   <p className="font-fira text-sm font-semibold">Crear nueva galería</p>
                 </div>
               </div>
@@ -484,7 +484,7 @@ export default function GalleriesView({ galleries, serviceTypes }) {
           <Link href="/dashboard/galerias/new" className="block mb-4">
             <div className="bg-[#2d2d2d] rounded-xl p-4 cursor-pointer active:scale-[0.98] transition-all duration-300">
               <div className="flex items-center justify-center gap-2 text-white">
-                <ImageIcon size={16} className="text-[#79502A]" />
+                <ImageIcon size={16} className="text-[#caad81]" />
                 <p className="font-fira text-xs font-semibold">Crear nueva galería</p>
               </div>
             </div>

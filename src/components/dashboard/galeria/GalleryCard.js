@@ -236,7 +236,7 @@ export default function GalleryCard({ gallery, serviceTypes, selectionMode, isSe
             {/* Fotos */}
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-white/10 rounded">
-                <ImageIcon size={12} className="text-[#79502A]" />
+                <ImageIcon size={12} className="text-[#caad81]" />
               </div>
               <div>
                 <p className="font-fira text-sm font-semibold text-white">{photoCount}</p>
@@ -274,7 +274,7 @@ export default function GalleryCard({ gallery, serviceTypes, selectionMode, isSe
             <button
               onClick={handleShare}
               disabled={isArchived}
-              className={`py-2 rounded-lg transition-colors font-fira text-xs font-semibold flex items-center justify-center gap-1.5 ${
+              className={`py-2 rounded-lg transition-colors !text-white font-fira text-xs font-semibold flex items-center justify-center gap-1.5 ${
                 isArchived
                   ? 'bg-white/5 text-white/30 cursor-not-allowed'
                   : 'bg-[#79502A] hover:bg-[#8B5A2F] text-white'
@@ -285,7 +285,7 @@ export default function GalleryCard({ gallery, serviceTypes, selectionMode, isSe
             </button>
             <button
               onClick={handleEdit}
-              className="py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors font-fira text-xs font-semibold flex items-center justify-center gap-1.5"
+              className="py-2 !text-white bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors font-fira text-xs font-semibold flex items-center justify-center gap-1.5"
               title="Editar galería"
             >
               <Edit size={12} />
@@ -293,7 +293,7 @@ export default function GalleryCard({ gallery, serviceTypes, selectionMode, isSe
             <button
               onClick={handleFavorites}
               disabled={favorites_count === 0}
-              className={`py-2 rounded-lg transition-colors font-fira text-xs font-semibold flex items-center justify-center gap-1.5 ${
+              className={`py-2 !text-pink-400 rounded-lg transition-colors font-fira text-xs font-semibold flex items-center justify-center gap-1.5 ${
                 favorites_count > 0
                   ? 'bg-pink-500/20 hover:bg-pink-500/30 text-pink-300'
                   : 'bg-white/5 text-white/30 cursor-not-allowed'
