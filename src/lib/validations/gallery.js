@@ -79,11 +79,6 @@ export const gallerySchema = z.object({
         .optional()
         .or(z.literal('')),
 
-    expirationDate: z
-        .string()
-        .optional()
-        .or(z.literal('')),
-
     allowDownloads: z.boolean(),
     allowComments: z.boolean(),
 

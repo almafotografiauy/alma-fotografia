@@ -204,6 +204,7 @@ export default function GalleryDetailView({ gallery }) {
     password,
     expiration_date,
     max_favorites,
+    has_active_link,
   } = gallery;
 
   // Usar localPhotos para permitir reordenar antes de guardar
@@ -927,7 +928,9 @@ export default function GalleryDetailView({ gallery }) {
                   <Eye className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-[#d5975b]" />
                 </div>
                 <div>
-                  <p className="font-fira text-base sm:text-lg font-semibold">{views_count || 0}</p>
+                  <p className="font-fira text-base sm:text-lg font-semibold">
+                    {has_active_link ? (views_count || 0) : 'Sin enlace'}
+                  </p>
                   <p className="font-fira text-xs text-white/60">Vistas</p>
                 </div>
               </div>

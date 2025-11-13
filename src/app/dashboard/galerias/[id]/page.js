@@ -85,6 +85,9 @@ async function GalleryContent({ galleryId }) {
     ?.filter(s => s.is_active)
     .reduce((sum, s) => sum + (s.views_count || 0), 0) || 0;
 
+  // Verificar si hay algún enlace activo
+  const hasActiveLink = shares?.some(s => s.is_active) || false;
+
   // Ordenar fotos por display_order
   const sortedPhotos = (gallery.photos || []).sort(
     (a, b) => (a.display_order || 0) - (b.display_order || 0)
@@ -95,6 +98,8 @@ async function GalleryContent({ galleryId }) {
       gallery={{
         ...gallery,
         photos: sortedPhotos,
+        has_active_link: hasActiveLink,
+        views_count: totalViews,
       }}
     />
   );

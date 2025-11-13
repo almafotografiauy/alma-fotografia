@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Loader2, Save, Globe, Lock, Bell, MessageSquare, Clock, Eye, EyeOff } from 'lucide-react';
+import { X, Loader2, Save, Globe, Lock, Bell, MessageSquare, Eye, EyeOff } from 'lucide-react';
 import { createClient } from '@/lib/supabaseClient';
 
 export default function EditGalleryModal({ gallery, onClose, onSuccess }) {
@@ -18,7 +18,6 @@ export default function EditGalleryModal({ gallery, onClose, onSuccess }) {
     notify_on_favorites: false,
     custom_message: '',
     password: '',
-    expiration_date: '',
     max_favorites: 150,
   });
   const [services, setServices] = useState([]);
@@ -47,7 +46,6 @@ export default function EditGalleryModal({ gallery, onClose, onSuccess }) {
         notify_on_favorites: gallery.notify_on_favorites ?? false,
         custom_message: gallery.custom_message || '',
         password: gallery.password || '',
-        expiration_date: gallery.expiration_date || '',
         max_favorites: gallery.max_favorites || 150,
       });
     }
@@ -134,7 +132,6 @@ export default function EditGalleryModal({ gallery, onClose, onSuccess }) {
         notify_on_favorites: formData.notify_on_favorites,
         custom_message: formData.custom_message.trim() || null,
         password: formData.password.trim() || null,
-        expiration_date: formData.expiration_date || null,
         max_favorites: formData.max_favorites,
       };
 
@@ -499,24 +496,6 @@ export default function EditGalleryModal({ gallery, onClose, onSuccess }) {
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
-                  </div>
-
-                  {/* Fecha de expiración */}
-                  <div>
-                    <label className="block font-fira text-[11px] sm:text-xs md:text-sm font-semibold text-black mb-1.5 sm:mb-2 flex items-center gap-1.5">
-                      <Clock size={14} className="sm:w-4 sm:h-4 text-[#79502A]" />
-                      Fecha de expiración
-                    </label>
-                    <input
-                      type="datetime-local"
-                      name="expiration_date"
-                      value={formData.expiration_date}
-                      onChange={handleChange}
-                      className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 border border-gray-300 rounded-lg font-fira text-xs sm:text-sm text-black focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent"
-                    />
-                    <p className="font-fira text-[10px] sm:text-xs text-gray-500 mt-1">
-                      La galería dejará de ser accesible después de esta fecha
-                    </p>
                   </div>
 
                   {/* Límite de favoritos */}

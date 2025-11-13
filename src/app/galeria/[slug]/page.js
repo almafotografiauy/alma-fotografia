@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import PublicGalleryView from '@/components/public/PublicGalleryView';
+import ProtectedGalleryWrapper from '@/components/public/ProtectedGalleryWrapper';
 import PublicGallerySkeleton from '@/components/public/PublicGallerySkeleton';
 import { getGalleryWithToken } from '@/lib/validations/validate-share-token';
 import { createClient } from '@/lib/server';
@@ -49,7 +49,7 @@ async function GalleryContent({ slug, token }) {
     .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
 
   return (
-    <PublicGalleryView
+    <ProtectedGalleryWrapper
       gallery={{
         id: gallery.id,
         title: gallery.title,
@@ -60,6 +60,7 @@ async function GalleryContent({ slug, token }) {
         coverImage: gallery.cover_image,
         allowDownloads: gallery.allow_downloads,
         watermarkEnabled: gallery.watermark_enabled,
+        password: gallery.password,
         photos: validPhotos,
       }}
       token={token}

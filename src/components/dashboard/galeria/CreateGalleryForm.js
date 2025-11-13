@@ -22,7 +22,6 @@ import {
     EyeOff,
     Image as ImageIcon,
     Info,
-    Clock,
     ArrowLeft
 } from 'lucide-react';
 import Image from 'next/image';
@@ -31,15 +30,14 @@ import { createClient } from '@/lib/supabaseClient';
 
 /**
  * CreateGalleryForm - Formulario profesional de creación de galería
- * 
+ *
  * Features completas inspiradas en Pixieset:
  * - Protección por contraseña (opcional)
- * - Fecha de expiración
  * - Control de descargas
  * - Control de comentarios
  * - Límite de favoritos personalizado
  * - Portada optimizada
- * 
+ *
  * Optimizaciones:
  * - React Hook Form + Zod
  * - Animaciones con Framer Motion
@@ -84,7 +82,6 @@ export default function CreateGalleryForm() {
             notifyOnView: false,
             notifyOnFavorites: true,
             password: '',
-            expirationDate: '',
             allowDownloads: true,
             allowComments: true,
             maxFavorites: 150,
@@ -357,7 +354,6 @@ export default function CreateGalleryForm() {
                 notify_on_view: data.notifyOnView,
                 notify_on_favorites: data.notifyOnFavorites,
                 password: data.password?.trim() || null,
-                expiration_date: data.expirationDate || null,
                 allow_downloads: data.allowDownloads,
                 allow_comments: data.allowComments,
                 max_favorites: data.maxFavorites || 150,
@@ -935,24 +931,6 @@ export default function CreateGalleryForm() {
                                         {errors.password && (
                                             <p className="mt-2 font-fira text-sm text-red-600">{errors.password.message}</p>
                                         )}
-                                    </div>
-
-                                    {/* Fecha de expiración */}
-                                    <div>
-                                        <label className="block font-fira text-sm font-medium text-black mb-2 flex items-center gap-2">
-                                            <Clock size={16} className="text-[#79502A]" />
-                                            Fecha de expiración
-                                        </label>
-                                        <input
-                                            type="datetime-local"
-                                            {...register('expirationDate')}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg font-fira text-sm text-black 
-                                                focus:outline-none focus:ring-2 focus:ring-[#C6A97D]/40 transition-all
-                                                hover:border-gray-400"
-                                        />
-                                        <p className="mt-1 font-fira text-xs text-black/50">
-                                            La galería dejará de ser accesible después de esta fecha
-                                        </p>
                                     </div>
 
                                     {/* Límite de favoritos */}
