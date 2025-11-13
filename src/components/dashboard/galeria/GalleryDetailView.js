@@ -388,8 +388,9 @@ export default function GalleryDetailView({ gallery }) {
 
       console.log('✅ Galería eliminada exitosamente');
 
-      // Redirect al listado de galerías
-      router.push('/dashboard/galerias');
+      // Navegación forzada para evitar errores de re-renderizado
+      // En lugar de router.replace(), usar window.location para navegación completa
+      window.location.href = '/dashboard/galerias';
 
     } catch (error) {
       console.error('❌ Error eliminando galería:', error);
