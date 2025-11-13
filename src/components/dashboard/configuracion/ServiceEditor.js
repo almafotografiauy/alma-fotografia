@@ -473,9 +473,9 @@ export default function ServiceEditor() {
         )}
       </AnimatePresence>
 
-      {/* Lista de servicios - Mejorado */}
+      {/* Lista de servicios - Compacto */}
       {!isEditing && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <AnimatePresence>
             {services.map((service, index) => {
               const IconComponent = iconMap[service.icon_name] || iconMap['Camera'];
@@ -489,49 +489,49 @@ export default function ServiceEditor() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ delay: index * 0.05 }}
-                  className="relative group bg-white border-2 border-gray-200 rounded-xl
-                    p-5 hover:border-[#79502A] hover:shadow-lg transition-all"
+                  className="relative group bg-white border-2 border-gray-200 rounded-lg
+                    p-4 hover:border-[#79502A] hover:shadow-md transition-all"
                 >
                   {/* Icon */}
-                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl
-                    bg-gradient-to-br from-[#79502A]/10 to-[#C6A97D]/10
-                    flex items-center justify-center mb-4
-                    group-hover:scale-110 group-hover:from-[#79502A]/20 group-hover:to-[#C6A97D]/20
+                  <div className="w-12 h-12 rounded-lg
+                    bg-[#79502A]/10
+                    flex items-center justify-center mb-3
+                    group-hover:scale-105 group-hover:bg-[#79502A]/15
                     transition-all">
                     <IconComponent
-                      size={28}
+                      size={22}
                       className="text-[#79502A]"
-                      strokeWidth={1.5}
+                      strokeWidth={1.8}
                     />
                   </div>
 
                   {/* Info */}
-                  <div className="mb-4">
-                    <h4 className="font-fira text-base md:text-lg font-semibold text-black mb-2 leading-tight">
+                  <div className="mb-3">
+                    <h4 className="font-fira text-sm font-semibold text-black mb-1.5 leading-tight">
                       {service.name}
                     </h4>
                     {service.description ? (
-                      <p className="font-fira text-sm text-black/60 leading-relaxed line-clamp-2">
+                      <p className="font-fira text-xs text-black/60 leading-snug line-clamp-2">
                         {service.description}
                       </p>
                     ) : (
-                      <p className="font-fira text-xs text-black/40 italic">
-                        {service.is_default ? 'Servicio predeterminado del sistema' : 'Servicio personalizado'}
+                      <p className="font-fira text-[10px] text-black/40 italic">
+                        {service.is_default ? 'Predeterminado' : 'Personalizado'}
                       </p>
                     )}
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleEdit(service)}
-                      className="flex-1 px-4 py-2 bg-[#79502A] text-white
-                        rounded-lg font-fira text-sm font-medium
-                        hover:bg-[#8B5A2F] transition-colors flex items-center justify-center gap-2 shadow-sm"
+                      className="flex-1 px-3 py-2 bg-[#79502A] text-white
+                        rounded-lg font-fira text-xs font-semibold
+                        hover:bg-[#8B5A2F] transition-colors flex items-center justify-center gap-1.5"
                     >
-                      <Pencil size={16} />
+                      <Pencil size={14} />
                       <span>Editar</span>
                     </motion.button>
                     {!service.is_default && (
@@ -540,15 +540,15 @@ export default function ServiceEditor() {
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleDelete(service)}
                         disabled={isDeleting}
-                        className="px-4 py-2 bg-red-500 text-white
-                          rounded-lg font-fira text-sm font-medium
+                        className="px-3 py-2 bg-red-500 text-white
+                          rounded-lg font-fira text-xs font-semibold
                           hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed
-                          flex items-center justify-center shadow-sm"
+                          flex items-center justify-center"
                       >
                         {isDeleting ? (
-                          <Loader2 size={16} className="animate-spin" />
+                          <Loader2 size={14} className="animate-spin" />
                         ) : (
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         )}
                       </motion.button>
                     )}
