@@ -1,0 +1,26 @@
+{
+  "name": "Alma Fotografía",
+  "short_name": "Alma Foto",
+  "description": "Fotografía profesional de eventos y bodas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#79502A",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/img/logos/logo_BN_SF.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/img/logos/logo_BN_SF.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["photography", "business", "lifestyle"],
+  "lang": "es-ES"
+}

@@ -69,7 +69,7 @@ export default function DashboardLayoutClient({ children, userName }) {
         <div className="p-8 border-b border-white/10 flex flex-col items-center justify-center gap-3">
           <Link href="/dashboard" className="flex flex-col items-center gap-2">
             <Image
-              src="/img/logos/Logo_BN_SF.png"
+              src="/img/logos/logo_BN_SF.png"
               alt="Alma Fotografía Logo"
               width={180}
               height={132}
@@ -205,7 +205,7 @@ export default function DashboardLayoutClient({ children, userName }) {
               <div className="p-6 border-b border-white/10 flex items-center justify-between">
                 <div className="flex flex-col items-center gap-1">
                   <Image
-                    src="/img/logos/Logo_BN_SF.png"
+                    src="/img/logos/logo_BN_SF.png"
                     alt="Alma Fotografía Logo"
                     width={150}
                     height={110}
@@ -324,7 +324,7 @@ export default function DashboardLayoutClient({ children, userName }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img
-                src="/img/logos/Logo_BN_SF.png"
+                src="/img/logos/logo_BN_SF.png"
                 alt="Alma Fotografía Logo"
                 className="w-auto h-12 object-contain brightness-0 invert"
               />
