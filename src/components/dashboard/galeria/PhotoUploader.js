@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
-import { Upload, X, Loader2, AlertCircle, ChevronLeft, ChevronRight, CheckSquare, Trash2, Eye } from 'lucide-react';
+import { Upload, X, Loader2, AlertCircle, ChevronLeft, ChevronRight, CheckSquare, Trash2, Eye, Plus } from 'lucide-react';
 
 export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, onUploadComplete }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -22,7 +22,7 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
   const previewsToShow = selectedFiles.slice(startIdx, endIdx);
   const totalPages = Math.ceil(selectedFiles.length / PREVIEWS_PER_PAGE);
 
-  // Generar nombre bonito basado en slug/título de galería
+  // Generar nombre SEO-friendly basado en slug/título de galería
   const generatePrettyFileName = (index) => {
     // Usar slug si existe, sino crear uno del título
     const baseName = gallerySlug || galleryTitle
@@ -34,8 +34,10 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
 
     // Número con padding (001, 002, etc)
     const paddedNumber = String(index + 1).padStart(3, '0');
-    
-    return `${baseName}-${paddedNumber}.webp`;
+
+    // ✅ Incluir "foto" para mejor SEO
+    // Ej: casamiento-maria-juan-foto-001.webp
+    return `${baseName}-foto-${paddedNumber}.webp`;
   };
 
   const togglePreviewSelection = (fileId) => {
@@ -203,6 +205,7 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
 
   const uploadSinglePhoto = async (fileData, index) => {
     const { file, id, name } = fileData;
+    let uploadedCloudinaryUrl = null; // Rastrear URL para rollback
 
     try {
       setUploadProgress(prev => ({
@@ -211,10 +214,10 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
       }));
 
       const optimizedBlob = await optimizeImage(file);
-      
+
       // Generar nombre bonito basado en galería + número
       const prettyFileName = generatePrettyFileName(index);
-      
+
       const optimizedFile = new File(
         [optimizedBlob],
         prettyFileName,
@@ -225,6 +228,10 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
         const reduction = ((1 - optimizedBlob.size / file.size) * 100).toFixed(1);
         console.log(`📸 ${name} → ${prettyFileName}: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(optimizedBlob.size / 1024).toFixed(0)}KB (-${reduction}%)`);
       }
+
+      // ==========================================
+      // PASO 1: Subir a Cloudinary primero
+      // ==========================================
 
       setUploadProgress(prev => ({
         ...prev,
@@ -242,14 +249,20 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
       });
 
       if (!response.ok) {
-        throw new Error('Error al subir imagen');
+        throw new Error('Error al subir imagen a Cloudinary');
       }
 
       const result = await response.json();
 
       if (!result.success) {
-        throw new Error(result.error || 'Upload failed');
+        throw new Error(result.error || 'Upload to Cloudinary failed');
       }
+
+      uploadedCloudinaryUrl = result.url; // ✅ Guardar para posible rollback
+
+      // ==========================================
+      // PASO 2: Guardar en BD solo si Cloudinary fue exitoso
+      // ==========================================
 
       setUploadProgress(prev => ({
         ...prev,
@@ -261,12 +274,34 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
         .insert({
           gallery_id: galleryId,
           file_path: result.url,
-          file_name: prettyFileName, // Usar nombre bonito
+          file_name: prettyFileName,
           file_size: optimizedBlob.size,
           display_order: index,
         });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('❌ Error guardando en BD:', dbError);
+
+        // ✅ ROLLBACK: Eliminar de Cloudinary si falló BD
+        if (uploadedCloudinaryUrl) {
+          console.log('🔄 Ejecutando rollback: eliminando de Cloudinary...');
+          try {
+            const publicId = uploadedCloudinaryUrl.match(/\/v\d+\/(.+)\.\w+$/)?.[1];
+            if (publicId) {
+              await fetch('/api/cloudinary/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ publicId })
+              });
+              console.log('✅ Rollback exitoso: foto eliminada de Cloudinary');
+            }
+          } catch (rollbackError) {
+            console.error('⚠️ Error en rollback:', rollbackError);
+          }
+        }
+
+        throw new Error(`Error guardando en base de datos: ${dbError.message}`);
+      }
 
       setUploadProgress(prev => ({
         ...prev,
@@ -276,8 +311,9 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
       URL.revokeObjectURL(fileData.preview);
 
       return { success: true, id };
+
     } catch (error) {
-      console.error(`Error uploading ${name}:`, error);
+      console.error(`❌ Error uploading ${name}:`, error);
 
       setUploadErrors(prev => ({
         ...prev,
@@ -399,11 +435,11 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
                 <>
                   <button
                     onClick={() => setSelectionMode(true)}
-                    className="!text-black/80 bg-gray-100 hover:bg-gray-200 px-3 py-2 hover:bg-gray-200 rounded-lg transition-colors font-fira text-xs sm:text-sm font-medium flex items-center gap-2"
+                    className="!text-black/80 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg transition-colors font-fira text-xs sm:text-sm font-medium flex items-center gap-2"
                     type="button"
                   >
                     <CheckSquare size={14} />
-                    Seleccionar
+                    <span className="hidden sm:inline">Seleccionar</span>
                   </button>
                   <button
                     onClick={handleUploadAll}
@@ -451,6 +487,25 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
 
           {/* Grid previews más pequeños */}
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-1 sm:gap-2">
+            {/* Card de "Agregar más" como primer elemento */}
+            {!uploading && !selectionMode && (
+              <label className="relative group aspect-square bg-gradient-to-br from-[#C6A97D]/20 to-[#79502A]/20 rounded overflow-hidden cursor-pointer border-2 border-dashed border-[#C6A97D] hover:border-[#79502A] hover:from-[#C6A97D]/30 hover:to-[#79502A]/30 transition-all">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 sm:gap-2">
+                  <Plus size={24} className="sm:w-8 sm:h-8 text-[#79502A]" strokeWidth={2} />
+                  <span className="font-fira text-[10px] sm:text-xs font-semibold text-[#79502A] text-center px-2">
+                    Agregar más
+                  </span>
+                </div>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={(e) => handleFileSelect(e.target.files)}
+                  className="hidden"
+                />
+              </label>
+            )}
+
             {previewsToShow.map((fileData, index) => {
               const progress = uploadProgress[fileData.id];
               const isSelected = selectedPreviews.has(fileData.id);

@@ -376,7 +376,7 @@ export default function GalleriesView({ galleries, serviceTypes }) {
         </div>
 
         {selectionMode && selectedGalleries.size > 0 && (
-          <div className="mb-4 p-4 bg-[#2d2d2d] border-[#C6A97D] border rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="sticky top-0 z-20 mb-4 p-4 bg-[#2d2d2d] border-[#C6A97D] border rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
             <span className="font-fira text-sm font-semibold text-white">
               {selectedGalleries.size} {selectedGalleries.size === 1 ? 'galería seleccionada' : 'galerías seleccionadas'}
             </span>

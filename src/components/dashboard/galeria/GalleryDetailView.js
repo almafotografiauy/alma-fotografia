@@ -49,6 +49,7 @@ import Modal from '@/components/ui/Modal';
 import { useModal } from '@/hooks/useModal';
 import { createClient } from '@/lib/supabaseClient';
 import { iconMap } from '@/lib/validations/gallery';
+import { deleteCloudinaryImage, deleteGalleries } from '@/app/actions/gallery-actions';
 
 // Componente SortablePhoto para drag & drop
 function SortablePhoto({ photo, photoIndex, isCover, isReorderMode, handleSetAsCover, changingCover }) {
@@ -376,113 +377,25 @@ export default function GalleryDetailView({ gallery }) {
     setDeletingGallery(true);
 
     try {
-      const supabase = await createClient();
+      console.log('🗑️ Eliminando galería:', id);
 
-      console.log('🗑️ Iniciando eliminación de galería:', id);
-      console.log('📸 Total fotos a eliminar:', workingPhotos.length);
-      console.log('🖼️ Portada:', cover_image);
+      // Usar Server Action con atomicidad (todo o nada)
+      const result = await deleteGalleries([id]);
 
-      // 1. Eliminar carpeta completa de Cloudinary (más eficiente)
-      const folderPath = `galleries/${id}`;
-      console.log('📁 Eliminando carpeta completa:', folderPath);
-
-      try {
-        const deleteFolderResponse = await fetch('/api/cloudinary/delete-folder', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ folder: folderPath })
-        });
-
-        if (!deleteFolderResponse.ok) {
-          console.warn('⚠️ No se pudo eliminar carpeta, eliminando archivos individualmente...');
-          
-          // Fallback: eliminar archivos uno por uno
-          const deletePromises = workingPhotos.map(photo => {
-            const publicId = extractPublicIdFromUrl(photo.file_path);
-            console.log('🔍 Foto:', photo.file_name, '→ PublicID:', publicId);
-            if (publicId) {
-              return fetch('/api/cloudinary/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ publicId })
-              }).catch(err => {
-                console.error('❌ Error eliminando foto:', err);
-                return null;
-              });
-            }
-            return Promise.resolve();
-          });
-
-          await Promise.all(deletePromises);
-        } else {
-          console.log('✅ Carpeta eliminada de Cloudinary');
-        }
-      } catch (err) {
-        console.error('❌ Error eliminando carpeta:', err);
+      if (!result.success) {
+        throw new Error(result.error || 'Error desconocido al eliminar galería');
       }
 
-      // 2. Eliminar portada si es independiente (fuera de la carpeta de galería)
-      if (cover_image) {
-        const isGalleryPhoto = workingPhotos.some(p => p.file_path === cover_image);
-        const isInGalleryFolder = cover_image.includes(`galleries/${id}`);
-        
-        console.log('🖼️ Portada es foto de galería?', isGalleryPhoto);
-        console.log('🖼️ Portada está en carpeta de galería?', isInGalleryFolder);
-        
-        if (!isGalleryPhoto && !isInGalleryFolder) {
-          const publicId = extractPublicIdFromUrl(cover_image);
-          console.log('🔍 Portada independiente → PublicID:', publicId);
-          
-          if (publicId) {
-            try {
-              await fetch('/api/cloudinary/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ publicId })
-              });
-              console.log('✅ Portada independiente eliminada');
-            } catch (err) {
-              console.error('❌ Error eliminando portada:', err);
-            }
-          }
-        }
-      }
+      console.log('✅ Galería eliminada exitosamente');
 
-      // 3. Eliminar registros de fotos de la BD
-      console.log('🗄️ Eliminando registros de fotos de BD...');
-      const { error: photosError } = await supabase
-        .from('photos')
-        .delete()
-        .eq('gallery_id', id);
-
-      if (photosError) {
-        console.error('❌ Error eliminando fotos de BD:', photosError);
-      } else {
-        console.log('✅ Fotos eliminadas de BD');
-      }
-
-      // 4. Eliminar galería de la BD
-      console.log('🗄️ Eliminando galería de BD...');
-      const { error: galleryError } = await supabase
-        .from('galleries')
-        .delete()
-        .eq('id', id);
-
-      if (galleryError) {
-        console.error('❌ Error eliminando galería:', galleryError);
-        throw galleryError;
-      }
-
-      console.log('✅ Galería eliminada completamente');
-
-      // 5. Redirect al listado de galerías
+      // Redirect al listado de galerías
       router.push('/dashboard/galerias');
 
     } catch (error) {
-      console.error('❌ Error general eliminando galería:', error);
+      console.error('❌ Error eliminando galería:', error);
       showModal({
-        title: 'Error',
-        message: 'No se pudo eliminar la galería completamente. Algunos archivos pueden quedar huérfanos.',
+        title: 'Error al eliminar',
+        message: error.message || 'No se pudo eliminar la galería. Por favor intenta nuevamente.',
         type: 'error'
       });
       setDeletingGallery(false);
@@ -544,6 +457,9 @@ export default function GalleryDetailView({ gallery }) {
       const photosToDelete = workingPhotos.filter(p => selectedPhotos.has(p.id));
       const supabase = await createClient();
 
+      console.log(`🗑️ Eliminando ${photosToDelete.length} fotos...`);
+
+      // 1. Eliminar de base de datos primero
       const { error: dbError } = await supabase
         .from('photos')
         .delete()
@@ -551,16 +467,28 @@ export default function GalleryDetailView({ gallery }) {
 
       if (dbError) throw dbError;
 
-      photosToDelete.forEach(photo => {
+      console.log('✅ Fotos eliminadas de BD');
+
+      // 2. Eliminar de Cloudinary en paralelo con Promise.all
+      const deletePromises = photosToDelete.map(async (photo) => {
         const publicId = extractPublicIdFromUrl(photo.file_path);
         if (publicId) {
-          fetch('/api/cloudinary/delete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ publicId })
-          }).catch(err => console.error('Error eliminando de Cloudinary:', err));
+          console.log('🗑️ Eliminando foto de Cloudinary:', publicId);
+          const result = await deleteCloudinaryImage(publicId);
+
+          if (result.success) {
+            console.log('✅ Foto eliminada:', publicId);
+          } else {
+            console.warn('⚠️ No se pudo eliminar foto:', publicId, result.error);
+          }
+
+          return result;
         }
+        return { success: true };
       });
+
+      await Promise.all(deletePromises);
+      console.log('✅ Todas las fotos eliminadas de Cloudinary');
 
       setSelectedPhotos(new Set());
       setSelectionMode(false);
@@ -592,23 +520,21 @@ export default function GalleryDetailView({ gallery }) {
 
       if (error) throw error;
 
+      // Eliminar portada anterior de Cloudinary si no es foto de galería
       if (previousCoverUrl) {
         const isGalleryPhoto = workingPhotos.some(p => p.file_path === previousCoverUrl);
 
         if (!isGalleryPhoto) {
           const publicId = extractPublicIdFromUrl(previousCoverUrl);
           if (publicId) {
-            fetch('/api/cloudinary/delete', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ publicId })
-            })
-              .then(response => {
-                if (response.ok) {
-                  console.log('✅ Portada anterior eliminada de Cloudinary');
-                }
-              })
-              .catch(err => console.error('Error eliminando portada anterior:', err));
+            console.log('🗑️ Eliminando portada anterior:', publicId);
+            const deleteResult = await deleteCloudinaryImage(publicId);
+
+            if (deleteResult.success) {
+              console.log('✅ Portada anterior eliminada de Cloudinary');
+            } else {
+              console.warn('⚠️ No se pudo eliminar portada anterior:', deleteResult.error);
+            }
           }
         }
       }
@@ -652,25 +578,21 @@ export default function GalleryDetailView({ gallery }) {
 
       if (error) throw error;
 
+      // Eliminar portada de Cloudinary si no es foto de galería
       if (imageToDelete) {
         const isGalleryPhoto = workingPhotos.some(p => p.file_path === imageToDelete);
 
         if (!isGalleryPhoto) {
           const publicId = extractPublicIdFromUrl(imageToDelete);
           if (publicId) {
-            fetch('/api/cloudinary/delete', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ publicId })
-            })
-              .then(response => {
-                if (response.ok) {
-                  console.log('✅ Portada eliminada de Cloudinary:', publicId);
-                } else {
-                  console.warn('⚠️ No se pudo eliminar portada de Cloudinary');
-                }
-              })
-              .catch(err => console.error('Error eliminando portada de Cloudinary:', err));
+            console.log('🗑️ Eliminando portada:', publicId);
+            const deleteResult = await deleteCloudinaryImage(publicId);
+
+            if (deleteResult.success) {
+              console.log('✅ Portada eliminada de Cloudinary:', publicId);
+            } else {
+              console.warn('⚠️ No se pudo eliminar portada de Cloudinary:', deleteResult.error);
+            }
           }
         } else {
           console.log('ℹ️ Portada es foto de galería, no se elimina de Cloudinary');
@@ -725,9 +647,21 @@ export default function GalleryDetailView({ gallery }) {
       }
 
       const optimizedBlob = await optimizeImageForCover(file);
+
+      // Generar nombre profesional: portada-nombreGaleria-timestamp.webp
+      const gallerySlug = slug || title
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+      const timestamp = Date.now();
+      const prettyFileName = `portada-${gallerySlug}-${timestamp}.webp`;
+
       const optimizedFile = new File(
         [optimizedBlob],
-        `cover-${Date.now()}.webp`,
+        prettyFileName,
         { type: 'image/webp' }
       );
 

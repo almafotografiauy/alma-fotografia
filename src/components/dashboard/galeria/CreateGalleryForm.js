@@ -183,9 +183,23 @@ export default function CreateGalleryForm() {
             setIsUploading(true);
 
             const optimizedBlob = await optimizeImage(file);
+
+            // Generar nombre SEO-friendly: portada-galeria-nombreGaleria-timestamp.webp
+            const gallerySlug = watch('slug') || watch('title')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
+            const timestamp = Date.now();
+            // ✅ Incluir "galeria" para mejor SEO
+            // Ej: portada-galeria-casamiento-maria-juan-1234567890.webp
+            const prettyFileName = `portada-galeria-${gallerySlug}-${timestamp}.webp`;
+
             const optimizedFile = new File(
                 [optimizedBlob],
-                `${file.name.split('.')[0]}.webp`,
+                prettyFileName,
                 { type: 'image/webp' }
             );
 
@@ -198,7 +212,7 @@ export default function CreateGalleryForm() {
             // Log optimización (solo dev)
             if (process.env.NODE_ENV === 'development') {
                 const reduction = ((1 - optimizedBlob.size / file.size) * 100).toFixed(1);
-                console.log(`📸 Optimizada: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(optimizedBlob.size / 1024 / 1024).toFixed(2)}MB (-${reduction}%)`);
+                console.log(`📸 Portada optimizada → ${prettyFileName}: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(optimizedBlob.size / 1024 / 1024).toFixed(2)}MB (-${reduction}%)`);
             }
         } catch (error) {
             console.error('Error optimizing image:', error);
@@ -245,6 +259,8 @@ export default function CreateGalleryForm() {
      * Submit del formulario
      */
     const onSubmit = async (data) => {
+        let uploadedCoverUrl = null; // Rastrear la portada subida para cleanup
+
         try {
             console.log('📋 Iniciando creación de galería...', data);
 
@@ -302,10 +318,28 @@ export default function CreateGalleryForm() {
                 }
             }
 
+            // Verificar que el slug no exista antes de subir la portada
+            console.log('🔍 Verificando slug:', data.slug);
+            const { data: existingSlug } = await supabase
+                .from('galleries')
+                .select('id, title')
+                .eq('slug', data.slug.trim())
+                .maybeSingle();
+
+            if (existingSlug) {
+                console.log('⚠️ Slug duplicado encontrado:', existingSlug);
+                showModal({
+                    title: 'URL duplicada',
+                    message: `Ya existe una galería con esta URL (${data.slug}). La galería existente se llama: "${existingSlug.title}". Por favor elige otra URL.`,
+                    type: 'error'
+                });
+                return;
+            }
+
             // Subir portada si existe
             console.log('📸 Subiendo imagen de portada...');
-            const coverImageUrl = await uploadCoverImage();
-            console.log('✅ Imagen subida:', coverImageUrl || 'Sin imagen');
+            uploadedCoverUrl = await uploadCoverImage();
+            console.log('✅ Imagen subida:', uploadedCoverUrl || 'Sin imagen');
 
             // Preparar datos
             const galleryData = {
@@ -314,7 +348,7 @@ export default function CreateGalleryForm() {
                 description: data.description?.trim() || null,
                 event_date: data.eventDate || null,
                 client_email: data.clientEmail?.trim() || null,
-                cover_image: coverImageUrl,
+                cover_image: uploadedCoverUrl,
                 is_public: data.isPublic,
                 created_by: user.id,
                 views_count: 0,
@@ -339,15 +373,40 @@ export default function CreateGalleryForm() {
 
             if (error) {
                 console.error('❌ Error de Supabase:', error);
+                console.error('❌ Error code:', error.code);
+                console.error('❌ Error message:', error.message);
+                console.error('❌ Error details:', error.details);
+
+                // Cleanup: eliminar portada subida si falla la creación
+                if (uploadedCoverUrl) {
+                    console.log('🧹 Limpiando portada huérfana...');
+                    try {
+                        const publicId = uploadedCoverUrl.match(/\/v\d+\/(.+)\.\w+$/)?.[1];
+                        if (publicId) {
+                            await fetch('/api/cloudinary/delete', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ publicId })
+                            });
+                            console.log('✅ Portada huérfana eliminada');
+                        }
+                    } catch (cleanupError) {
+                        console.error('⚠️ No se pudo eliminar portada huérfana:', cleanupError);
+                    }
+                }
+
+                // Limpiar estado para evitar acumulación
+                setCoverImage(null);
+                setCoverImagePreview(null);
 
                 if (error.code === '23505') {
-                    if (error.message.includes('unique_public_service_gallery')) {
+                    if (error.message && error.message.includes('unique_public_service_gallery')) {
                         showModal({
                             title: 'Galería duplicada',
                             message: 'Ya existe una galería pública con este tipo de servicio',
                             type: 'error'
                         });
-                    } else if (error.message.includes('slug')) {
+                    } else if (error.message && error.message.includes('slug')) {
                         showModal({
                             title: 'URL duplicada',
                             message: 'Ya existe una galería con esta URL. Elige otra.',
@@ -356,7 +415,7 @@ export default function CreateGalleryForm() {
                     } else {
                         showModal({
                             title: 'Error de duplicado',
-                            message: error.message,
+                            message: error.message || 'Ya existe una galería con estos datos',
                             type: 'error'
                         });
                     }
@@ -366,7 +425,7 @@ export default function CreateGalleryForm() {
                 // Otros errores
                 showModal({
                     title: 'Error al crear galería',
-                    message: `Error: ${error.message || 'Desconocido'}`,
+                    message: error.message || error.details || 'Error desconocido. Revisa la consola para más detalles.',
                     type: 'error'
                 });
                 return;
@@ -383,6 +442,28 @@ export default function CreateGalleryForm() {
 
         } catch (error) {
             console.error('❌ Error creating gallery:', error);
+
+            // Cleanup: eliminar portada subida si hubo error general
+            if (uploadedCoverUrl) {
+                console.log('🧹 Limpiando portada huérfana...');
+                try {
+                    const publicId = uploadedCoverUrl.match(/\/v\d+\/(.+)\.\w+$/)?.[1];
+                    if (publicId) {
+                        await fetch('/api/cloudinary/delete', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ publicId })
+                        });
+                        console.log('✅ Portada huérfana eliminada');
+                    }
+                } catch (cleanupError) {
+                    console.error('⚠️ No se pudo eliminar portada huérfana:', cleanupError);
+                }
+            }
+
+            // Limpiar estado para evitar acumulación
+            setCoverImage(null);
+            setCoverImagePreview(null);
 
             showModal({
                 title: 'Error al crear galería',
@@ -403,6 +484,7 @@ export default function CreateGalleryForm() {
 
 
                 <button
+                    type="button"
                     onClick={() => router.push('/dashboard/galerias')}
                     className="flex items-center gap-2 text-black/60 hover:text-black transition-colors font-fira text-sm mb-4"
                 >

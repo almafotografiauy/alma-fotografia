@@ -9,7 +9,7 @@ import PublicDownloadAllButton from '@/components/public/PublicDownloadAllButton
 /**
  * PhotoGrid - Grid memoizado de fotos
  */
-const PhotoGrid = memo(({ photos, onPhotoClick, onDownload }) => {
+const PhotoGrid = memo(({ photos, galleryTitle, onPhotoClick, onDownload }) => {
   return (
     <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
       {photos.map((photo, index) => (
@@ -23,7 +23,7 @@ const PhotoGrid = memo(({ photos, onPhotoClick, onDownload }) => {
           >
             <Image
               src={photo.file_path}
-              alt={photo.file_name || `Foto ${index + 1}`}
+              alt={`${galleryTitle} - ${photo.file_name || `Foto ${index + 1}`}`}
               width={800}
               height={800}
               className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-110"
@@ -272,6 +272,7 @@ export default function PublicGalleryView({ gallery, token }) {
         ) : (
           <PhotoGrid
             photos={photos}
+            galleryTitle={title}
             onPhotoClick={openLightbox}
             onDownload={handleDownload}
           />
@@ -336,7 +337,7 @@ export default function PublicGalleryView({ gallery, token }) {
             >
               <Image
                 src={selectedPhoto.file_path}
-                alt={selectedPhoto.file_name || 'Foto'}
+                alt={`${title} - ${selectedPhoto.file_name || `Foto ${selectedPhoto.index + 1}`}`}
                 fill
                 className="object-contain"
                 sizes="100vw"
