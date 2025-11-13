@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -67,10 +68,14 @@ export default function DashboardLayoutClient({ children, userName }) {
         {/* Logo */}
         <div className="p-8 border-b border-white/10 flex flex-col items-center justify-center gap-3">
           <Link href="/dashboard" className="flex flex-col items-center gap-2">
-            <img
+            <Image
               src="/img/logos/Logo_BN_SF.png"
               alt="Alma Fotografía Logo"
-              className="w-auto h-22 object-contain brightness-0 invert"
+              width={180}
+              height={132}
+              className="w-auto h-22 object-contain"
+              priority
+              quality={100}
             />
           </Link>
         </div>
@@ -199,10 +204,14 @@ export default function DashboardLayoutClient({ children, userName }) {
               {/* Header con logo y botón cerrar */}
               <div className="p-6 border-b border-white/10 flex items-center justify-between">
                 <div className="flex flex-col items-center gap-1">
-                  <img
+                  <Image
                     src="/img/logos/Logo_BN_SF.png"
                     alt="Alma Fotografía Logo"
-                    className="w-auto h-16 object-contain brightness-0 invert"
+                    width={150}
+                    height={110}
+                    className="w-auto h-16 object-contain"
+                    priority
+                    quality={100}
                   />
                 </div>
                 <button

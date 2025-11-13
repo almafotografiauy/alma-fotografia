@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/server';
 import { revalidatePath } from 'next/cache';
+import { deleteFolderFromCloudinary, deleteBatchFromCloudinary } from '@/lib/cloudinary';
 
 /**
  * ============================================
@@ -69,66 +70,72 @@ export async function archiveGalleries(galleryIds) {
 
 /**
  * Eliminar permanentemente múltiples galerías
- * 
+ *
+ * ESTRATEGIA FAIL-SAFE:
+ * - Si Cloudinary falla, NO elimina de BD (preserva registros)
+ * - Evita archivos huérfanos consumiendo espacio
+ * - Usuario puede reintentar la eliminación
+ *
  * ORDEN DE OPERACIONES:
  * 1. Eliminar carpetas completas de Cloudinary (galleries/{id}/)
  * 2. Eliminar portadas individuales (gallery-covers/)
- * 3. Eliminar registros de Supabase (CASCADE elimina fotos y shares)
- * 
- * NOTA: Si falla Cloudinary, igual elimina de BD (evita orphan records)
- * 
+ * 3. Solo si TODO Cloudinary fue exitoso → Eliminar de Supabase
+ *
+ * ATOMICIDAD:
+ * - O se elimina todo (Cloudinary + BD) o nada
+ * - Si falla en el medio, registros en BD quedan intactos
+ * - Permite reintentar sin perder referencias
+ *
  * @param {string[]} galleryIds - IDs de galerías a eliminar
  * @returns {Promise<{success: boolean, deletedFolders?: number, totalGalleries?: number, error?: string}>}
  */
 export async function deleteGalleries(galleryIds) {
   try {
     const supabase = await createClient();
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+
+    console.log(`🗑️ Iniciando eliminación de ${galleryIds.length} galerías...`);
 
     // ==========================================
     // PASO 1: Eliminar carpetas de Cloudinary
     // ==========================================
-    
+
     const deleteFolderPromises = galleryIds.map(async (galleryId) => {
       const folderPath = `galleries/${galleryId}`;
-      
-      try {
-        const response = await fetch(`${baseUrl}/api/cloudinary/delete-folder`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ folder: folderPath }),
-        });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.warn(`⚠️ No se pudo eliminar carpeta ${folderPath}:`, errorText);
-          return { galleryId, success: false };
-        }
-        
-        console.log(`✅ Carpeta eliminada: ${folderPath}`);
-        return { galleryId, success: true };
-      } catch (error) {
-        console.error(`❌ Error eliminando carpeta ${folderPath}:`, error);
-        return { galleryId, success: false };
+      // ✅ Llamar directamente a la función de Cloudinary (no fetch)
+      const result = await deleteFolderFromCloudinary(folderPath);
+
+      if (!result.success) {
+        console.error(`❌ Error eliminando carpeta ${folderPath}: ${result.error}`);
+        throw new Error(`No se pudo eliminar carpeta ${folderPath}: ${result.error}`);
       }
+
+      console.log(`✅ Carpeta eliminada: ${folderPath} (${result.deletedCount} archivos, ${result.iterations} iteraciones)`);
+
+      return {
+        galleryId,
+        success: true,
+        deletedCount: result.deletedCount,
+        iterations: result.iterations
+      };
     });
 
+    // Si CUALQUIER galería falla, se detiene todo con throw
     const deleteResults = await Promise.all(deleteFolderPromises);
-    const successCount = deleteResults.filter(r => r.success).length;
+    const totalFilesDeleted = deleteResults.reduce((sum, r) => sum + (r.deletedCount || 0), 0);
 
-    console.log(`📊 Cloudinary: ${successCount}/${galleryIds.length} carpetas eliminadas`);
+    console.log(`📊 Cloudinary: ${deleteResults.length}/${galleryIds.length} carpetas eliminadas (${totalFilesDeleted} archivos totales)`);
 
     // ==========================================
     // PASO 2: Eliminar portadas (gallery-covers)
     // ==========================================
-    
+
     const { data: galleries } = await supabase
       .from('galleries')
       .select('cover_image')
       .in('id', galleryIds);
 
     if (galleries && galleries.length > 0) {
-      // Extraer public_ids de portadas
       const coverPublicIds = galleries
         .filter(g => g.cover_image && g.cover_image.includes('gallery-covers'))
         .map(g => {
@@ -139,45 +146,57 @@ export async function deleteGalleries(galleryIds) {
         .filter(Boolean);
 
       if (coverPublicIds.length > 0) {
-        try {
-          await fetch(`${baseUrl}/api/cloudinary/delete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ publicIds: coverPublicIds }),
-          });
-          console.log(`🖼️ ${coverPublicIds.length} portadas eliminadas`);
-        } catch (error) {
-          console.error('⚠️ Error eliminando portadas:', error);
-          // No throw - continuar con la eliminación de BD
+        // ✅ Llamar directamente a la función de Cloudinary
+        const coverResult = await deleteBatchFromCloudinary(coverPublicIds);
+
+        if (!coverResult.success) {
+          console.error('❌ Error eliminando portadas:', coverResult.error);
+          throw new Error(`No se pudieron eliminar portadas: ${coverResult.error}`);
         }
+
+        console.log(`🖼️ ${coverPublicIds.length} portadas eliminadas de Cloudinary`);
       }
     }
 
     // ==========================================
     // PASO 3: Eliminar de Supabase
     // ==========================================
-    
+
+    // Solo llega aquí si TODO Cloudinary fue exitoso
+    console.log('💾 Eliminando registros de base de datos...');
+
     // ON DELETE CASCADE elimina automáticamente:
-    // - photos
-    // - gallery_shares
+    // - photos (todas las fotos de la galería)
+    // - gallery_shares (todos los enlaces compartidos)
     const { error: deleteError } = await supabase
       .from('galleries')
       .delete()
       .in('id', galleryIds);
 
-    if (deleteError) throw deleteError;
+    if (deleteError) {
+      console.error('❌ Error eliminando de BD:', deleteError);
+      throw new Error(`Error al eliminar de base de datos: ${deleteError.message}`);
+    }
 
-    // Revalidar caché
+    console.log('✅ Registros eliminados de base de datos');
+
+    // Revalidar caché para actualizar UI
     revalidatePath('/dashboard/galerias');
-    
-    return { 
-      success: true, 
-      deletedFolders: successCount,
-      totalGalleries: galleryIds.length 
+
+    return {
+      success: true,
+      deletedFolders: deleteResults.length,
+      totalGalleries: galleryIds.length,
+      totalFilesDeleted,
     };
+
   } catch (error) {
-    console.error('❌ Error deleting galleries:', error);
-    return { success: false, error: error.message };
+    console.error('❌ Error en deleteGalleries:', error.message);
+
+    return {
+      success: false,
+      error: `No se pudieron eliminar las galerías: ${error.message}. Los registros en la base de datos se preservaron para reintentar.`
+    };
   }
 }
 
