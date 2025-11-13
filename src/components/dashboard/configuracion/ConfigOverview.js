@@ -30,10 +30,10 @@ const quickActions = [
     title: 'Perfil',
     description: 'Información personal y contacto',
     href: '/dashboard/configuracion/perfil',
-    gradient: 'from-blue-50 to-indigo-50',
-    iconBg: 'bg-gradient-to-br from-blue-500 to-indigo-600',
+    gradient: 'from-stone-50 to-stone-100',
+    iconBg: 'bg-gradient-to-br from-[#A67C52] to-[#B8956A]',
     iconColor: 'text-white',
-    accentColor: 'text-blue-600',
+    accentColor: 'text-[#8B5A2F]',
     disabled: true
   },
   {
@@ -41,10 +41,10 @@ const quickActions = [
     title: 'Notificaciones',
     description: 'Preferencias de alertas',
     href: '/dashboard/configuracion/notificaciones',
-    gradient: 'from-purple-50 to-pink-50',
-    iconBg: 'bg-gradient-to-br from-purple-500 to-pink-600',
+    gradient: 'from-orange-50 to-amber-50',
+    iconBg: 'bg-gradient-to-br from-[#8B5A2F] to-[#A0713E]',
     iconColor: 'text-white',
-    accentColor: 'text-purple-600',
+    accentColor: 'text-[#79502A]',
     disabled: true
   },
   {
@@ -52,10 +52,10 @@ const quickActions = [
     title: 'Apariencia',
     description: 'Personaliza tu marca',
     href: '/dashboard/configuracion/apariencia',
-    gradient: 'from-pink-50 to-rose-50',
-    iconBg: 'bg-gradient-to-br from-pink-500 to-rose-600',
+    gradient: 'from-neutral-50 to-stone-50',
+    iconBg: 'bg-gradient-to-br from-[#6B4423] to-[#79502A]',
     iconColor: 'text-white',
-    accentColor: 'text-pink-600',
+    accentColor: 'text-[#6B4423]',
     disabled: true
   },
   {
@@ -63,10 +63,10 @@ const quickActions = [
     title: 'Seguridad',
     description: 'Contraseña y sesiones',
     href: '/dashboard/configuracion/seguridad',
-    gradient: 'from-red-50 to-orange-50',
-    iconBg: 'bg-gradient-to-br from-red-500 to-orange-600',
+    gradient: 'from-amber-50 to-orange-50',
+    iconBg: 'bg-gradient-to-br from-[#79502A] to-[#A67C52]',
     iconColor: 'text-white',
-    accentColor: 'text-red-600',
+    accentColor: 'text-[#79502A]',
     disabled: true
   },
   {
@@ -74,10 +74,10 @@ const quickActions = [
     title: 'Almacenamiento',
     description: 'Uso de espacio',
     href: '/dashboard/configuracion/almacenamiento',
-    gradient: 'from-emerald-50 to-teal-50',
-    iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-600',
+    gradient: 'from-stone-50 to-amber-50',
+    iconBg: 'bg-gradient-to-br from-[#B8956A] to-[#C4A576]',
     iconColor: 'text-white',
-    accentColor: 'text-emerald-600',
+    accentColor: 'text-[#8B5A2F]',
     disabled: true
   },
 ];
