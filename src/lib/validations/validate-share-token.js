@@ -27,9 +27,9 @@ export async function validateShareToken(token, galleryId) {
       .single();
 
     if (shareError || !share) {
-      return { 
-        valid: false, 
-        error: 'Token inválido o no encontrado' 
+      return {
+        valid: false,
+        error: 'Token inválido o no encontrado'
       };
     }
 
@@ -58,22 +58,20 @@ export async function validateShareToken(token, galleryId) {
       };
     }
 
-    // 4. Incrementar vistas (solo si es válido)
-    await supabase
+    // 4. Incrementar vistas en gallery_shares
+    const { error: updateError } = await supabase
       .from('gallery_shares')
-      .update({ 
+      .update({
         views_count: (share.views_count || 0) + 1,
-        last_accessed_at: new Date().toISOString(),
       })
       .eq('id', share.id);
 
-    // 5. Incrementar vistas en la galería también
-    await supabase.rpc('increment_gallery_views', { 
-      gallery_id: galleryId 
-    });
+    if (updateError) {
+      console.error('Error incrementing views:', updateError);
+    }
 
-    return { 
-      valid: true, 
+    return {
+      valid: true,
       share: {
         ...share,
         views_count: (share.views_count || 0) + 1,
@@ -130,20 +128,23 @@ export async function getGalleryWithToken(slug, token) {
     // 3. Si no es pública, validar token
     if (!gallery.is_public) {
       if (!token) {
-        return { 
-          success: false, 
-          error: 'Esta galería requiere un enlace válido' 
+        return {
+          success: false,
+          error: 'Esta galería requiere un enlace válido'
         };
       }
 
       const validation = await validateShareToken(token, gallery.id);
-      
+
       if (!validation.valid) {
-        return { 
-          success: false, 
-          error: validation.error 
+        return {
+          success: false,
+          error: validation.error
         };
       }
+    } else if (token) {
+      // Si es pública PERO tiene token, también incrementar vistas
+      await validateShareToken(token, gallery.id);
     }
 
     // 4. Obtener fotos

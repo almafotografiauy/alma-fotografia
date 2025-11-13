@@ -151,8 +151,16 @@ export async function generateMetadata({ params, searchParams }) {
       openGraph: {
         title: gallery.title,
         description: gallery.description || 'Galería de fotos profesionales',
-        images: gallery.cover_image ? [gallery.cover_image] : [],
+        images: gallery.cover_image ? [
+          {
+            url: gallery.cover_image,
+            width: 1200,
+            height: 630,
+            alt: `${gallery.title} - Portada`,
+          }
+        ] : [],
         type: 'website',
+        siteName: 'Alma Fotografía',
       },
       twitter: {
         card: 'summary_large_image',
