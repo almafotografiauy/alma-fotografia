@@ -769,6 +769,20 @@ export default function GalleryDetailView({ gallery }) {
   const endIdx = startIdx + PHOTOS_PER_PAGE;
   const photosToShow = workingPhotos.slice(startIdx, endIdx);
 
+  // Si está eliminando, mostrar solo el overlay para evitar flash de 404
+  if (deletingGallery) {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-3 shadow-2xl max-w-sm mx-4">
+          <Loader2 size={32} className="text-red-600 animate-spin" />
+          <p className="font-fira text-sm text-black/80 text-center">
+            Eliminando galería y todos sus archivos...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
       <div className="max-w-[2000px] mx-auto">
@@ -1326,20 +1340,6 @@ export default function GalleryDetailView({ gallery }) {
             <Loader2 size={32} className="text-[#79502A] animate-spin" />
             <p className="font-fira text-sm text-black font-medium">
               Subiendo portada...
-            </p>
-          </div>
-        </div>
-      )}
-
-      {deletingGallery && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-3 shadow-2xl max-w-sm mx-4">
-            <Loader2 size={32} className="text-red-600 animate-spin" />
-            <p className="font-fira text-sm text-black font-medium text-center">
-              Eliminando galería y todas sus fotos...
-            </p>
-            <p className="font-fira text-xs text-gray-500 text-center">
-              Esto puede tardar unos segundos
             </p>
           </div>
         </div>

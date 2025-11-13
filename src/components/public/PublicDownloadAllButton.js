@@ -121,19 +121,22 @@ export default function PublicDownloadAllButton({ photos, galleryTitle }) {
                             throw new Error('Archivo vacío');
                         }
 
-                        // Extraer nombre del archivo
-                        let filename = `foto_${String(index + 1).padStart(4, '0')}.jpg`;
+                        // Extraer y formatear nombre amigable del archivo
+                        let filename = photo.file_name || `foto_${String(index + 1).padStart(4, '0')}.jpg`;
 
-                        try {
-                            const url = new URL(photoUrl);
-                            const pathParts = url.pathname.split('/');
-                            const lastPart = pathParts[pathParts.length - 1];
-                            if (lastPart) {
-                                filename = lastPart;
-                            }
-                        } catch (e) {
-                            // Usar nombre por defecto
-                        }
+                        // Remover extensión
+                        filename = filename.replace(/\.(jpg|jpeg|png|webp|gif)$/i, '');
+
+                        // Convertir a formato amigable: "nombre-galeria-foto-001" → "Nombre Galeria - Foto 001"
+                        filename = filename
+                            .split('-')
+                            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                            .join(' ')
+                            .replace(/ Foto /, ' - Foto ');
+
+                        // Determinar extensión (JPG por defecto, PNG si corresponde)
+                        const extension = blob.type === 'image/png' ? '.png' : '.jpg';
+                        filename += extension;
 
                         // Agregar al ZIP
                         zip.file(filename, blob);

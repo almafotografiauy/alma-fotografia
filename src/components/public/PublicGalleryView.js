@@ -118,7 +118,7 @@ export default function PublicGalleryView({ gallery, token }) {
         }
       }
 
-      // ✅ Determinar nombre con extensión correcta
+      // ✅ Determinar nombre amigable para descarga
       let fileName = photo.file_name;
 
       if (!fileName) {
@@ -132,6 +132,13 @@ export default function PublicGalleryView({ gallery, token }) {
 
       // Remover cualquier extensión existente
       fileName = fileName.replace(/\.(jpg|jpeg|png|webp|gif)$/i, '');
+
+      // ✅ Convertir a formato amigable: "nombre-galeria-foto-001" → "Nombre Galeria - Foto 001"
+      fileName = fileName
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+        .replace(/ Foto /, ' - Foto ');
 
       // Agregar extensión correcta
       fileName += isPNG ? '.png' : '.jpg';
