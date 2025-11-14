@@ -68,10 +68,6 @@ export const gallerySchema = z.object({
         .optional()
         .or(z.literal('')),
 
-    // Nuevo: Notificaciones
-    notifyOnView: z.boolean(),
-    notifyOnFavorites: z.boolean(),
-
     password: z
         .string()
         .min(4, 'La contraseña debe tener al menos 4 caracteres')
