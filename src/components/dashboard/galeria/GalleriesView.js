@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -61,6 +61,11 @@ export default function GalleriesView({ galleries, serviceTypes }) {
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Refs para prevenir dobles llamadas (useRef persiste durante Fast Refresh)
+  const isArchivingRef = useRef(false);
+  const isRestoringRef = useRef(false);
+  const isDeletingRef = useRef(false);
 
   // Filtrar galerías
   const filteredGalleries = useMemo(() => {
@@ -212,41 +217,74 @@ export default function GalleriesView({ galleries, serviceTypes }) {
   }, [selectedGalleries, filteredGalleries]);
 
   const handleBatchArchive = async () => {
-    const ids = Array.from(selectedGalleries);
-    const result = await archiveGalleries(ids);
+    if (isArchivingRef.current) {
+      return;
+    }
 
-    if (result.success) {
-      setSelectedGalleries(new Set());
-      setSelectionMode(false);
-      router.refresh();
-    } else {
-      alert('Error al archivar galerías: ' + result.error);
+    isArchivingRef.current = true;
+
+    try {
+      const ids = Array.from(selectedGalleries);
+      const result = await archiveGalleries(ids);
+
+      if (result.success) {
+        setSelectedGalleries(new Set());
+        setSelectionMode(false);
+        router.refresh();
+      } else {
+        console.error('[handleBatchArchive] Error:', result.error);
+        alert('Error al archivar galerías: ' + result.error);
+      }
+    } finally {
+      isArchivingRef.current = false;
     }
   };
 
   const handleBatchRestore = async () => {
-    const ids = Array.from(selectedGalleries);
-    const result = await restoreGalleries(ids);
+    if (isRestoringRef.current) {
+      return;
+    }
 
-    if (result.success) {
-      setSelectedGalleries(new Set());
-      setSelectionMode(false);
-      router.refresh();
-    } else {
-      alert('Error al restaurar galerías: ' + result.error);
+    isRestoringRef.current = true;
+
+    try {
+      const ids = Array.from(selectedGalleries);
+      const result = await restoreGalleries(ids);
+
+      if (result.success) {
+        setSelectedGalleries(new Set());
+        setSelectionMode(false);
+        router.refresh();
+      } else {
+        console.error('[handleBatchRestore] Error:', result.error);
+        alert('Error al restaurar galerías: ' + result.error);
+      }
+    } finally {
+      isRestoringRef.current = false;
     }
   };
 
   const handleBatchDelete = async () => {
-    const ids = Array.from(selectedGalleries);
-    const result = await deleteGalleries(ids);
+    if (isDeletingRef.current) {
+      return;
+    }
 
-    if (result.success) {
-      setSelectedGalleries(new Set());
-      setSelectionMode(false);
-      router.refresh();
-    } else {
-      alert('Error al eliminar galerías: ' + result.error);
+    isDeletingRef.current = true;
+
+    try {
+      const ids = Array.from(selectedGalleries);
+      const result = await deleteGalleries(ids);
+
+      if (result.success) {
+        setSelectedGalleries(new Set());
+        setSelectionMode(false);
+        router.refresh();
+      } else {
+        console.error('[handleBatchDelete] Error:', result.error);
+        alert('Error al eliminar galerías: ' + result.error);
+      }
+    } finally {
+      isDeletingRef.current = false;
     }
   };
 

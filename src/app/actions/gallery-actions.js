@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/server';
 import { revalidatePath } from 'next/cache';
 import { deleteFolderFromCloudinary, deleteBatchFromCloudinary, deleteFromCloudinary } from '@/lib/cloudinary';
+import { notifyGalleryArchived, notifyGalleryDeleted, notifyGalleryRestored } from '@/lib/notifications/notification-helpers';
 
 /**
  * ============================================
@@ -36,6 +37,12 @@ export async function archiveGalleries(galleryIds) {
   try {
     const supabase = await createClient();
 
+    // Obtener el usuario actual
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
+
     // Archivar galerías
     const { error: archiveError } = await supabase
       .from('galleries')
@@ -51,15 +58,23 @@ export async function archiveGalleries(galleryIds) {
       .in('gallery_id', galleryIds);
 
     if (linksError) {
-      console.error('⚠️ Error desactivando enlaces:', linksError);
-      // No throw - la galería se archivó correctamente
+      console.error('[archiveGalleries] Error desactivando enlaces:', linksError);
+    }
+
+    // Enviar notificaciones para cada galería archivada
+    for (const galleryId of galleryIds) {
+      try {
+        await notifyGalleryArchived(galleryId, user.id);
+      } catch (notifyError) {
+        console.error(`[archiveGalleries] Error en notificación para ${galleryId}:`, notifyError);
+      }
     }
 
     revalidatePath('/dashboard/galerias');
-    
+
     return { success: true };
   } catch (error) {
-    console.error('❌ Error archiving galleries:', error);
+    console.error('[archiveGalleries] Error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -99,6 +114,27 @@ export async function deleteGalleries(galleryIds) {
     const supabase = await createClient();
 
     console.log(`🗑️ Iniciando eliminación de ${galleryIds.length} galerías...`);
+
+    // ==========================================
+    // PASO 0: Obtener info de galerías para notificaciones
+    // ==========================================
+
+    console.log('📋 Obteniendo información de galerías...');
+    const { data: galleries, error: galleriesError } = await supabase
+      .from('galleries')
+      .select('id, title, created_by')
+      .in('id', galleryIds);
+
+    if (galleriesError) {
+      console.error('❌ Error obteniendo galerías:', galleriesError);
+      throw new Error(`Error al obtener galerías: ${galleriesError.message}`);
+    }
+
+    // Guardar info para notificaciones (antes de eliminar)
+    const galleryInfoForNotifications = galleries.map(g => ({
+      title: g.title,
+      userId: g.created_by
+    }));
 
     // ==========================================
     // PASO 1: Obtener todas las fotos
@@ -207,13 +243,13 @@ export async function deleteGalleries(galleryIds) {
     // PASO 5: Eliminar portadas (gallery-covers)
     // ==========================================
 
-    const { data: galleries } = await supabase
+    const { data: galleriesWithCovers } = await supabase
       .from('galleries')
       .select('cover_image')
       .in('id', galleryIds);
 
-    if (galleries && galleries.length > 0) {
-      const coverPublicIds = galleries
+    if (galleriesWithCovers && galleriesWithCovers.length > 0) {
+      const coverPublicIds = galleriesWithCovers
         .filter(g => g.cover_image && g.cover_image.includes('gallery-covers'))
         .map(g => {
           // Regex: https://res.cloudinary.com/.../v1234/PUBLIC_ID.format
@@ -271,6 +307,20 @@ export async function deleteGalleries(galleryIds) {
 
     console.log('✅ Galerías eliminadas de base de datos');
 
+    // ==========================================
+    // PASO 8: Enviar notificaciones
+    // ==========================================
+
+    console.log(`📧 Enviando notificaciones para ${galleryInfoForNotifications.length} galerías eliminadas...`);
+    for (const galleryInfo of galleryInfoForNotifications) {
+      try {
+        await notifyGalleryDeleted(galleryInfo.title, galleryInfo.userId);
+      } catch (notifyError) {
+        console.error(`Error enviando notificación para galería "${galleryInfo.title}":`, notifyError);
+        // Continuar con las demás
+      }
+    }
+
     // Revalidar caché para actualizar UI
     revalidatePath('/dashboard/galerias');
 
@@ -310,12 +360,29 @@ export async function restoreGalleries(galleryIds) {
   try {
     const supabase = await createClient();
 
+    // Obtener el usuario actual
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
+
     const { error } = await supabase
       .from('galleries')
       .update({ archived_at: null })
       .in('id', galleryIds);
 
     if (error) throw error;
+
+    // Enviar notificaciones para cada galería restaurada
+    console.log(`📧 Enviando notificaciones para ${galleryIds.length} galerías restauradas...`);
+    for (const galleryId of galleryIds) {
+      try {
+        await notifyGalleryRestored(galleryId, user.id);
+      } catch (notifyError) {
+        console.error(`Error enviando notificación para galería ${galleryId}:`, notifyError);
+        // Continuar con las demás
+      }
+    }
 
     revalidatePath('/dashboard/galerias');
 

@@ -24,6 +24,7 @@ import { useRouter } from 'next/navigation';
 export default function NotificationSettings() {
   const router = useRouter();
   const [preferences, setPreferences] = useState({
+    email_enabled: true,
     email_on_gallery_view: false,
     email_on_favorites: false,
     email_on_link_expiring: true,
@@ -31,6 +32,7 @@ export default function NotificationSettings() {
     email_on_new_gallery: false,
     email_on_link_deactivated: false,
     email_on_gallery_archived: false,
+    email_on_gallery_restored: false,
     email_on_gallery_deleted: true,
     inapp_enabled: true,
     notification_email: '',
@@ -66,6 +68,7 @@ export default function NotificationSettings() {
 
       if (data) {
         setPreferences({
+          email_enabled: data.email_enabled ?? true,
           email_on_gallery_view: data.email_on_gallery_view || false,
           email_on_favorites: data.email_on_favorites || false,
           email_on_link_expiring: data.email_on_link_expiring ?? true,
@@ -73,6 +76,7 @@ export default function NotificationSettings() {
           email_on_new_gallery: data.email_on_new_gallery || false,
           email_on_link_deactivated: data.email_on_link_deactivated || false,
           email_on_gallery_archived: data.email_on_gallery_archived || false,
+          email_on_gallery_restored: data.email_on_gallery_restored || false,
           email_on_gallery_deleted: data.email_on_gallery_deleted ?? true,
           inapp_enabled: data.inapp_enabled ?? true,
           notification_email: data.notification_email || '',
@@ -110,12 +114,31 @@ export default function NotificationSettings() {
         return;
       }
 
+      // Preparar datos para actualizar (solo los campos que existen en la tabla)
+      const updateData = {
+        email_enabled: preferences.email_enabled,
+        email_on_gallery_view: preferences.email_on_gallery_view,
+        email_on_favorites: preferences.email_on_favorites,
+        email_on_link_expiring: preferences.email_on_link_expiring,
+        email_on_link_expired: preferences.email_on_link_expired,
+        email_on_new_gallery: preferences.email_on_new_gallery,
+        email_on_link_deactivated: preferences.email_on_link_deactivated,
+        email_on_gallery_archived: preferences.email_on_gallery_archived,
+        email_on_gallery_restored: preferences.email_on_gallery_restored,
+        email_on_gallery_deleted: preferences.email_on_gallery_deleted,
+        inapp_enabled: preferences.inapp_enabled,
+        notification_email: preferences.notification_email,
+      };
+
       const { error } = await supabase
         .from('notification_preferences')
-        .update(preferences)
+        .update(updateData)
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[NotificationSettings] Error de Supabase:', error);
+        throw error;
+      }
 
       setMessage({
         type: 'success',
@@ -127,10 +150,11 @@ export default function NotificationSettings() {
         router.back();
       }, 1000);
     } catch (err) {
-      console.error('Error saving preferences:', err);
+      console.error('❌ Error saving preferences:', err);
+      console.error('❌ Error completo:', JSON.stringify(err, null, 2));
       setMessage({
         type: 'error',
-        text: 'Error al guardar las preferencias',
+        text: `Error al guardar: ${err.message || JSON.stringify(err)}`,
       });
     } finally {
       setIsSaving(false);
@@ -196,6 +220,12 @@ export default function NotificationSettings() {
       description: 'Te avisaremos cuando una galería sea archivada',
     },
     {
+      key: 'email_on_gallery_restored',
+      icon: Archive,
+      title: 'Cuando restaures una galería archivada',
+      description: 'Te confirmaremos cuando vuelvas a activar una galería archivada',
+    },
+    {
       key: 'email_on_gallery_deleted',
       icon: Trash2,
       title: 'Cuando elimines una galería',
@@ -251,17 +281,32 @@ export default function NotificationSettings() {
           <label className="block font-fira text-sm font-medium text-black">
             Email para recibir notificaciones
           </label>
-          <input
-            type="email"
-            value={preferences.notification_email}
-            onChange={(e) => handleChange('notification_email', e.target.value)}
-            placeholder="tu-email@ejemplo.com"
-            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg font-fira text-sm text-black
-              focus:outline-none focus:ring-2 focus:ring-[#C6A97D]/40 focus:border-[#79502A] transition-all
-              hover:border-gray-300"
-          />
+          <div className="flex gap-3 items-center">
+            <input
+              type="email"
+              value={preferences.notification_email}
+              onChange={(e) => handleChange('notification_email', e.target.value)}
+              placeholder="tu-email@ejemplo.com"
+              className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-lg font-fira text-sm text-black
+                focus:outline-none focus:ring-2 focus:ring-[#C6A97D]/40 focus:border-[#79502A] transition-all
+                hover:border-gray-300"
+            />
+            <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={preferences.email_enabled}
+                onChange={() => handleChange('email_enabled')}
+                className="w-5 h-5 text-[#79502A] border-gray-300 rounded focus:ring-[#79502A] cursor-pointer"
+              />
+              <span className="font-fira text-sm font-medium text-black">
+                Habilitar emails
+              </span>
+            </label>
+          </div>
           <p className="font-fira text-xs text-gray-500">
-            Todas las notificaciones por email seleccionadas abajo se enviarán a este correo
+            {preferences.email_enabled
+              ? 'Los emails están habilitados. Las notificaciones seleccionadas abajo se enviarán a este correo.'
+              : 'Los emails están deshabilitados. No se enviará ningún email aunque estén marcadas las opciones.'}
           </p>
         </div>
 
