@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MessageSquare, Star, Send, Loader2, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createTestimonial } from '@/app/actions/testimonial-actions';
+import { createTestimonial, checkClientTestimonial } from '@/app/actions/testimonial-actions';
 
 /**
  * TestimonialForm - Formulario para dejar testimonios
@@ -28,6 +28,30 @@ export default function TestimonialForm({ galleryId, galleryTitle, clientEmail: 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [isCheckingExisting, setIsCheckingExisting] = useState(true);
+
+  // Verificar al cargar si el cliente ya envió un testimonio
+  useEffect(() => {
+    const checkExistingTestimonial = async () => {
+      if (!initialEmail || !galleryId) {
+        setIsCheckingExisting(false);
+        return;
+      }
+
+      try {
+        const result = await checkClientTestimonial(galleryId, initialEmail);
+        if (result.success && result.hasTestimonial) {
+          setSubmitSuccess(true);
+        }
+      } catch (error) {
+        console.error('Error checking testimonial:', error);
+      } finally {
+        setIsCheckingExisting(false);
+      }
+    };
+
+    checkExistingTestimonial();
+  }, [galleryId, initialEmail]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -88,8 +112,14 @@ export default function TestimonialForm({ galleryId, galleryTitle, clientEmail: 
   return (
     <section className={compact ? "" : "bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8"}>
       <div className="max-w-2xl mx-auto">
-        {/* Mensaje de agradecimiento permanente después de enviar */}
-        {submitSuccess ? (
+        {/* Loading mientras verifica si ya envió testimonio */}
+        {isCheckingExisting ? (
+          <div className="text-center py-8">
+            <Loader2 size={32} className="animate-spin text-[#79502A] mx-auto" />
+            <p className="font-fira text-sm text-gray-500 mt-3">Verificando...</p>
+          </div>
+        ) : submitSuccess ? (
+          /* Mensaje de agradecimiento permanente después de enviar */
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}

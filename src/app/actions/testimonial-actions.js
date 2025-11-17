@@ -127,6 +127,41 @@ export async function createTestimonial({ galleryId, clientName, clientEmail, me
 }
 
 /**
+ * Verificar si un cliente ya envió testimonio para una galería
+ *
+ * @param {string} galleryId - ID de la galería
+ * @param {string} clientEmail - Email del cliente
+ * @returns {Promise<{success: boolean, hasTestimonial: boolean, error?: string}>}
+ */
+export async function checkClientTestimonial(galleryId, clientEmail) {
+  try {
+    if (!galleryId || !clientEmail) {
+      return { success: false, hasTestimonial: false, error: 'Missing parameters' };
+    }
+
+    const supabase = await createClient();
+    const normalizedEmail = clientEmail.toLowerCase().trim();
+
+    const { data, error } = await supabase
+      .from('testimonials')
+      .select('id')
+      .eq('gallery_id', galleryId)
+      .eq('client_email', normalizedEmail)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      hasTestimonial: !!data,
+    };
+  } catch (error) {
+    console.error('[checkClientTestimonial] Error:', error);
+    return { success: false, hasTestimonial: false, error: error.message };
+  }
+}
+
+/**
  * Obtener testimonios de una galería
  *
  * @param {string} galleryId - ID de la galería
