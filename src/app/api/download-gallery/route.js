@@ -79,11 +79,15 @@ export async function GET(request) {
       const photo = photos[i];
       const url = photo.file_path;
 
-      // Obtener la versión de máxima calidad de Cloudinary
+      // Generar nombre coherente: slug-galeria-001.jpg (siempre JPG)
+      const paddedNumber = String(i + 1).padStart(3, '0');
+      const fileName = `${gallery.slug || 'galeria'}-${paddedNumber}.jpg`;
+
+      // Obtener la versión de máxima calidad de Cloudinary en formato JPG
       let downloadUrl = url;
       if (url.includes('cloudinary.com')) {
-        // Reemplazar transformaciones para obtener imagen original
-        downloadUrl = url.replace(/\/upload\/.*?\//g, '/upload/');
+        // Forzar formato JPG con máxima calidad (q_100)
+        downloadUrl = url.replace(/\/upload\/.*?\//g, '/upload/f_jpg,q_100/');
       }
 
       try {
@@ -95,11 +99,6 @@ export async function GET(request) {
         }
 
         const arrayBuffer = await response.arrayBuffer();
-
-        // Generar nombre coherente: slug-galeria-001.jpg
-        const paddedNumber = String(i + 1).padStart(3, '0');
-        const extension = photo.file_name ? photo.file_name.split('.').pop() : 'jpg';
-        const fileName = `${gallery.slug || 'galeria'}-${paddedNumber}.${extension}`;
 
         // Agregar al ZIP
         folder.file(fileName, arrayBuffer);

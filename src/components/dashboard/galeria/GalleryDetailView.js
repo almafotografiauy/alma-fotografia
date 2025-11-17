@@ -167,7 +167,6 @@ export default function GalleryDetailView({ gallery }) {
   const [serviceName, setServiceName] = useState(null);
   const [coverImageSize, setCoverImageSize] = useState(0);
   const [favoritesCount, setFavoritesCount] = useState(null);
-  const [showPin, setShowPin] = useState(false);
   const { modalState, showModal, closeModal } = useModal();
 
   // Sensores para drag & drop (desktop + mobile) - OPTIMIZADO PARA MOBILE
@@ -853,13 +852,21 @@ export default function GalleryDetailView({ gallery }) {
                   )}
 
                   {/* Configuraciones activas */}
-                  {(allow_downloads || allow_comments || password || max_favorites !== 150 || download_pin) && (
+                  {(allow_downloads || allow_comments || password || max_favorites !== 150) && (
                     <div className="flex flex-wrap gap-1.5 mb-3">
                       {allow_downloads && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#af7c4b] text-black rounded-full font-fira text-[10px] font-medium">
-                          <Download size={10} />
-                          Descargas
-                        </span>
+                        <>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#af7c4b] text-black rounded-full font-fira text-[10px] font-medium">
+                            <Download size={10} />
+                            Descargas
+                          </span>
+                          {download_pin && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#b8824f] text-black rounded-full font-fira text-[10px] font-medium">
+                              <Lock size={10} />
+                              PIN: {download_pin}
+                            </span>
+                          )}
+                        </>
                       )}
                       {allow_comments && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#89613B] text-black rounded-full font-fira text-[10px] font-medium">
@@ -878,24 +885,6 @@ export default function GalleryDetailView({ gallery }) {
                           <Star size={10} />
                           Máx {max_favorites} favoritos
                         </span>
-                      )}
-                      {download_pin && (
-                        <div className="relative">
-                          <button
-                            onMouseEnter={() => setShowPin(true)}
-                            onMouseLeave={() => setShowPin(false)}
-                            onClick={() => setShowPin(!showPin)}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#b8824f] text-black rounded-full font-fira text-[10px] font-medium cursor-pointer hover:bg-[#c8925f] transition-colors"
-                          >
-                            <Lock size={10} />
-                            Con PIN de descarga
-                          </button>
-                          {showPin && (
-                            <div className="absolute z-10 left-0 top-full mt-1 px-3 py-2 bg-black text-white rounded-lg font-fira text-xs font-bold shadow-lg whitespace-nowrap">
-                              PIN: {download_pin}
-                            </div>
-                          )}
-                        </div>
                       )}
                     </div>
                   )}

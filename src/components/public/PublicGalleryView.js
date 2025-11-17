@@ -633,25 +633,34 @@ export default function PublicGalleryView({ gallery, token }) {
     try {
       const url = photo.file_path;
 
-      // Si es URL de Cloudinary, obtener la versión de máxima calidad
-      let downloadUrl = url;
-      if (url.includes('cloudinary.com')) {
-        // Reemplazar transformaciones para obtener imagen original
-        downloadUrl = url.replace(/\/upload\/.*?\//g, '/upload/fl_attachment/');
-      }
-
       // Generar nombre coherente: slug-galeria-001.jpg
       const paddedNumber = String(photoIndex + 1).padStart(3, '0');
-      const extension = photo.file_name ? photo.file_name.split('.').pop() : 'jpg';
-      const fileName = `${slug || 'galeria'}-${paddedNumber}.${extension}`;
+      const fileName = `${slug || 'galeria'}-${paddedNumber}.jpg`;
+
+      // Si es URL de Cloudinary, forzar formato JPG y máxima calidad
+      let downloadUrl = url;
+      if (url.includes('cloudinary.com')) {
+        // Forzar formato JPG con máxima calidad
+        downloadUrl = url.replace(/\/upload\/.*?\//g, '/upload/f_jpg,q_100,fl_attachment/');
+      }
+
+      // Fetchear la imagen y crear blob para forzar nombre de archivo
+      const response = await fetch(downloadUrl);
+      const blob = await response.blob();
+
+      // Crear URL del blob
+      const blobUrl = window.URL.createObjectURL(blob);
 
       // Crear elemento 'a' temporal para forzar descarga
       const link = document.createElement('a');
-      link.href = downloadUrl;
+      link.href = blobUrl;
       link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      // Liberar memoria
+      window.URL.revokeObjectURL(blobUrl);
 
       showToast({
         message: 'Descargando foto...',
