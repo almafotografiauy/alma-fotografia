@@ -703,30 +703,30 @@ export default function PublicGalleryView({ gallery, token }) {
             headerSticky ? 'fixed top-0' : 'relative'
           } left-0 right-0 z-40 bg-white`}
         >
-          <div className="px-6 py-4 flex items-center justify-between">
+          <div className="px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
             {/* Título + Alma */}
-            <div>
-              <h2 className="font-voga text-xl md:text-2xl text-black">
+            <div className="flex-shrink min-w-0">
+              <h2 className="font-voga text-base sm:text-xl md:text-2xl text-black truncate">
                 {title}
               </h2>
-              <p className="text-[10px] md:text-xs text-black/40 tracking-widest uppercase font-light">
+              <p className="text-[9px] sm:text-[10px] md:text-xs text-black/40 tracking-widest uppercase font-light">
                 Alma Fotografía
               </p>
             </div>
 
             {/* Acciones */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
               <button
                 onClick={() => setShowShareModal(true)}
-                className="p-2 hover:bg-black/5 rounded-full transition-colors"
+                className="p-1.5 sm:p-2 hover:bg-black/5 rounded-full transition-colors"
                 title="Compartir"
               >
-                <Share2 size={18} strokeWidth={1.5} className="text-black/70" />
+                <Share2 size={16} className="text-black/70 sm:w-[18px] sm:h-[18px]" strokeWidth={1.5} />
               </button>
 
               <button
                 onClick={toggleSlideshow}
-                className="p-2 hover:bg-black/5 rounded-full transition-colors"
+                className="p-1.5 sm:p-2 hover:bg-black/5 rounded-full transition-colors hidden sm:flex"
                 title={isSlideshow ? "Pausar presentación" : "Iniciar presentación"}
               >
                 {isSlideshow ? (
@@ -739,12 +739,12 @@ export default function PublicGalleryView({ gallery, token }) {
               {customMessage && (
                 <button
                   onClick={handleOpenMessage}
-                  className="relative p-2 hover:bg-black/5 rounded-full transition-colors"
+                  className="relative p-1.5 sm:p-2 hover:bg-black/5 rounded-full transition-colors"
                   title="Mensaje del fotógrafo"
                 >
-                  <MessageSquare size={18} strokeWidth={1.5} className="text-black/70" />
+                  <MessageSquare size={16} strokeWidth={1.5} className="text-black/70 sm:w-[18px] sm:h-[18px]" />
                   {!hasSeenMessage && (
-                    <span className="absolute -top-1 -right-1 bg-[#79502A] w-2.5 h-2.5 rounded-full" />
+                    <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-[#79502A] w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full" />
                   )}
                 </button>
               )}
@@ -756,16 +756,16 @@ export default function PublicGalleryView({ gallery, token }) {
                       setShowEmailPrompt(true);
                     }
                   }}
-                  className="relative p-2 hover:bg-black/5 rounded-full transition-colors"
+                  className="relative p-1.5 sm:p-2 hover:bg-black/5 rounded-full transition-colors"
                   title="Mis favoritas"
                 >
                   <Heart
-                    size={18}
+                    size={16}
                     strokeWidth={1.5}
-                    className={favoritePhotoIds.length > 0 ? 'fill-rose-500 text-rose-500' : 'text-black/70'}
+                    className={`${favoritePhotoIds.length > 0 ? 'fill-rose-500 text-rose-500' : 'text-black/70'} sm:w-[18px] sm:h-[18px]`}
                   />
                   {favoritePhotoIds.length > 0 && (
-                    <span className="absolute -top-2 -right-1 bg-rose-500 text-white text-[9px] font-semibold rounded-full px-1.5 py-0.5 flex items-center justify-center whitespace-nowrap">
+                    <span className="absolute -top-2 -right-2 sm:-right-1 bg-rose-500 text-white text-[8px] sm:text-[9px] font-semibold rounded-full px-1 sm:px-1.5 py-0.5 flex items-center justify-center whitespace-nowrap leading-none">
                       {favoritePhotoIds.length}/{maxFavorites}
                     </span>
                   )}
@@ -775,24 +775,23 @@ export default function PublicGalleryView({ gallery, token }) {
               {allowDownloads && (
                 <button
                   onClick={() => setShowDownloadModal(true)}
-                  className="p-2 hover:bg-black/5 rounded-full transition-colors"
+                  className="p-1.5 sm:p-2 hover:bg-black/5 rounded-full transition-colors"
                   title="Descargar"
                 >
-                  <Download size={18} strokeWidth={1.5} className="text-black/70" />
+                  <Download size={16} strokeWidth={1.5} className="text-black/70 sm:w-[18px] sm:h-[18px]" />
                 </button>
               )}
 
               {allowComments && (
                 <motion.button
                   onClick={() => setShowTestimonialModal(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-transparent border border-[#79502A] hover:bg-[#79502A]/5 text-[#79502A] rounded-full transition-all"
+                  className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-transparent border border-[#79502A] hover:bg-[#79502A]/5 text-[#79502A] rounded-full transition-all"
                   title="Dejar testimonio"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Star size={16} strokeWidth={0.5} className="fill-yellow-400 text-black" />
-                  <span className="font-fira text-xs font-semibold hidden sm:inline">Dejar Testimonio</span>
-                  <span className="font-fira text-xs font-semibold sm:hidden">Testimonio</span>
+                  <Star size={14} strokeWidth={0.5} className="fill-yellow-400 text-black sm:w-4 sm:h-4" />
+                  <span className="font-fira text-[10px] sm:text-xs font-semibold">Testimonio</span>
                 </motion.button>
               )}
             </div>
@@ -825,7 +824,7 @@ export default function PublicGalleryView({ gallery, token }) {
 
       {/* ===== SECCIÓN DE TESTIMONIOS ===== */}
       {allowComments && clientEmail && (
-        <div className="px-6 py-16">
+        <div className="px-4 sm:px-6 py-10 sm:py-16">
           <div className="max-w-4xl mx-auto">
             <TestimonialForm
               galleryId={galleryId}
@@ -851,26 +850,26 @@ export default function PublicGalleryView({ gallery, token }) {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-lg bg-white rounded-sm shadow-2xl z-50 p-8"
+              className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-lg bg-white rounded-sm shadow-2xl z-50 p-5 sm:p-8"
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-50 rounded-lg">
-                    <MessageSquare size={24} className="text-blue-600" strokeWidth={1.5} />
+              <div className="flex items-start sm:items-center justify-between mb-3 sm:mb-4 gap-2">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="p-1.5 sm:p-2 bg-blue-50 rounded-lg flex-shrink-0">
+                    <MessageSquare size={20} className="text-blue-600 sm:w-6 sm:h-6" strokeWidth={1.5} />
                   </div>
-                  <h2 className="font-serif text-2xl text-black" style={{ fontFamily: 'Cormorant Garamond, serif' }}>
+                  <h2 className="font-serif text-lg sm:text-2xl text-black" style={{ fontFamily: 'Cormorant Garamond, serif' }}>
                     Mensaje del fotógrafo
                   </h2>
                 </div>
                 <button
                   onClick={() => setShowMessageModal(false)}
-                  className="p-1 hover:bg-black/5 rounded-full transition-colors"
+                  className="p-1 hover:bg-black/5 rounded-full transition-colors flex-shrink-0"
                 >
-                  <X size={20} strokeWidth={1.5} className="text-black/60" />
+                  <X size={18} strokeWidth={1.5} className="text-black/60 sm:w-5 sm:h-5" />
                 </button>
               </div>
 
-              <p className="font-fira text-base text-black leading-relaxed">
+              <p className="font-fira text-sm sm:text-base text-black leading-relaxed">
                 "{customMessage}"
               </p>
             </motion.div>

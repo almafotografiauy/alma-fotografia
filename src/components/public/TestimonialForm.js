@@ -87,18 +87,18 @@ export default function TestimonialForm({ galleryId, galleryTitle, clientEmail: 
   };
 
   return (
-    <section className="bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-2xl p-6 md:p-8">
+    <section className="bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-gradient-to-br from-[#79502A] to-[#8B5A2F] rounded-xl">
-            <Star size={24} className="text-yellow-300 fill-yellow-300" />
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <div className="p-2 sm:p-3 bg-gradient-to-br from-[#79502A] to-[#8B5A2F] rounded-lg sm:rounded-xl flex-shrink-0">
+            <Star size={20} className="text-yellow-300 fill-yellow-300 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <h2 className="font-voga text-2xl md:text-3xl text-black">
+          <div className="min-w-0">
+            <h2 className="font-voga text-xl sm:text-2xl md:text-3xl text-black">
               Comparte tu Experiencia
             </h2>
-            <p className="font-fira text-sm text-gray-600 mt-1">
+            <p className="font-fira text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1">
               Tu opinión es muy importante para nosotros
             </p>
           </div>
@@ -111,9 +111,9 @@ export default function TestimonialForm({ galleryId, galleryTitle, clientEmail: 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mb-6 p-4 bg-green-50 border-2 border-green-300 rounded-xl flex items-start gap-3"
+              className="mb-4 sm:mb-6 p-3 sm:p-4 bg-green-50 border-2 border-green-300 rounded-lg sm:rounded-xl flex items-start gap-2 sm:gap-3"
             >
-              <CheckCircle2 size={24} className="text-green-600 flex-shrink-0 mt-0.5" />
+              <CheckCircle2 size={20} className="text-green-600 flex-shrink-0 mt-0.5 sm:w-6 sm:h-6" />
               <div>
                 <p className="font-fira text-sm font-semibold text-green-800">
                   ¡Gracias por tu testimonio!
@@ -128,8 +128,8 @@ export default function TestimonialForm({ galleryId, galleryTitle, clientEmail: 
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border-2 border-red-300 rounded-xl">
-            <p className="font-fira text-sm text-red-800">{error}</p>
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-50 border-2 border-red-300 rounded-lg sm:rounded-xl">
+            <p className="font-fira text-xs sm:text-sm text-red-800">{error}</p>
           </div>
         )}
 
