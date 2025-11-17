@@ -17,17 +17,27 @@ import { createClient } from '@/lib/server';
  * @param {Object} params
  * @param {string} params.galleryId - ID de la galería
  * @param {string} params.clientName - Nombre del cliente
+ * @param {string} params.clientEmail - Email del cliente (para validar unicidad)
  * @param {string} params.message - Mensaje/testimonio
  * @param {number} [params.rating] - Calificación 1-5 (opcional)
  * @returns {Promise<{success: boolean, testimonial?: object, error?: string}>}
  */
-export async function createTestimonial({ galleryId, clientName, message, rating = null }) {
+export async function createTestimonial({ galleryId, clientName, clientEmail, message, rating = null }) {
   try {
     // Validaciones
-    if (!galleryId || !clientName || !message) {
+    if (!galleryId || !clientName || !clientEmail || !message) {
       return {
         success: false,
         error: 'Todos los campos son requeridos',
+      };
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(clientEmail)) {
+      return {
+        success: false,
+        error: 'El email no es válido',
       };
     }
 
@@ -75,12 +85,29 @@ export async function createTestimonial({ galleryId, clientName, message, rating
       };
     }
 
+    // Verificar si el cliente ya envió un testimonio para esta galería
+    const normalizedEmail = clientEmail.toLowerCase().trim();
+    const { data: existingTestimonial } = await supabase
+      .from('testimonials')
+      .select('id')
+      .eq('gallery_id', galleryId)
+      .eq('client_email', normalizedEmail)
+      .maybeSingle();
+
+    if (existingTestimonial) {
+      return {
+        success: false,
+        error: 'Ya has enviado un testimonio para esta galería',
+      };
+    }
+
     // Crear testimonio
     const { data, error } = await supabase
       .from('testimonials')
       .insert({
         gallery_id: galleryId,
         client_name: clientName.trim(),
+        client_email: normalizedEmail,
         message: message.trim(),
         rating: rating,
       })

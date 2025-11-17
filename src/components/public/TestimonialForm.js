@@ -11,9 +11,10 @@ import { createTestimonial } from '@/app/actions/testimonial-actions';
  * Permite a los clientes dejar un comentario y calificación
  * sobre su experiencia con la galería/fotógrafo
  */
-export default function TestimonialForm({ galleryId, galleryTitle }) {
+export default function TestimonialForm({ galleryId, galleryTitle, clientEmail: initialEmail = '' }) {
   const [formData, setFormData] = useState({
     clientName: '',
+    clientEmail: initialEmail,
     message: '',
     rating: 0,
   });
@@ -28,6 +29,18 @@ export default function TestimonialForm({ galleryId, galleryTitle }) {
 
     if (!formData.clientName.trim()) {
       setError('Por favor ingresa tu nombre');
+      return;
+    }
+
+    if (!formData.clientEmail.trim()) {
+      setError('Por favor ingresa tu email');
+      return;
+    }
+
+    // Validar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.clientEmail)) {
+      setError('Por favor ingresa un email válido');
       return;
     }
 
@@ -47,13 +60,14 @@ export default function TestimonialForm({ galleryId, galleryTitle }) {
       const result = await createTestimonial({
         galleryId,
         clientName: formData.clientName,
+        clientEmail: formData.clientEmail,
         message: formData.message,
         rating: formData.rating > 0 ? formData.rating : null,
       });
 
       if (result.success) {
         setSubmitSuccess(true);
-        setFormData({ clientName: '', message: '', rating: 0 });
+        setFormData({ clientName: '', clientEmail: initialEmail, message: '', rating: 0 });
         setTimeout(() => setSubmitSuccess(false), 5000);
       } else {
         setError(result.error || 'Error al enviar el testimonio');
@@ -130,6 +144,24 @@ export default function TestimonialForm({ galleryId, galleryTitle }) {
             />
           </div>
 
+          {/* Email Input */}
+          <div>
+            <label className="block font-fira text-sm font-semibold text-black mb-2">
+              Tu Email *
+            </label>
+            <input
+              type="email"
+              value={formData.clientEmail}
+              onChange={(e) => setFormData(prev => ({ ...prev, clientEmail: e.target.value }))}
+              placeholder="Ej: maria@ejemplo.com"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl font-fira text-sm text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              disabled={isSubmitting}
+            />
+            <p className="font-fira text-xs text-gray-500 mt-2">
+              Solo puedes enviar un testimonio por galería
+            </p>
+          </div>
+
           {/* Rating */}
           <div>
             <label className="block font-fira text-sm font-semibold text-black mb-3">
@@ -185,7 +217,7 @@ export default function TestimonialForm({ galleryId, galleryTitle }) {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={isSubmitting || !formData.clientName.trim() || !formData.message.trim()}
+            disabled={isSubmitting || !formData.clientName.trim() || !formData.clientEmail.trim() || !formData.message.trim()}
             className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:from-gray-300 disabled:to-gray-300 text-white rounded-xl font-fira font-semibold flex items-center justify-center gap-2 transition-all disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
           >
             {isSubmitting ? (

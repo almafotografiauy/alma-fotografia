@@ -111,6 +111,7 @@ export default function PublicGalleryView({ gallery, token }) {
   const [showEmailTooltip, setShowEmailTooltip] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [hasSeenMessage, setHasSeenMessage] = useState(false);
+  const [showTestimonialModal, setShowTestimonialModal] = useState(false);
   const favoritesDebounceRef = useRef(null);
   const { showToast } = useToast();
 
@@ -780,6 +781,16 @@ export default function PublicGalleryView({ gallery, token }) {
                   <Download size={18} strokeWidth={1.5} className="text-black/70" />
                 </button>
               )}
+
+              {allowComments && (
+                <button
+                  onClick={() => setShowTestimonialModal(true)}
+                  className="p-2 hover:bg-black/5 rounded-full transition-colors"
+                  title="Dejar testimonio"
+                >
+                  <MessageSquare size={18} strokeWidth={1.5} className="text-black/70" />
+                </button>
+              )}
             </div>
           </div>
         </motion.header>
@@ -812,7 +823,11 @@ export default function PublicGalleryView({ gallery, token }) {
       {allowComments && clientEmail && (
         <div className="px-6 py-16">
           <div className="max-w-4xl mx-auto">
-            <TestimonialForm galleryId={galleryId} galleryTitle={title} />
+            <TestimonialForm
+              galleryId={galleryId}
+              galleryTitle={title}
+              clientEmail={clientEmail}
+            />
           </div>
         </div>
       )}
@@ -1203,6 +1218,50 @@ export default function PublicGalleryView({ gallery, token }) {
                   </p>
                 </form>
               )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ===== MODAL TESTIMONIO ===== */}
+      <AnimatePresence>
+        {showTestimonialModal && allowComments && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+              onClick={() => setShowTestimonialModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl bg-white rounded-2xl shadow-2xl z-50 overflow-y-auto max-h-[90vh]"
+            >
+              {/* Header del Modal */}
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+                <h3 className="font-voga text-2xl text-black">
+                  Dejar un Testimonio
+                </h3>
+                <button
+                  onClick={() => setShowTestimonialModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X size={20} strokeWidth={1.5} className="text-black/60" />
+                </button>
+              </div>
+
+              {/* Contenido del Modal */}
+              <div className="p-6">
+                <TestimonialForm
+                  galleryId={galleryId}
+                  galleryTitle={title}
+                  clientEmail={clientEmail}
+                />
+              </div>
             </motion.div>
           </>
         )}
