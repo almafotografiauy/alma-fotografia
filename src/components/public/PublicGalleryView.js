@@ -785,12 +785,12 @@ export default function PublicGalleryView({ gallery, token }) {
               {allowComments && (
                 <motion.button
                   onClick={() => setShowTestimonialModal(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-transparent border-2 border-[#79502A] hover:bg-[#79502A]/5 text-[#79502A] rounded-full transition-all"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-transparent border border-[#79502A] hover:bg-[#79502A]/5 text-[#79502A] rounded-full transition-all"
                   title="Dejar testimonio"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Star size={16} strokeWidth={2} className="fill-yellow-400 text-yellow-400" />
+                  <Star size={16} strokeWidth={0.5} className="fill-yellow-400 text-black" />
                   <span className="font-fira text-xs font-semibold hidden sm:inline">Dejar Testimonio</span>
                   <span className="font-fira text-xs font-semibold sm:hidden">Testimonio</span>
                 </motion.button>
@@ -870,7 +870,7 @@ export default function PublicGalleryView({ gallery, token }) {
                 </button>
               </div>
 
-              <p className="font-serif text-lg text-black/80 leading-relaxed italic" style={{ fontFamily: 'Cormorant Garamond, serif' }}>
+              <p className="font-fira text-base text-black leading-relaxed">
                 "{customMessage}"
               </p>
             </motion.div>
