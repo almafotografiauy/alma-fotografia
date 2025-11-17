@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { Upload, X, Loader2, AlertCircle, ChevronLeft, ChevronRight, CheckSquare, Trash2, Eye, Plus } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
 
 export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, onUploadComplete }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -16,6 +17,7 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const PREVIEWS_PER_PAGE = 30;
+  const { showToast } = useToast();
 
   const startIdx = previewPage * PREVIEWS_PER_PAGE;
   const endIdx = startIdx + PREVIEWS_PER_PAGE;
@@ -158,7 +160,7 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
     });
 
     if (validFiles.length === 0) {
-      alert('No se seleccionaron archivos válidos. Usa JPG, PNG o WebP menores a 15MB.');
+      showToast({ message: 'No se seleccionaron archivos válidos. Usa JPG, PNG o WebP menores a 15MB.', type: 'error' });
       return;
     }
 

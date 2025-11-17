@@ -16,6 +16,7 @@ import GalleriesSidebar from './GalleriesSidebar';
 import GalleryPreviewModal from './GalleryPreviewModal';
 import ShareGalleryModal from './ShareGalleryModal';
 import ConfirmModal from './ConfirmModal';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * ============================================
@@ -66,6 +67,7 @@ export default function GalleriesView({ galleries, serviceTypes }) {
   const isArchivingRef = useRef(false);
   const isRestoringRef = useRef(false);
   const isDeletingRef = useRef(false);
+  const { showToast } = useToast();
 
   // Filtrar galerías
   const filteredGalleries = useMemo(() => {
@@ -232,8 +234,7 @@ export default function GalleriesView({ galleries, serviceTypes }) {
         setSelectionMode(false);
         router.refresh();
       } else {
-        console.error('[handleBatchArchive] Error:', result.error);
-        alert('Error al archivar galerías: ' + result.error);
+        showToast({ message: 'Error al archivar galerías: ' + result.error, type: 'error' });
       }
     } finally {
       isArchivingRef.current = false;
@@ -256,8 +257,7 @@ export default function GalleriesView({ galleries, serviceTypes }) {
         setSelectionMode(false);
         router.refresh();
       } else {
-        console.error('[handleBatchRestore] Error:', result.error);
-        alert('Error al restaurar galerías: ' + result.error);
+        showToast({ message: 'Error al restaurar galerías: ' + result.error, type: 'error' });
       }
     } finally {
       isRestoringRef.current = false;
@@ -280,8 +280,7 @@ export default function GalleriesView({ galleries, serviceTypes }) {
         setSelectionMode(false);
         router.refresh();
       } else {
-        console.error('[handleBatchDelete] Error:', result.error);
-        alert('Error al eliminar galerías: ' + result.error);
+        showToast({ message: 'Error al eliminar galerías: ' + result.error, type: 'error' });
       }
     } finally {
       isDeletingRef.current = false;

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Check, X, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabaseClient';
 import { iconMap, defaultServiceTypes, generateSlug } from '@/lib/validations/gallery';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * Iconos disponibles para seleccionar
@@ -35,6 +36,7 @@ export default function ServiceTypeSelector({ value, onChange, isPublic, error }
   const [newServiceName, setNewServiceName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('Camera');
   const [creating, setCreating] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadServices();
@@ -86,7 +88,7 @@ export default function ServiceTypeSelector({ value, onChange, isPublic, error }
 
       if (error) {
         if (error.code === '23505') {
-          alert('Ya existe un servicio con ese nombre');
+          showToast({ message: 'Ya existe un servicio con ese nombre', type: 'error' });
         } else {
           throw error;
         }
@@ -99,8 +101,7 @@ export default function ServiceTypeSelector({ value, onChange, isPublic, error }
       setSelectedIcon('Camera');
       setShowAddNew(false);
     } catch (error) {
-      console.error('Error creating service:', error);
-      alert('Error al crear el servicio');
+      showToast({ message: 'Error al crear el servicio', type: 'error' });
     } finally {
       setCreating(false);
     }

@@ -113,13 +113,9 @@ export async function deleteGalleries(galleryIds) {
   try {
     const supabase = await createClient();
 
-    console.log(`🗑️ Iniciando eliminación de ${galleryIds.length} galerías...`);
-
     // ==========================================
     // PASO 0: Obtener info de galerías para notificaciones
     // ==========================================
-
-    console.log('📋 Obteniendo información de galerías...');
     const { data: galleries, error: galleriesError } = await supabase
       .from('galleries')
       .select('id, title, created_by')
@@ -140,25 +136,20 @@ export async function deleteGalleries(galleryIds) {
     // PASO 1: Obtener todas las fotos
     // ==========================================
 
-    console.log('📋 Obteniendo fotos de las galerías...');
     const { data: photos, error: photosError } = await supabase
       .from('photos')
       .select('id, file_path, gallery_id')
       .in('gallery_id', galleryIds);
 
     if (photosError) {
-      console.error('❌ Error obteniendo fotos:', photosError);
       throw new Error(`Error al obtener fotos: ${photosError.message}`);
     }
-
-    console.log(`📸 Encontradas ${photos?.length || 0} fotos para eliminar`);
 
     // ==========================================
     // PASO 2: Eliminar fotos de Cloudinary
     // ==========================================
 
     if (photos && photos.length > 0) {
-      console.log('🗑️ Eliminando fotos de Cloudinary...');
 
       const photoPublicIds = photos
         .map(photo => {
@@ -178,14 +169,9 @@ export async function deleteGalleries(galleryIds) {
           const photoResult = await deleteBatchFromCloudinary(batch);
 
           if (!photoResult.success) {
-            console.error('❌ Error eliminando fotos:', photoResult.error);
             throw new Error(`No se pudieron eliminar fotos: ${photoResult.error}`);
           }
-
-          console.log(`✅ Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} fotos eliminadas de Cloudinary`);
         }
-
-        console.log(`📸 Total: ${photoPublicIds.length} fotos eliminadas de Cloudinary`);
       }
     }
 
@@ -194,18 +180,14 @@ export async function deleteGalleries(galleryIds) {
     // ==========================================
 
     if (photos && photos.length > 0) {
-      console.log('💾 Eliminando registros de fotos en BD...');
       const { error: deletePhotosError } = await supabase
         .from('photos')
         .delete()
         .in('gallery_id', galleryIds);
 
       if (deletePhotosError) {
-        console.error('❌ Error eliminando fotos de BD:', deletePhotosError);
         throw new Error(`Error al eliminar fotos de BD: ${deletePhotosError.message}`);
       }
-
-      console.log('✅ Registros de fotos eliminados de BD');
     }
 
     // ==========================================
@@ -219,11 +201,8 @@ export async function deleteGalleries(galleryIds) {
       const result = await deleteFolderFromCloudinary(folderPath);
 
       if (!result.success) {
-        console.error(`❌ Error eliminando carpeta ${folderPath}: ${result.error}`);
         throw new Error(`No se pudo eliminar carpeta ${folderPath}: ${result.error}`);
       }
-
-      console.log(`✅ Carpeta eliminada: ${folderPath} (${result.deletedCount} archivos restantes, ${result.iterations} iteraciones)`);
 
       return {
         galleryId,
@@ -236,8 +215,6 @@ export async function deleteGalleries(galleryIds) {
     // Si CUALQUIER galería falla, se detiene todo con throw
     const deleteResults = await Promise.all(deleteFolderPromises);
     const totalFolderFilesDeleted = deleteResults.reduce((sum, r) => sum + (r.deletedCount || 0), 0);
-
-    console.log(`📊 Cloudinary: ${deleteResults.length}/${galleryIds.length} carpetas eliminadas (${totalFolderFilesDeleted} archivos residuales)`);
 
     // ==========================================
     // PASO 5: Eliminar portadas (gallery-covers)
@@ -263,37 +240,28 @@ export async function deleteGalleries(galleryIds) {
         const coverResult = await deleteBatchFromCloudinary(coverPublicIds);
 
         if (!coverResult.success) {
-          console.error('❌ Error eliminando portadas:', coverResult.error);
           throw new Error(`No se pudieron eliminar portadas: ${coverResult.error}`);
         }
-
-        console.log(`🖼️ ${coverPublicIds.length} portadas eliminadas de Cloudinary`);
       }
     }
 
     // ==========================================
     // PASO 6: Eliminar enlaces compartidos
     // ==========================================
-
-    console.log('🔗 Eliminando enlaces compartidos...');
     const { error: deleteSharesError } = await supabase
       .from('gallery_shares')
       .delete()
       .in('gallery_id', galleryIds);
 
     if (deleteSharesError) {
-      console.error('❌ Error eliminando enlaces:', deleteSharesError);
       throw new Error(`Error al eliminar enlaces: ${deleteSharesError.message}`);
     }
-
-    console.log('✅ Enlaces compartidos eliminados');
 
     // ==========================================
     // PASO 7: Eliminar galerías de Supabase
     // ==========================================
 
     // Solo llega aquí si TODO fue exitoso
-    console.log('💾 Eliminando galerías de base de datos...');
 
     const { error: deleteError } = await supabase
       .from('galleries')
@@ -301,17 +269,12 @@ export async function deleteGalleries(galleryIds) {
       .in('id', galleryIds);
 
     if (deleteError) {
-      console.error('❌ Error eliminando galerías de BD:', deleteError);
       throw new Error(`Error al eliminar galerías de base de datos: ${deleteError.message}`);
     }
-
-    console.log('✅ Galerías eliminadas de base de datos');
 
     // ==========================================
     // PASO 8: Enviar notificaciones
     // ==========================================
-
-    console.log(`📧 Enviando notificaciones para ${galleryInfoForNotifications.length} galerías eliminadas...`);
     for (const galleryInfo of galleryInfoForNotifications) {
       try {
         await notifyGalleryDeleted(galleryInfo.title, galleryInfo.userId);
@@ -374,7 +337,6 @@ export async function restoreGalleries(galleryIds) {
     if (error) throw error;
 
     // Enviar notificaciones para cada galería restaurada
-    console.log(`📧 Enviando notificaciones para ${galleryIds.length} galerías restauradas...`);
     for (const galleryId of galleryIds) {
       try {
         await notifyGalleryRestored(galleryId, user.id);
@@ -439,8 +401,6 @@ export async function cleanOrphanedPhotos() {
   try {
     const supabase = await createClient();
 
-    console.log('🧹 Iniciando limpieza de fotos huérfanas...');
-
     // ==========================================
     // PASO 1: Encontrar fotos huérfanas
     // ==========================================
@@ -451,11 +411,8 @@ export async function cleanOrphanedPhotos() {
       .select('id, gallery_id, file_path');
 
     if (photosError) {
-      console.error('❌ Error obteniendo fotos:', photosError);
       throw new Error(`Error al obtener fotos: ${photosError.message}`);
     }
-
-    console.log(`📸 Total de fotos en BD: ${allPhotos?.length || 0}`);
 
     // Obtener IDs de galerías existentes
     const { data: galleries, error: galleriesError } = await supabase
@@ -463,20 +420,15 @@ export async function cleanOrphanedPhotos() {
       .select('id');
 
     if (galleriesError) {
-      console.error('❌ Error obteniendo galerías:', galleriesError);
       throw new Error(`Error al obtener galerías: ${galleriesError.message}`);
     }
 
     const galleryIds = new Set(galleries.map(g => g.id));
-    console.log(`📁 Total de galerías: ${galleryIds.size}`);
 
     // Filtrar fotos huérfanas
     const orphanedPhotos = allPhotos.filter(photo => !galleryIds.has(photo.gallery_id));
 
-    console.log(`🔍 Fotos huérfanas encontradas: ${orphanedPhotos.length}`);
-
     if (orphanedPhotos.length === 0) {
-      console.log('✅ No hay fotos huérfanas');
       return {
         success: true,
         cleanedPhotos: 0,
@@ -487,8 +439,6 @@ export async function cleanOrphanedPhotos() {
     // ==========================================
     // PASO 2: Eliminar de Cloudinary
     // ==========================================
-
-    console.log('🗑️ Eliminando fotos huérfanas de Cloudinary...');
 
     const photoPublicIds = orphanedPhotos
       .map(photo => {
@@ -507,21 +457,14 @@ export async function cleanOrphanedPhotos() {
         const photoResult = await deleteBatchFromCloudinary(batch);
 
         if (!photoResult.success) {
-          console.error('⚠️ Error eliminando batch de Cloudinary:', photoResult.error);
           // Continuar con el siguiente batch
-        } else {
-          console.log(`✅ Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} fotos eliminadas de Cloudinary`);
         }
       }
-
-      console.log(`📸 Total: ${photoPublicIds.length} fotos eliminadas de Cloudinary`);
     }
 
     // ==========================================
     // PASO 3: Eliminar de BD
     // ==========================================
-
-    console.log('💾 Eliminando registros huérfanos de BD...');
 
     const orphanedPhotoIds = orphanedPhotos.map(p => p.id);
 
@@ -531,11 +474,8 @@ export async function cleanOrphanedPhotos() {
       .in('id', orphanedPhotoIds);
 
     if (deleteError) {
-      console.error('❌ Error eliminando fotos de BD:', deleteError);
       throw new Error(`Error al eliminar fotos de BD: ${deleteError.message}`);
     }
-
-    console.log(`✅ ${orphanedPhotos.length} registros huérfanos eliminados de BD`);
 
     // Revalidar caché
     revalidatePath('/dashboard/galerias');

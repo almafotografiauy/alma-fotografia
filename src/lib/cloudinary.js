@@ -164,8 +164,6 @@ export const deleteFolderFromCloudinary = async (folderPath) => {
       throw new Error('Folder path is required');
     }
 
-    console.log('📁 Eliminando carpeta de Cloudinary:', folderPath);
-
     let totalDeleted = 0;
     let iteration = 0;
     let hasMoreResources = true;
@@ -173,7 +171,6 @@ export const deleteFolderFromCloudinary = async (folderPath) => {
     // Paginación recursiva: continuar hasta vaciar carpeta
     while (hasMoreResources) {
       iteration++;
-      console.log(`🔄 Iteración ${iteration}: Buscando recursos...`);
 
       // 1. Obtener siguiente página de recursos (máximo 500)
       const resources = await cloudinary.api.resources({
@@ -183,12 +180,10 @@ export const deleteFolderFromCloudinary = async (folderPath) => {
       });
 
       const resourceCount = resources.resources.length;
-      console.log(`📋 Encontrados: ${resourceCount} recursos en iteración ${iteration}`);
 
       // Si no hay recursos, terminamos
       if (resourceCount === 0) {
         hasMoreResources = false;
-        console.log('✅ Carpeta vacía, finalizando...');
         break;
       }
 
@@ -203,17 +198,13 @@ export const deleteFolderFromCloudinary = async (folderPath) => {
         batches.push(publicIds.slice(i, i + BATCH_SIZE));
       }
 
-      console.log(`📦 ${batches.length} batches a procesar en iteración ${iteration}`);
-
       // 4. Eliminar cada batch
       for (let i = 0; i < batches.length; i++) {
         const batch = batches[i];
         try {
           await cloudinary.api.delete_resources(batch);
           totalDeleted += batch.length;
-          console.log(`✅ Batch ${i + 1}/${batches.length} eliminado: ${batch.length} archivos (Total: ${totalDeleted})`);
         } catch (batchError) {
-          console.error(`❌ Error eliminando batch ${i + 1}:`, batchError.message);
           // Continuar con el siguiente batch aunque uno falle
         }
       }
@@ -221,18 +212,14 @@ export const deleteFolderFromCloudinary = async (folderPath) => {
       // 5. Si obtuvimos menos de 500, no hay más recursos
       if (resourceCount < 500) {
         hasMoreResources = false;
-        console.log(`✅ Última página procesada (${resourceCount} < 500)`);
       }
     }
-
-    console.log(`📊 Total eliminado: ${totalDeleted} archivos en ${iteration} iteraciones`);
 
     // 6. Intentar eliminar la carpeta (solo si está vacía)
     try {
       await cloudinary.api.delete_folder(folderPath);
-      console.log('✅ Carpeta eliminada:', folderPath);
     } catch (folderError) {
-      console.warn('⚠️ No se pudo eliminar carpeta:', folderError.message);
+      // No crítico si falla
     }
 
     return {

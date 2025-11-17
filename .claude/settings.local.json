@@ -24,7 +24,15 @@
       "Bash(rm:*)",
       "WebSearch",
       "Bash(node scripts/upload-logo-to-cloudinary.js:*)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(pnpm dev)",
+      "Bash(timeout:*)",
+      "Bash(nul)",
+      "Bash(tasklist:*)",
+      "Bash(xargs:*)",
+      "WebFetch(domain:help.pixieset.com)",
+      "WebFetch(domain:almafotografiauy.pixieset.com)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []

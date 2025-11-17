@@ -166,6 +166,7 @@ export default function GalleryDetailView({ gallery }) {
   const [serviceIcon, setServiceIcon] = useState(null);
   const [serviceName, setServiceName] = useState(null);
   const [coverImageSize, setCoverImageSize] = useState(0);
+  const [favoritesCount, setFavoritesCount] = useState(null);
   const { modalState, showModal, closeModal } = useModal();
 
   // Sensores para drag & drop (desktop + mobile) - OPTIMIZADO PARA MOBILE
@@ -236,6 +237,31 @@ export default function GalleryDetailView({ gallery }) {
   useEffect(() => {
     setLocalPhotos(gallery.photos);
   }, [gallery.photos]);
+
+  // Cargar conteo de favoritos
+  useEffect(() => {
+    const loadFavoritesCount = async () => {
+      try {
+        const supabase = createClient();
+        const { count, error } = await supabase
+          .from('favorites')
+          .select('*', { count: 'exact', head: true })
+          .eq('gallery_id', id);
+
+        if (error) {
+          console.error('Error loading favorites count:', error);
+          setFavoritesCount(0);
+        } else {
+          setFavoritesCount(count || 0);
+        }
+      } catch (error) {
+        console.error('Error loading favorites count:', error);
+        setFavoritesCount(0);
+      }
+    };
+
+    loadFavoritesCount();
+  }, [id]);
 
   // Cargar ícono del servicio si existe
   useEffect(() => {
@@ -317,10 +343,10 @@ export default function GalleryDetailView({ gallery }) {
     setSavingOrder(true);
 
     try {
-      const supabase = await createClient();
+      const supabase = createClient(); // NO usar await - createClient() no es async
 
       // Crear array de promesas - se ejecutan en paralelo
-      const updatePromises = workingPhotos.map((photo, index) => 
+      const updatePromises = workingPhotos.map((photo, index) =>
         supabase
           .from('photos')
           .update({ display_order: index + 1 })
@@ -888,7 +914,22 @@ export default function GalleryDetailView({ gallery }) {
                   </div>
                 </div>
 
-                <div className="flex gap-2 flex-shrink-0">
+                <div className="flex gap-2 flex-shrink-0 flex-wrap">
+                  <motion.button
+                    onClick={() => favoritesCount > 0 && router.push(`/dashboard/galerias/${gallery.id}/favoritos`)}
+                    whileHover={favoritesCount > 0 ? { scale: 1.02 } : {}}
+                    whileTap={favoritesCount > 0 ? { scale: 0.98 } : {}}
+                    disabled={favoritesCount === 0}
+                    title={favoritesCount === 0 ? 'No hay favoritas aún' : `Ver ${favoritesCount} foto${favoritesCount === 1 ? '' : 's'} favorita${favoritesCount === 1 ? '' : 's'}`}
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors font-fira text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 ${
+                      favoritesCount === 0
+                        ? '!text-neutral-500 bg-neutral-800/30 cursor-not-allowed opacity-50'
+                        : '!text-pink-300 bg-pink-500/20 hover:bg-pink-500/30 cursor-pointer'
+                    }`}
+                  >
+                    <Heart size={16} className={favoritesCount > 0 ? 'fill-pink-300' : ''} />
+                    <span>Favoritas{favoritesCount !== null && favoritesCount > 0 ? ` (${favoritesCount})` : ''}</span>
+                  </motion.button>
                   <motion.button
                     onClick={() => setShowShareModal(true)}
                     whileHover={{ scale: 1.02 }}
@@ -1279,7 +1320,7 @@ export default function GalleryDetailView({ gallery }) {
                     items={workingPhotos.map(p => p.id)}
                     strategy={rectSortingStrategy}
                   >
-                    <div className="columns-3 sm:columns-4 md:columns-5 lg:columns-6 xl:columns-7 2xl:columns-8 gap-1.5 sm:gap-2">
+                    <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
                       {workingPhotos.map((photo, index) => (
                         <SortablePhoto
                           key={photo.id}
@@ -1298,7 +1339,7 @@ export default function GalleryDetailView({ gallery }) {
             ) : selectionMode ? (
               /* Modo selección: checkboxes */
               <div className="px-0 sm:px-2 lg:px-4 py-2 sm:py-4">
-                <div className="columns-3 sm:columns-4 md:columns-5 lg:columns-6 xl:columns-7 2xl:columns-8 gap-1.5 sm:gap-2">
+                <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
                   {photosToShow.map((photo, index) => {
                     const photoIndex = startIdx + index;
                     const isSelected = selectedPhotos.has(photo.id);
@@ -1349,7 +1390,7 @@ export default function GalleryDetailView({ gallery }) {
             ) : (
               /* Modo normal: solo visualización con paginación */
               <div className="px-0 sm:px-2 lg:px-4 py-2 sm:py-4">
-                <div className="columns-3 sm:columns-4 md:columns-5 lg:columns-6 xl:columns-7 2xl:columns-8 gap-1.5 sm:gap-2">
+                <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
                   {photosToShow.map((photo, index) => (
                     <SortablePhoto
                       key={photo.id}

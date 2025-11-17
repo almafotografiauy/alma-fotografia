@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Download } from 'lucide-react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * PublicDownloadAllButton - Descarga directa desde Cloudinary
@@ -25,6 +26,7 @@ export default function PublicDownloadAllButton({
   const [status, setStatus] = useState('');
   const [downloadType, setDownloadType] = useState('all'); // 'all' | 'favorites'
   const [showMenu, setShowMenu] = useState(false);
+  const { showToast } = useToast();
 
     /**
      * Obtiene la URL de máxima calidad desde Cloudinary
@@ -81,14 +83,14 @@ export default function PublicDownloadAllButton({
 
         if (type === 'favorites') {
             if (!favoritePhotoIds || favoritePhotoIds.length === 0) {
-                alert('No has seleccionado ninguna foto favorita');
+                showToast({ message: 'No has seleccionado ninguna foto favorita', type: 'error' });
                 return;
             }
             photosToDownload = photos.filter(p => favoritePhotoIds.includes(p.id));
         }
 
         if (!photosToDownload || photosToDownload.length === 0) {
-            alert('No hay fotos para descargar');
+            showToast({ message: 'No hay fotos para descargar', type: 'error' });
             return;
         }
 
@@ -236,16 +238,14 @@ export default function PublicDownloadAllButton({
 
             // Mostrar resumen
             if (errorCount > 0) {
-                alert(
-                    `✅ Descarga completada\n\n` +
-                    `${successCount} fotos descargadas\n` +
-                    `${errorCount} fotos fallaron`
-                );
+                showToast({
+                    message: `Descarga completada: ${successCount} fotos descargadas, ${errorCount} fallaron`,
+                    type: 'warning'
+                });
             }
 
         } catch (error) {
-            console.error('❌ Error:', error);
-            alert(`Error: ${error.message}`);
+            showToast({ message: `Error: ${error.message}`, type: 'error' });
         } finally {
             setIsDownloading(false);
             setProgress(0);

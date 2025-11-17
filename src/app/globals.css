@@ -18,6 +18,8 @@
   --color-brand-white: var(--brand-white);
   --font-voga: var(--font-voga);
   --font-fira: var(--font-fira);
+  --font-cormorant: var(--font-cormorant);
+  --font-family-serif: var(--font-cormorant);
 }
 
 /* 🌙 Modo oscuro (por si se usa en el futuro) */
@@ -43,6 +45,11 @@ body {
 h1, h2, h3 {
   font-family: var(--font-voga, serif);
   letter-spacing: 0.02em;
+}
+
+/* 🔠 Font serif utility con Cormorant Garamond */
+.font-serif {
+  font-family: var(--font-cormorant, serif);
 }
 
 /* ✨ Enlaces y botones con acento dorado */

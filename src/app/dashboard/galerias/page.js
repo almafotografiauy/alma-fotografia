@@ -19,7 +19,7 @@ export const revalidate = 60;
 async function GalleriesContent() {
   const supabase = await createClient();
 
-  // Fetch galerías con stats + shares
+  // Fetch galerías con stats + shares + favorites
   const { data: galleries, error } = await supabase
     .from('galleries')
     .select(`
@@ -30,7 +30,8 @@ async function GalleriesContent() {
         is_active,
         views_count,
         expires_at
-      )
+      ),
+      favorites(count)
     `)
     .order('created_at', { ascending: false });
 
@@ -82,15 +83,15 @@ async function GalleriesContent() {
       allow_downloads: gallery.allow_downloads,
       password: gallery.password,
       photoCount: gallery.photos?.[0]?.count || 0,
-      archived_at: gallery.archived_at, // NUEVO
-      
-      // NUEVOS CAMPOS CALCULADOS
+      archived_at: gallery.archived_at,
+
+      // CAMPOS CALCULADOS
       views_count: totalViews,
       has_active_link: activeShares.length > 0,
       has_expired_link: expiredShares.length > 0,
-      
-      // Favoritos (preparado para futuro - por ahora 0)
-      favorites_count: 0, // TODO: Implementar cuando tengamos tabla de favoritos
+
+      // Contador de favoritas real
+      favorites_count: gallery.favorites?.[0]?.count || 0,
     };
   });
 

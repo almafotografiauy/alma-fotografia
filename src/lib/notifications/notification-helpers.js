@@ -490,9 +490,10 @@ export async function notifyGalleryView(galleryId, clientInfo = null) {
  * Notificar cuando un cliente selecciona favoritos
  *
  * @param {string} galleryId - ID de la galería
- * @param {number} favoritesCount - Cantidad de favoritos seleccionados
+ * @param {number} favoritesCount - Cantidad de favoritos seleccionados actualmente
+ * @param {string} clientEmail - Email del cliente (opcional, para notificaciones específicas)
  */
-export async function notifyFavoritesSelected(galleryId, favoritesCount) {
+export async function notifyFavoritesSelected(galleryId, favoritesCount, clientEmail = null) {
   try {
     const supabase = await createClient();
 
@@ -507,6 +508,19 @@ export async function notifyFavoritesSelected(galleryId, favoritesCount) {
       return { success: false, error: 'Gallery not found' };
     }
 
+    // Obtener notificaciones previas de este tipo para este cliente y galería
+    const emailToCheck = clientEmail || gallery.client_email;
+    const { data: prevNotifications, error: notifError } = await supabase
+      .from('notifications')
+      .select('id, created_at')
+      .eq('user_id', gallery.created_by)
+      .eq('type', 'favorites_selected')
+      .eq('gallery_id', galleryId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const isFirstTime = !prevNotifications || prevNotifications.length === 0;
+
     // Verificar preferencias
     const { data: prefs } = await supabase
       .from('notification_preferences')
@@ -514,8 +528,12 @@ export async function notifyFavoritesSelected(galleryId, favoritesCount) {
       .eq('user_id', gallery.created_by)
       .maybeSingle();
 
-    const clientName = gallery.client_email ? gallery.client_email.split('@')[0] : 'El cliente';
-    const message = `${clientName} seleccionó ${favoritesCount} foto${favoritesCount > 1 ? 's' : ''} favorita${favoritesCount > 1 ? 's' : ''} en "${gallery.title}"`;
+    const clientName = emailToCheck ? emailToCheck.split('@')[0] : 'El cliente';
+
+    // Mensaje diferente según si es primera vez o está agregando más
+    const message = isFirstTime
+      ? `${clientName} seleccionó ${favoritesCount} foto${favoritesCount > 1 ? 's' : ''} favorita${favoritesCount > 1 ? 's' : ''} en "${gallery.title}"`
+      : `${clientName} agregó más fotos favoritas en "${gallery.title}" (Total: ${favoritesCount})`;
 
     let notificationResult = null;
 
@@ -526,17 +544,18 @@ export async function notifyFavoritesSelected(galleryId, favoritesCount) {
         type: 'favorites_selected',
         message,
         galleryId: gallery.id,
-        actionUrl: `/dashboard/galerias/${gallery.id}`,
+        actionUrl: `/dashboard/galerias/${gallery.id}/favoritos`,
       });
     }
 
     // Enviar email si: email_enabled está activado Y la opción está marcada Y hay email configurado
     if (prefs && prefs.email_enabled && prefs.email_on_favorites && prefs.notification_email) {
-      const emailTemplate = getEmailTemplate('favorites_selected', {
+      const emailTemplate = getEmailTemplate(isFirstTime ? 'favorites_selected' : 'favorites_added', {
         galleryTitle: gallery.title,
-        galleryUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard/galerias/${gallery.id}`,
+        galleryUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard/galerias/${gallery.id}/favoritos`,
         clientName,
         favoritesCount,
+        isFirstTime,
       });
 
       if (emailTemplate) {
@@ -551,6 +570,287 @@ export async function notifyFavoritesSelected(galleryId, favoritesCount) {
     return notificationResult || { success: true, skipped: 'In-app disabled' };
   } catch (error) {
     console.error('[notifyFavoritesSelected] Error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Notificar cuando un cliente envía su selección de favoritas
+ * Detecta automáticamente si es primera vez o edición
+ *
+ * @param {string} galleryId - ID de la galería
+ * @param {string} clientEmail - Email del cliente
+ * @param {number} totalCount - Cantidad total de favoritas
+ * @param {boolean} isFirstSubmission - Si es la primera vez que envía
+ * @param {number} addedCount - Cantidad de fotos agregadas (en edición)
+ * @param {number} removedCount - Cantidad de fotos eliminadas (en edición)
+ */
+export async function notifyFavoritesSubmitted(
+  galleryId,
+  clientEmail,
+  totalCount,
+  isFirstSubmission,
+  addedCount,
+  removedCount,
+  clientName = null
+) {
+  try {
+    const supabase = await createClient();
+
+    const { data: gallery, error } = await supabase
+      .from('galleries')
+      .select('id, title, created_by, notify_on_favorites')
+      .eq('id', galleryId)
+      .single();
+
+    if (error || !gallery) {
+      console.error('[notifyFavoritesSubmitted] Gallery not found:', galleryId);
+      return { success: false, error: 'Gallery not found' };
+    }
+
+    // Solo notificar si está habilitado en la galería
+    if (!gallery.notify_on_favorites) {
+      return { success: true, skipped: 'Gallery notifications disabled' };
+    }
+
+    // Verificar preferencias
+    const { data: prefs } = await supabase
+      .from('notification_preferences')
+      .select('inapp_enabled, email_enabled, email_on_favorites, notification_email')
+      .eq('user_id', gallery.created_by)
+      .maybeSingle();
+
+    const displayName = clientName || (clientEmail ? clientEmail.split('@')[0] : 'Un cliente');
+
+    // Construir mensaje según el tipo de submission
+    let message;
+    let notifType;
+
+    if (isFirstSubmission) {
+      // Primera vez
+      message = `${displayName} agregó fotos favoritas en la galería "${gallery.title}" (Total: ${totalCount})`;
+      notifType = 'favorites_selected';
+    } else {
+      // Es edición - construir mensaje inteligente
+      const parts = [];
+
+      if (addedCount > 0 && removedCount > 0) {
+        parts.push(`Eliminó ${removedCount} y agregó ${addedCount}`);
+      } else if (addedCount > 0) {
+        parts.push(`Agregó ${addedCount}`);
+      } else if (removedCount > 0) {
+        parts.push(`Eliminó ${removedCount}`);
+      }
+
+      const changesText = parts.length > 0 ? ` - ${parts.join(', ')}` : '';
+      message = `${displayName} editó la selección de favoritas de la galería "${gallery.title}"${changesText} (Total: ${totalCount})`;
+      notifType = 'favorites_edited';
+    }
+
+    let notificationResult = null;
+
+    // Crear notificación in-app solo si está habilitada
+    if (prefs && prefs.inapp_enabled && prefs.email_on_favorites) {
+      notificationResult = await createNotification({
+        userId: gallery.created_by,
+        type: notifType,
+        message,
+        galleryId: gallery.id,
+        actionUrl: `/dashboard/galerias/${gallery.id}/favoritos`,
+      });
+    }
+
+    // Enviar email si está configurado
+    if (prefs && prefs.email_enabled && prefs.email_on_favorites && prefs.notification_email) {
+      const emailTemplate = getEmailTemplate(notifType, {
+        galleryTitle: gallery.title,
+        galleryUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard/galerias/${gallery.id}/favoritos`,
+        clientName: displayName,
+        totalCount,
+        isFirstSubmission,
+        addedCount,
+        removedCount,
+      });
+
+      if (emailTemplate) {
+        await sendEmail({
+          to: prefs.notification_email,
+          subject: emailTemplate.subject,
+          html: emailTemplate.html,
+        });
+      }
+    }
+
+    return notificationResult || { success: true, skipped: 'In-app disabled' };
+  } catch (error) {
+    console.error('[notifyFavoritesSubmitted] Error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * @deprecated - Usar notifyFavoritesSubmitted en su lugar
+ * Notificar cuando un cliente agrega una foto favorita
+ *
+ * @param {string} galleryId - ID de la galería
+ * @param {string} clientEmail - Email del cliente
+ * @param {number} currentCount - Cantidad actual de favoritos después de agregar
+ */
+export async function notifyFavoriteAdded(galleryId, clientEmail, currentCount) {
+  try {
+    const supabase = await createClient();
+
+    const { data: gallery, error } = await supabase
+      .from('galleries')
+      .select('id, title, created_by, notify_on_favorites')
+      .eq('id', galleryId)
+      .single();
+
+    if (error || !gallery) {
+      console.error('[notifyFavoriteAdded] Gallery not found:', galleryId);
+      return { success: false, error: 'Gallery not found' };
+    }
+
+    // Solo notificar si está habilitado en la galería
+    if (!gallery.notify_on_favorites) {
+      return { success: true, skipped: 'Gallery notifications disabled' };
+    }
+
+    // Verificar si es la primera foto favorita
+    const { data: history } = await supabase
+      .from('favorites_history')
+      .select('id')
+      .eq('gallery_id', galleryId)
+      .eq('client_email', clientEmail)
+      .eq('action_type', 'added')
+      .limit(2);
+
+    const isFirstFavorite = history && history.length === 1;
+
+    // Verificar preferencias
+    const { data: prefs } = await supabase
+      .from('notification_preferences')
+      .select('inapp_enabled, email_enabled, email_on_favorites, notification_email')
+      .eq('user_id', gallery.created_by)
+      .maybeSingle();
+
+    const clientName = clientEmail ? clientEmail.split('@')[0] : 'Un cliente';
+
+    // Mensaje diferente si es la primera favorita o está agregando más
+    const message = isFirstFavorite
+      ? `${clientName} seleccionó su primera foto favorita en "${gallery.title}"`
+      : `${clientName} agregó una foto favorita en "${gallery.title}" (Total: ${currentCount})`;
+
+    let notificationResult = null;
+
+    // Crear notificación in-app solo si está habilitada
+    if (prefs && prefs.inapp_enabled && prefs.email_on_favorites) {
+      notificationResult = await createNotification({
+        userId: gallery.created_by,
+        type: isFirstFavorite ? 'favorites_selected' : 'favorite_added',
+        message,
+        galleryId: gallery.id,
+        actionUrl: `/dashboard/galerias/${gallery.id}/favoritos`,
+      });
+    }
+
+    // Enviar email si está configurado
+    if (prefs && prefs.email_enabled && prefs.email_on_favorites && prefs.notification_email) {
+      const emailTemplate = getEmailTemplate(isFirstFavorite ? 'favorites_selected' : 'favorite_added', {
+        galleryTitle: gallery.title,
+        galleryUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard/galerias/${gallery.id}/favoritos`,
+        clientName,
+        currentCount,
+        isFirstFavorite,
+      });
+
+      if (emailTemplate) {
+        await sendEmail({
+          to: prefs.notification_email,
+          subject: emailTemplate.subject,
+          html: emailTemplate.html,
+        });
+      }
+    }
+
+    return notificationResult || { success: true, skipped: 'In-app disabled' };
+  } catch (error) {
+    console.error('[notifyFavoriteAdded] Error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Notificar cuando un cliente elimina una foto favorita
+ *
+ * @param {string} galleryId - ID de la galería
+ * @param {string} clientEmail - Email del cliente
+ * @param {number} remainingCount - Cantidad de favoritos restantes después de eliminar
+ */
+export async function notifyFavoriteRemoved(galleryId, clientEmail, remainingCount) {
+  try {
+    const supabase = await createClient();
+
+    const { data: gallery, error } = await supabase
+      .from('galleries')
+      .select('id, title, created_by, notify_on_favorites')
+      .eq('id', galleryId)
+      .single();
+
+    if (error || !gallery) {
+      console.error('[notifyFavoriteRemoved] Gallery not found:', galleryId);
+      return { success: false, error: 'Gallery not found' };
+    }
+
+    // Solo notificar si está habilitado en la galería
+    if (!gallery.notify_on_favorites) {
+      return { success: true, skipped: 'Gallery notifications disabled' };
+    }
+
+    // Verificar preferencias
+    const { data: prefs } = await supabase
+      .from('notification_preferences')
+      .select('inapp_enabled, email_enabled, email_on_favorites, notification_email')
+      .eq('user_id', gallery.created_by)
+      .maybeSingle();
+
+    const clientName = clientEmail ? clientEmail.split('@')[0] : 'Un cliente';
+    const message = `${clientName} quitó una foto favorita en "${gallery.title}" (Quedan: ${remainingCount})`;
+
+    let notificationResult = null;
+
+    // Crear notificación in-app solo si está habilitada
+    if (prefs && prefs.inapp_enabled && prefs.email_on_favorites) {
+      notificationResult = await createNotification({
+        userId: gallery.created_by,
+        type: 'favorite_removed',
+        message,
+        galleryId: gallery.id,
+        actionUrl: `/dashboard/galerias/${gallery.id}/favoritos`,
+      });
+    }
+
+    // Enviar email si está configurado
+    if (prefs && prefs.email_enabled && prefs.email_on_favorites && prefs.notification_email) {
+      const emailTemplate = getEmailTemplate('favorite_removed', {
+        galleryTitle: gallery.title,
+        galleryUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard/galerias/${gallery.id}/favoritos`,
+        clientName,
+        remainingCount,
+      });
+
+      if (emailTemplate) {
+        await sendEmail({
+          to: prefs.notification_email,
+          subject: emailTemplate.subject,
+          html: emailTemplate.html,
+        });
+      }
+    }
+
+    return notificationResult || { success: true, skipped: 'In-app disabled' };
+  } catch (error) {
+    console.error('[notifyFavoriteRemoved] Error:', error);
     return { success: false, error: error.message };
   }
 }

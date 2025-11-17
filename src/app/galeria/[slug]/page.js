@@ -40,11 +40,12 @@ async function GalleryContent({ slug, token }) {
 
   const { gallery, photos } = result;
 
-  // ✅ Filtrar fotos válidas
+  // ✅ Filtrar fotos válidas (cloudinary_url o file_path)
   const validPhotos = (photos || [])
     .filter(photo => {
-      if (!photo.cloudinary_url) return false;
-      return photo.cloudinary_url.startsWith('http');
+      const url = photo.cloudinary_url || photo.file_path;
+      if (!url) return false;
+      return url.startsWith('http');
     })
     .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
 

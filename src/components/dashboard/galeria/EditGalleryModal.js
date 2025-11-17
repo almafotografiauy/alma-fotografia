@@ -87,6 +87,8 @@ export default function EditGalleryModal({ gallery, hasActiveLink, onClose, onSu
     setError('');
 
     try {
+      const supabase = await createClient();
+
       // Validaciones
       if (!formData.title.trim()) {
         throw new Error('El título es obligatorio');
@@ -100,7 +102,27 @@ export default function EditGalleryModal({ gallery, hasActiveLink, onClose, onSu
         throw new Error('El límite de favoritos debe estar entre 0 y 500');
       }
 
-      const supabase = await createClient();
+      // Validación: Verificar que max_favorites no sea menor a favoritos ya seleccionados
+      const { data: favoritesCount, error: favoritesError } = await supabase
+        .from('favorites')
+        .select('id', { count: 'exact' })
+        .eq('gallery_id', gallery.id);
+
+      if (favoritesError) {
+        console.error('Error checking favorites:', favoritesError);
+      } else if (favoritesCount && favoritesCount.length > formData.max_favorites) {
+        setIsSaving(false);
+        showModal({
+          title: 'Límite de favoritas muy bajo',
+          message: `Actualmente hay ${favoritesCount.length} fotos seleccionadas como favoritas por tus clientes. Debes establecer un límite igual o mayor a ${favoritesCount.length}.`,
+          type: 'warning',
+          confirmText: 'Entendido',
+          onConfirm: () => {
+            closeModal();
+          }
+        });
+        return;
+      }
 
       // Validación: Solo una galería pública por servicio
       if (formData.is_public && formData.service_type) {

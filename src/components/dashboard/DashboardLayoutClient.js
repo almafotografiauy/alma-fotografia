@@ -321,18 +321,18 @@ export default function DashboardLayoutClient({ children, userName }) {
         {/* Header mobile */}
         <header className="lg:hidden sticky top-0 z-30 bg-[#1a1a1a] border-b border-white/10 px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <Link href="/dashboard" className="flex items-center gap-2">
               <img
                 src="/img/logos/logo_BN_SF.png"
                 alt="Alma Fotografía Logo"
                 className="w-auto h-12 object-contain brightness-0 invert"
               />
-            </div>
-            
+            </Link>
+
             {/* Notificaciones + Menu - Mobile */}
             <div className="flex items-center gap-2">
               <NotificationBell isMobile />
-              
+
               <button
                 onClick={() => setSidebarOpen(true)}
                 className="p-2 hover:bg-white/10 rounded-none transition-colors"

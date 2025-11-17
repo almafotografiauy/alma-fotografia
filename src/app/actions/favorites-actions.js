@@ -1,7 +1,8 @@
 'use server';
 
 import { createClient } from '@/lib/server';
-import { notifyFavoritesSelected } from '@/lib/notifications/notification-helpers';
+import { notifyFavoritesSubmitted } from '@/lib/notifications/notification-helpers';
+import { revalidatePath } from 'next/cache';
 
 /**
  * ============================================
@@ -49,9 +50,10 @@ export async function getClientFavorites(galleryId, clientEmail) {
  * @param {string} photoId - ID de la foto
  * @param {string} clientEmail - Email del cliente
  * @param {number} maxFavorites - Límite de favoritos para esta galería
+ * @param {string} clientName - Nombre del cliente (opcional)
  * @returns {Promise<{success: boolean, action?: string, error?: string}>}
  */
-export async function toggleFavorite(galleryId, photoId, clientEmail, maxFavorites = 150) {
+export async function toggleFavorite(galleryId, photoId, clientEmail, maxFavorites = 150, clientName = null) {
   try {
     const supabase = await createClient();
     const normalizedEmail = clientEmail.toLowerCase().trim();
@@ -74,6 +76,11 @@ export async function toggleFavorite(galleryId, photoId, clientEmail, maxFavorit
 
       if (error) throw error;
 
+      // Revalidar todas las rutas relevantes
+      revalidatePath('/dashboard/galerias');
+      revalidatePath(`/dashboard/galerias/${galleryId}`);
+      revalidatePath(`/dashboard/galerias/${galleryId}/favoritos`);
+
       return { success: true, action: 'removed' };
     } else {
       // Verificar límite antes de agregar
@@ -93,15 +100,27 @@ export async function toggleFavorite(galleryId, photoId, clientEmail, maxFavorit
       }
 
       // Agregar a favoritos
+      const insertData = {
+        gallery_id: galleryId,
+        photo_id: photoId,
+        client_email: normalizedEmail,
+      };
+
+      // Agregar nombre si está disponible
+      if (clientName) {
+        insertData.client_name = clientName.trim();
+      }
+
       const { error } = await supabase
         .from('favorites')
-        .insert({
-          gallery_id: galleryId,
-          photo_id: photoId,
-          client_email: normalizedEmail,
-        });
+        .insert(insertData);
 
       if (error) throw error;
+
+      // Revalidar todas las rutas relevantes
+      revalidatePath('/dashboard/galerias');
+      revalidatePath(`/dashboard/galerias/${galleryId}`);
+      revalidatePath(`/dashboard/galerias/${galleryId}/favoritos`);
 
       return { success: true, action: 'added' };
     }
@@ -113,33 +132,114 @@ export async function toggleFavorite(galleryId, photoId, clientEmail, maxFavorit
 
 /**
  * Enviar selección completa de favoritos
- * (notifica al fotógrafo)
+ * (notifica al fotógrafo con información de cambios)
  *
  * @param {string} galleryId - ID de la galería
  * @param {string} clientEmail - Email del cliente
+ * @param {string} clientName - Nombre del cliente (opcional)
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-export async function submitFavoritesSelection(galleryId, clientEmail) {
+export async function submitFavoritesSelection(galleryId, clientEmail, clientName = null) {
   try {
     const supabase = await createClient();
     const normalizedEmail = clientEmail.toLowerCase().trim();
 
-    // Obtener cantidad de favoritos
-    const { data: favorites, error: favError } = await supabase
+    // Obtener favoritos actuales (incluyendo client_name si existe)
+    const { data: currentFavorites, error: favError } = await supabase
       .from('favorites')
-      .select('id', { count: 'exact' })
+      .select('photo_id, client_name')
       .eq('gallery_id', galleryId)
       .eq('client_email', normalizedEmail);
 
     if (favError) throw favError;
 
-    const favoritesCount = favorites.length;
+    const currentPhotoIds = currentFavorites.map(f => f.photo_id);
+    const currentCount = currentPhotoIds.length;
 
-    if (favoritesCount === 0) {
+    // Obtener el nombre del cliente (de los favoritos existentes o del parámetro)
+    const resolvedClientName = clientName || currentFavorites[0]?.client_name || null;
+
+    if (currentCount === 0) {
       return {
         success: false,
         error: 'No has seleccionado ninguna foto favorita',
       };
+    }
+
+    // Obtener la última submission del cliente para detectar cambios
+    const { data: lastSubmission } = await supabase
+      .from('favorites_submissions')
+      .select('photo_ids, is_first_submission')
+      .eq('gallery_id', galleryId)
+      .eq('client_email', normalizedEmail)
+      .order('submitted_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Detectar si es primera vez
+    const isFirstSubmission = !lastSubmission;
+    const previousPhotoIds = lastSubmission?.photo_ids || [];
+
+    // Calcular cambios
+    const addedPhotos = currentPhotoIds.filter(id => !previousPhotoIds.includes(id));
+    const removedPhotos = previousPhotoIds.filter(id => !currentPhotoIds.includes(id));
+    const addedCount = addedPhotos.length;
+    const removedCount = removedPhotos.length;
+
+    // Guardar esta submission
+    const submissionData = {
+      gallery_id: galleryId,
+      client_email: normalizedEmail,
+      photo_ids: currentPhotoIds,
+      total_count: currentCount,
+      is_first_submission: isFirstSubmission,
+      added_count: addedCount,
+      removed_count: removedCount,
+    };
+
+    if (resolvedClientName) {
+      submissionData.client_name = resolvedClientName;
+    }
+
+    const { error: submissionError } = await supabase
+      .from('favorites_submissions')
+      .insert(submissionData);
+
+    if (submissionError) {
+      // No crítico si falla
+    }
+
+    // Registrar en el historial de forma agrupada
+    let actionType = 'submitted';
+    if (isFirstSubmission) {
+      actionType = 'added';
+    } else if (addedCount > 0 && removedCount > 0) {
+      actionType = 'edited';
+    } else if (addedCount > 0) {
+      actionType = 'added';
+    } else if (removedCount > 0) {
+      actionType = 'removed';
+    }
+
+    const historyData = {
+      gallery_id: galleryId,
+      client_email: normalizedEmail,
+      action_type: actionType,
+      photo_count: currentCount,
+      added_count: addedCount,
+      removed_count: removedCount,
+    };
+
+    if (resolvedClientName) {
+      historyData.client_name = resolvedClientName;
+    }
+
+    const { error: historyError } = await supabase
+      .from('favorites_history')
+      .insert(historyData);
+
+    if (historyError) {
+      // No crítico si falla
     }
 
     // Obtener datos de la galería
@@ -153,12 +253,28 @@ export async function submitFavoritesSelection(galleryId, clientEmail) {
 
     // Enviar notificación solo si está habilitada
     if (gallery.notify_on_favorites) {
-      await notifyFavoritesSelected(galleryId, favoritesCount);
+      await notifyFavoritesSubmitted(
+        galleryId,
+        normalizedEmail,
+        currentCount,
+        isFirstSubmission,
+        addedCount,
+        removedCount,
+        resolvedClientName
+      );
     }
+
+    // Revalidar todas las rutas relevantes
+    revalidatePath('/dashboard/galerias');
+    revalidatePath(`/dashboard/galerias/${galleryId}`);
+    revalidatePath(`/dashboard/galerias/${galleryId}/favoritos`);
 
     return {
       success: true,
-      count: favoritesCount,
+      count: currentCount,
+      isFirstSubmission,
+      addedCount,
+      removedCount,
     };
   } catch (error) {
     console.error('[submitFavoritesSelection] Error:', error);

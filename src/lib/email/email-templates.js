@@ -189,14 +189,14 @@ export function galleryViewEmail({ galleryTitle, galleryUrl, clientName }) {
 }
 
 /**
- * Notificación de favoritos seleccionados
+ * Notificación de favoritos seleccionados (primera vez)
  */
-export function favoritesSelectedEmail({ galleryTitle, galleryUrl, clientName, favoritesCount }) {
+export function favoritesSelectedEmail({ galleryTitle, galleryUrl, clientName, totalCount }) {
   const content = `
-    <p><strong>${clientName}</strong> seleccionó <strong>${favoritesCount}</strong> foto${favoritesCount > 1 ? 's' : ''} favorita${favoritesCount > 1 ? 's' : ''} en <strong>"${galleryTitle}"</strong>.</p>
+    <p><strong>${clientName}</strong> seleccionó <strong>${totalCount}</strong> foto${totalCount > 1 ? 's' : ''} favorita${totalCount > 1 ? 's' : ''} en <strong>"${galleryTitle}"</strong>.</p>
 
     <div class="highlight">
-      <p style="margin: 0; color: #79502A; font-weight: 600;">${favoritesCount} foto${favoritesCount > 1 ? 's' : ''} favorita${favoritesCount > 1 ? 's' : ''}</p>
+      <p style="margin: 0; color: #79502A; font-weight: 600;">${totalCount} foto${totalCount > 1 ? 's' : ''} seleccionada${totalCount > 1 ? 's' : ''}</p>
       <p style="margin: 8px 0 0 0; color: #666; font-size: 14px;">
         Ya puedes revisar la selección de tu cliente
       </p>
@@ -210,8 +210,47 @@ export function favoritesSelectedEmail({ galleryTitle, galleryUrl, clientName, f
   `;
 
   return {
-    subject: `${clientName} eligió ${favoritesCount} favoritos en "${galleryTitle}"`,
+    subject: `${clientName} eligió ${totalCount} favorito${totalCount > 1 ? 's' : ''} en "${galleryTitle}"`,
     html: wrapTemplate(content, 'Favoritos Seleccionados'),
+  };
+}
+
+/**
+ * Notificación de favoritos editados
+ */
+export function favoritesEditedEmail({ galleryTitle, galleryUrl, clientName, totalCount, addedCount, removedCount }) {
+  let changesText = '';
+  if (addedCount > 0 && removedCount > 0) {
+    changesText = `eliminó <strong style="color: #ef4444;">${removedCount}</strong> y agregó <strong style="color: #10b981;">${addedCount}</strong>`;
+  } else if (addedCount > 0) {
+    changesText = `agregó <strong style="color: #10b981;">${addedCount}</strong> foto${addedCount > 1 ? 's' : ''}`;
+  } else if (removedCount > 0) {
+    changesText = `eliminó <strong style="color: #ef4444;">${removedCount}</strong> foto${removedCount > 1 ? 's' : ''}`;
+  }
+
+  const content = `
+    <p><strong>${clientName}</strong> modificó su selección de favoritos en <strong>"${galleryTitle}"</strong>.</p>
+
+    <div class="highlight">
+      <p style="margin: 0; color: #79502A; font-weight: 600;">Cambios realizados:</p>
+      <p style="margin: 8px 0 0 0; color: #2d2d2d; font-size: 16px;">
+        ${changesText.charAt(0).toUpperCase() + changesText.slice(1)}
+      </p>
+      <p style="margin: 12px 0 0 0; color: #79502A; font-weight: 600;">
+        Total actual: ${totalCount} foto${totalCount > 1 ? 's' : ''}
+      </p>
+    </div>
+
+    <p>Revisa la selección actualizada de tu cliente y continúa con el proceso de entrega.</p>
+
+    <center>
+      <a href="${galleryUrl}" class="button">Ver favoritos →</a>
+    </center>
+  `;
+
+  return {
+    subject: `${clientName} modificó sus favoritos en "${galleryTitle}"`,
+    html: wrapTemplate(content, 'Favoritos Modificados'),
   };
 }
 
@@ -402,6 +441,8 @@ export function getEmailTemplate(type, data) {
       return galleryViewEmail(data);
     case 'favorites_selected':
       return favoritesSelectedEmail(data);
+    case 'favorites_edited':
+      return favoritesEditedEmail(data);
     case 'link_expiring_soon':
       return linkExpiringEmail(data);
     case 'link_expired':

@@ -90,7 +90,7 @@ export default function NotificationBell({ className = '', isMobile = false }) {
           )
           .subscribe();
       } catch (error) {
-        console.warn('⚠️ Realtime no disponible, usando polling:', error);
+        // Realtime no disponible, usar solo polling
       }
     };
 
@@ -318,30 +318,32 @@ export default function NotificationBell({ className = '', isMobile = false }) {
               animate-in zoom-in-95 duration-200"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
-              <h3 className="font-fira text-sm font-semibold text-black">
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 flex-shrink-0">
+              <h3 className="font-fira text-sm sm:text-base font-semibold text-black">
                 Notificaciones
                 {isSelectionMode && selectedIds.length > 0 && (
                   <span className="ml-2 text-xs text-[#79502A]">
-                    ({selectedIds.length} seleccionada{selectedIds.length > 1 ? 's' : ''})
+                    ({selectedIds.length})
                   </span>
                 )}
               </h3>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 {!isSelectionMode && notifications.length > 0 && (
                   <button
                     onClick={() => setIsSelectionMode(true)}
                     className="px-2 py-1 text-xs font-fira font-semibold text-[#79502A] hover:bg-[#79502A]/10 rounded-lg transition-colors"
                   >
-                    Seleccionar
+                    <span className="hidden sm:inline">Seleccionar</span>
+                    <span className="sm:hidden">Sel.</span>
                   </button>
                 )}
                 {!isSelectionMode && unreadCount > 0 && (
                   <button
                     onClick={markAllAsRead}
-                    className="px-2 py-1 text-xs font-fira font-semibold text-[#79502A] hover:bg-[#79502A]/10 rounded-lg transition-colors"
+                    className="px-2 py-1 text-xs font-fira font-semibold text-[#79502A] hover:bg-[#79502A]/10 rounded-lg transition-colors whitespace-nowrap"
                   >
-                    Marcar todas
+                    <span className="hidden sm:inline">Marcar todas</span>
+                    <span className="sm:hidden">Todas</span>
                   </button>
                 )}
                 {isSelectionMode && (
@@ -361,45 +363,48 @@ export default function NotificationBell({ className = '', isMobile = false }) {
                     setIsSelectionMode(false);
                     setSelectedIds([]);
                   }}
-                  className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
                   aria-label="Cerrar"
                 >
-                  <X size={16} />
+                  <X size={18} className="sm:w-4 sm:h-4" />
                 </button>
               </div>
             </div>
 
             {/* Botones de acciones masivas - Solo en modo selección */}
             {isSelectionMode && notifications.length > 0 && (
-              <div className="p-3 border-b border-gray-200 flex items-center gap-2 flex-shrink-0 bg-gray-50">
+              <div className="p-2 sm:p-3 border-b border-gray-200 flex flex-wrap items-center gap-1.5 sm:gap-2 flex-shrink-0 bg-gray-50">
                 <button
                   onClick={selectAll}
-                  className="px-3 py-1.5 text-xs font-fira font-semibold text-gray-700 hover:bg-white rounded-lg transition-colors border border-gray-200"
+                  className="px-2 sm:px-3 py-1.5 text-xs font-fira font-semibold text-gray-700 hover:bg-white rounded-lg transition-colors border border-gray-200"
                 >
-                  Seleccionar todas
+                  <span className="hidden sm:inline">Seleccionar todas</span>
+                  <span className="sm:hidden">Todas</span>
                 </button>
                 {selectedIds.length > 0 && (
                   <>
                     <button
                       onClick={deselectAll}
-                      className="px-3 py-1.5 text-xs font-fira font-semibold text-gray-700 hover:bg-white rounded-lg transition-colors border border-gray-200"
+                      className="px-2 sm:px-3 py-1.5 text-xs font-fira font-semibold text-gray-700 hover:bg-white rounded-lg transition-colors border border-gray-200"
                     >
-                      Deseleccionar
+                      <span className="hidden sm:inline">Deseleccionar</span>
+                      <span className="sm:hidden">Ninguna</span>
                     </button>
-                    <div className="flex-1"></div>
+                    <div className="flex-1 min-w-[8px]"></div>
                     <button
                       onClick={markSelectedAsRead}
-                      className="px-3 py-1.5 text-xs font-fira font-semibold text-[#79502A] hover:bg-[#79502A]/10 rounded-lg transition-colors flex items-center gap-1"
+                      className="px-2 sm:px-3 py-1.5 text-xs font-fira font-semibold text-[#79502A] hover:bg-[#79502A]/10 rounded-lg transition-colors flex items-center gap-1"
                     >
                       <Check size={14} />
-                      <span>Marcar leídas</span>
+                      <span className="hidden sm:inline">Marcar leídas</span>
+                      <span className="sm:hidden">Leer</span>
                     </button>
                     <button
                       onClick={deleteSelected}
-                      className="px-3 py-1.5 text-xs font-fira font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1"
+                      className="px-2 sm:px-3 py-1.5 text-xs font-fira font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1"
                     >
                       <Trash2 size={14} />
-                      <span>Eliminar</span>
+                      <span className="hidden sm:inline">Eliminar</span>
                     </button>
                   </>
                 )}
@@ -424,11 +429,11 @@ export default function NotificationBell({ className = '', isMobile = false }) {
                   {notifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-4 hover:bg-gray-50 transition-colors ${
+                      className={`p-3 sm:p-4 hover:bg-gray-50 transition-colors ${
                         !notification.is_read ? 'bg-blue-50/50' : ''
                       } ${isSelectionMode && selectedIds.includes(notification.id) ? 'bg-[#79502A]/5' : ''}`}
                     >
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-start gap-2 sm:gap-3">
                         {/* Checkbox en modo selección */}
                         {isSelectionMode && (
                           <button

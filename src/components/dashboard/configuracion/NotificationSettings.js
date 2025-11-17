@@ -192,8 +192,8 @@ export default function NotificationSettings() {
     {
       key: 'email_on_favorites',
       icon: Heart,
-      title: 'Cuando un cliente seleccione favoritos',
-      description: 'Te avisaremos cuando un cliente finalice su selección de fotos favoritas',
+      title: 'Cuando un cliente seleccione o edite favoritos',
+      description: 'Te avisaremos cuando un cliente envíe o modifique su selección de fotos favoritas',
     },
     {
       key: 'email_on_link_expiring',
@@ -278,32 +278,32 @@ export default function NotificationSettings() {
 
         {/* Campo de email para notificaciones */}
         <div className="space-y-2 pt-1">
-          <label className="block font-fira text-sm font-medium text-black">
+          <label className="block font-fira text-xs sm:text-sm font-medium text-black">
             Email para recibir notificaciones
           </label>
-          <div className="flex gap-3 items-center">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
             <input
               type="email"
               value={preferences.notification_email}
               onChange={(e) => handleChange('notification_email', e.target.value)}
               placeholder="tu-email@ejemplo.com"
-              className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-lg font-fira text-sm text-black
+              className="flex-1 px-3 sm:px-4 py-2.5 border-2 border-gray-200 rounded-lg font-fira text-sm text-black
                 focus:outline-none focus:ring-2 focus:ring-[#C6A97D]/40 focus:border-[#79502A] transition-all
-                hover:border-gray-300"
+                hover:border-gray-300 w-full"
             />
             <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
               <input
                 type="checkbox"
                 checked={preferences.email_enabled}
                 onChange={() => handleChange('email_enabled')}
-                className="w-5 h-5 text-[#79502A] border-gray-300 rounded focus:ring-[#79502A] cursor-pointer"
+                className="w-5 h-5 text-[#79502A] border-gray-300 rounded focus:ring-[#79502A] cursor-pointer flex-shrink-0"
               />
-              <span className="font-fira text-sm font-medium text-black">
+              <span className="font-fira text-xs sm:text-sm font-medium text-black">
                 Habilitar emails
               </span>
             </label>
           </div>
-          <p className="font-fira text-xs text-gray-500">
+          <p className="font-fira text-xs text-gray-500 leading-relaxed">
             {preferences.email_enabled
               ? 'Los emails están habilitados. Las notificaciones seleccionadas abajo se enviarán a este correo.'
               : 'Los emails están deshabilitados. No se enviará ningún email aunque estén marcadas las opciones.'}
@@ -318,21 +318,21 @@ export default function NotificationSettings() {
             return (
               <label
                 key={item.key}
-                className="flex items-start gap-3 cursor-pointer group p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100"
+                className="flex items-start gap-2 sm:gap-3 cursor-pointer group p-2.5 sm:p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100"
               >
                 <input
                   type="checkbox"
                   checked={preferences[item.key]}
                   onChange={() => handleChange(item.key)}
-                  className="mt-1 w-5 h-5 text-[#79502A] border-gray-300 rounded focus:ring-[#79502A] cursor-pointer flex-shrink-0"
+                  className="mt-0.5 sm:mt-1 w-4 h-4 sm:w-5 sm:h-5 text-[#79502A] border-gray-300 rounded focus:ring-[#79502A] cursor-pointer flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
                     <IconComponent
-                      size={16}
-                      className="text-[#79502A] flex-shrink-0"
+                      size={14}
+                      className="text-[#79502A] flex-shrink-0 sm:w-4 sm:h-4"
                     />
-                    <span className="font-fira text-sm font-medium text-black">
+                    <span className="font-fira text-xs sm:text-sm font-medium text-black leading-tight">
                       {item.title}
                     </span>
                   </div>
@@ -367,18 +367,18 @@ export default function NotificationSettings() {
           </div>
         </div>
 
-        <label className="flex items-start gap-3 sm:gap-4 cursor-pointer group p-3 rounded-lg hover:bg-gray-50 transition-colors">
+        <label className="flex items-start gap-2 sm:gap-3 md:gap-4 cursor-pointer group p-2.5 sm:p-3 rounded-lg hover:bg-gray-50 transition-colors">
           <input
             type="checkbox"
             checked={preferences.inapp_enabled}
             onChange={() => handleChange('inapp_enabled')}
-            className="mt-1 w-5 h-5 text-[#79502A] border-gray-300 rounded focus:ring-[#79502A] cursor-pointer"
+            className="mt-0.5 sm:mt-1 w-4 h-4 sm:w-5 sm:h-5 text-[#79502A] border-gray-300 rounded focus:ring-[#79502A] cursor-pointer flex-shrink-0"
           />
           <div>
-            <span className="font-fira text-sm sm:text-base font-medium text-black block mb-1">
+            <span className="font-fira text-xs sm:text-sm font-medium text-black block mb-0.5 sm:mb-1 leading-tight">
               Habilitar notificaciones en la plataforma
             </span>
-            <p className="font-fira text-xs sm:text-sm text-gray-600 leading-relaxed">
+            <p className="font-fira text-xs text-gray-600 leading-relaxed">
               Verás todas las actualizaciones en tiempo real en el ícono de campana
             </p>
           </div>
@@ -397,17 +397,19 @@ export default function NotificationSettings() {
           disabled={isSaving}
           whileHover={{ scale: isSaving ? 1 : 1.02 }}
           whileTap={{ scale: isSaving ? 1 : 0.98 }}
-          className="px-6 py-3 bg-[#79502A] hover:bg-[#8B5A2F] disabled:bg-gray-300 disabled:cursor-not-allowed text-white hover:text-white rounded-lg font-fira text-sm font-semibold flex items-center gap-2 shadow-lg transition-all"
+          className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-[#79502A] hover:bg-[#8B5A2F] disabled:bg-gray-300 disabled:cursor-not-allowed text-white hover:text-white rounded-lg font-fira text-sm font-semibold flex items-center justify-center gap-2 shadow-lg transition-all"
         >
           {isSaving ? (
             <>
-              <Loader2 size={18} className="animate-spin" />
-              <span>Guardando...</span>
+              <Loader2 size={16} className="sm:w-[18px] sm:h-[18px] animate-spin" />
+              <span className="hidden sm:inline">Guardando...</span>
+              <span className="sm:hidden">Guardando...</span>
             </>
           ) : (
             <>
-              <Save size={18} />
-              <span>Guardar cambios</span>
+              <Save size={16} className="sm:w-[18px] sm:h-[18px]" />
+              <span className="hidden sm:inline">Guardar cambios</span>
+              <span className="sm:hidden">Guardar</span>
             </>
           )}
         </motion.button>

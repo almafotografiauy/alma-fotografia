@@ -1,6 +1,7 @@
-import { voga, firaSans } from '@/fonts';
+import { voga, firaSans, cormorantGaramond } from '@/fonts';
 import './globals.css';
-import { SpeedInsights } from "@vercel/speed-insights/next"
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { ToastProvider } from '@/components/ui/Toast';
 
 export const metadata = {
   metadataBase: new URL('https://alma-fotografia.vercel.app'),
@@ -59,7 +60,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es" className={`${voga.variable} ${firaSans.variable}`}>
+    <html lang="es" className={`${voga.variable} ${firaSans.variable} ${cormorantGaramond.variable}`}>
       <head>
         {/* PWA Manifest */}
         <link rel="manifest" href="/manifest.json" />
@@ -120,8 +121,10 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="font-fira antialiased">
-        {children}
-        <SpeedInsights />
+        <ToastProvider>
+          {children}
+          <SpeedInsights />
+        </ToastProvider>
       </body>
     </html>
   );

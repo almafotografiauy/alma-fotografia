@@ -3,7 +3,7 @@ import { createClient } from '@/lib/server';
 import { notifyLinkDeactivated } from '@/lib/notifications/notification-helpers';
 
 /**
- * API Route: Desactivar enlace compartido
+ * API Route: Desactivar (eliminar) enlace compartido
  *
  * POST /api/gallery-shares/deactivate
  * Body: { shareId: string }
@@ -31,22 +31,23 @@ export async function POST(request) {
       );
     }
 
-    // Desactivar el enlace
-    const { error: updateError } = await supabase
+    // 1. Obtener datos del enlace antes de eliminarlo (para la notificación)
+    const { data: shareData, error: fetchError } = await supabase
       .from('gallery_shares')
-      .update({ is_active: false })
+      .select('*')
       .eq('id', shareId)
-      .eq('created_by', user.id); // Seguridad: solo el dueño puede desactivar
+      .eq('created_by', user.id) // Seguridad: solo el dueño puede eliminar
+      .single();
 
-    if (updateError) {
-      console.error('[deactivate] Error updating share:', updateError);
+    if (fetchError || !shareData) {
+      console.error('[deactivate] Error fetching share:', fetchError);
       return NextResponse.json(
-        { success: false, error: 'Error al desactivar el enlace' },
-        { status: 500 }
+        { success: false, error: 'Enlace no encontrado' },
+        { status: 404 }
       );
     }
 
-    // Enviar notificación
+    // 2. Enviar notificación ANTES de eliminar (mientras todavía existe el registro)
     const notificationResult = await notifyLinkDeactivated(shareId, user.id);
 
     if (!notificationResult.success) {
@@ -54,9 +55,24 @@ export async function POST(request) {
       // No fallar la request si la notificación falla
     }
 
+    // 3. ELIMINAR el enlace de la base de datos
+    const { error: deleteError } = await supabase
+      .from('gallery_shares')
+      .delete()
+      .eq('id', shareId)
+      .eq('created_by', user.id); // Seguridad: solo el dueño puede eliminar
+
+    if (deleteError) {
+      console.error('[deactivate] Error deleting share:', deleteError);
+      return NextResponse.json(
+        { success: false, error: 'Error al eliminar el enlace' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Enlace desactivado correctamente',
+      message: 'Enlace eliminado correctamente',
     });
 
   } catch (error) {

@@ -10,6 +10,7 @@ export default function ShareGalleryModal({ galleryId, gallerySlug, onClose }) {
   const [shareLink, setShareLink] = useState('');
   const [isCopied, setIsCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingExisting, setIsCheckingExisting] = useState(true);
   const [existingShare, setExistingShare] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [expirationDays, setExpirationDays] = useState(30);
@@ -19,6 +20,7 @@ export default function ShareGalleryModal({ galleryId, gallerySlug, onClose }) {
   useEffect(() => {
     if (galleryId) {
       setErrorMessage('');
+      setIsCheckingExisting(true);
       checkExistingShare();
     }
   }, [galleryId]);
@@ -27,11 +29,17 @@ export default function ShareGalleryModal({ galleryId, gallerySlug, onClose }) {
   useEffect(() => {
     if (existingShare?.expires_at) {
       checkExpirationStatus();
+    } else {
+      // Si no hay enlace existente, resetear el estado
+      setExpirationStatus(null);
     }
   }, [existingShare]);
 
   const checkExpirationStatus = () => {
-    if (!existingShare?.expires_at) return;
+    if (!existingShare?.expires_at) {
+      setExpirationStatus(null);
+      return;
+    }
 
     const now = new Date();
     const expiresAt = new Date(existingShare.expires_at);
@@ -52,15 +60,16 @@ export default function ShareGalleryModal({ galleryId, gallerySlug, onClose }) {
     try {
       const { error } = await supabase
         .from('gallery_shares')
-        .update({ is_active: false })
+        .delete()
         .eq('id', existingShare.id);
 
       if (!error) {
-        // Actualizar estado local
-        setExistingShare({ ...existingShare, is_active: false });
+        // Actualizar estado local - limpiar todo
+        setExistingShare(null);
+        setShareLink('');
       }
     } catch (error) {
-      console.error('Error auto-deactivating expired link:', error);
+      console.error('Error auto-deleting expired link:', error);
     }
   };
 
@@ -73,26 +82,36 @@ export default function ShareGalleryModal({ galleryId, gallerySlug, onClose }) {
         .eq('is_active', true)
         .maybeSingle();
 
+      // Solo loggear si hay un error con información útil
       if (error) {
-        console.error('Error checking existing share:', error);
-        return;
+        // Verificar si el error tiene información real (message, code, details, etc.)
+        const hasErrorInfo = error.message || error.code || error.details;
+        if (hasErrorInfo) {
+          console.error('Error checking existing share:', error);
+        }
+        // Si no hay data y hay error, salir silenciosamente
+        if (!data) {
+          setIsCheckingExisting(false);
+          return;
+        }
       }
 
       if (data) {
         // Verificar si está vencido ANTES de mostrarlo
         const now = new Date();
         const expiresAt = new Date(data.expires_at);
-        
+
         if (expiresAt <= now) {
-          // Ya venció - desactivar automáticamente
+          // Ya venció - eliminar automáticamente
           await supabase
             .from('gallery_shares')
-            .update({ is_active: false })
+            .delete()
             .eq('id', data.id);
-          
+
           // No mostrar nada, como si no hubiera enlace
           setExistingShare(null);
           setShareLink('');
+          setIsCheckingExisting(false);
           return;
         }
 
@@ -101,8 +120,14 @@ export default function ShareGalleryModal({ galleryId, gallerySlug, onClose }) {
         const link = `${window.location.origin}/galeria/${slugToUse}?token=${data.share_token}`;
         setShareLink(link);
       }
+
+      setIsCheckingExisting(false);
     } catch (err) {
-      console.error('Error in checkExistingShare:', err);
+      // Solo loggear errores reales con información útil
+      if (err && (err.message || err.code || err.details)) {
+        console.error('Error in checkExistingShare:', err);
+      }
+      setIsCheckingExisting(false);
     }
   };
 
@@ -117,6 +142,20 @@ export default function ShareGalleryModal({ galleryId, gallerySlug, onClose }) {
         throw new Error('No se pudo obtener el usuario autenticado');
       }
 
+      // 1. ELIMINAR todos los enlaces anteriores de esta galería creados por este usuario
+      // Solo eliminamos los del usuario actual para evitar problemas de permisos
+      const { error: deleteError } = await supabase
+        .from('gallery_shares')
+        .delete()
+        .eq('gallery_id', galleryId)
+        .eq('created_by', user.id);
+
+      if (deleteError) {
+        console.error('Error deleting old shares:', deleteError);
+        // Continuar de todas formas, el nuevo enlace se creará igual
+      }
+
+      // 2. Crear el nuevo enlace
       const token = `${crypto.randomUUID()}-${Date.now()}`;
 
       const expiresAt = new Date();
@@ -276,8 +315,16 @@ export default function ShareGalleryModal({ galleryId, gallerySlug, onClose }) {
         {/* Content - Con scroll pero sin cortar dropdowns */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-5">
 
-          {/* Error message */}
-          {errorMessage && (
+          {/* Loading inicial */}
+          {isCheckingExisting ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 size={40} className="animate-spin text-[#79502A] mb-4" />
+              <p className="font-fira text-sm text-gray-600">Verificando enlaces existentes...</p>
+            </div>
+          ) : (
+            <>
+              {/* Error message */}
+              {errorMessage && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 sm:p-3 md:p-4 flex items-start gap-2 sm:gap-3">
               <AlertCircle size={16} className="sm:w-5 sm:h-5 text-red-600 flex-shrink-0 mt-0.5" />
               <p className="font-fira text-[11px] sm:text-xs md:text-sm text-red-800 leading-snug">{errorMessage}</p>
@@ -531,6 +578,8 @@ export default function ShareGalleryModal({ galleryId, gallerySlug, onClose }) {
                 </div>
               </div>
             </div>
+          )}
+            </>
           )}
         </div>
 

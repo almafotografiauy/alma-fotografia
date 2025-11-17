@@ -27,7 +27,23 @@ export async function validateShareToken(token, galleryId) {
       .eq('gallery_id', galleryId)
       .single();
 
-    if (shareError || !share) {
+    // Si la tabla no existe o hay error de relación
+    if (shareError) {
+      // Error 42P01 = tabla no existe
+      if (shareError.code === '42P01' || shareError.message?.includes('does not exist')) {
+        return {
+          valid: false,
+          error: 'Sistema de compartir no configurado. Contacta al administrador.'
+        };
+      }
+
+      return {
+        valid: false,
+        error: 'Token inválido o no encontrado'
+      };
+    }
+
+    if (!share) {
       return {
         valid: false,
         error: 'Token inválido o no encontrado'
@@ -36,9 +52,9 @@ export async function validateShareToken(token, galleryId) {
 
     // 2. Verificar si está activo
     if (!share.is_active) {
-      return { 
-        valid: false, 
-        error: 'Este enlace ha sido desactivado' 
+      return {
+        valid: false,
+        error: 'Este enlace ha sido desactivado'
       };
     }
 
@@ -47,15 +63,15 @@ export async function validateShareToken(token, galleryId) {
     const expiresAt = new Date(share.expires_at);
 
     if (expiresAt <= now) {
-      // VENCIDO - Desactivar automáticamente
+      // VENCIDO - Eliminar automáticamente
       await supabase
         .from('gallery_shares')
-        .update({ is_active: false })
+        .delete()
         .eq('id', share.id);
 
-      return { 
-        valid: false, 
-        error: 'Este enlace ha expirado' 
+      return {
+        valid: false,
+        error: 'Este enlace ha expirado'
       };
     }
 
@@ -68,7 +84,7 @@ export async function validateShareToken(token, galleryId) {
       .eq('id', share.id);
 
     if (updateError) {
-      console.error('Error incrementing views:', updateError);
+      // No crítico si falla
     }
 
     return {
@@ -81,9 +97,9 @@ export async function validateShareToken(token, galleryId) {
 
   } catch (error) {
     console.error('Error validating share token:', error);
-    return { 
-      valid: false, 
-      error: 'Error al validar el enlace' 
+    return {
+      valid: false,
+      error: 'Error al validar el enlace'
     };
   }
 }
@@ -111,18 +127,25 @@ export async function getGalleryWithToken(slug, token) {
       .eq('slug', slug)
       .single();
 
-    if (galleryError || !gallery) {
-      return { 
-        success: false, 
-        error: 'Galería no encontrada' 
+    if (galleryError) {
+      return {
+        success: false,
+        error: 'Galería no encontrada'
+      };
+    }
+
+    if (!gallery) {
+      return {
+        success: false,
+        error: 'Galería no encontrada'
       };
     }
 
     // 2. Verificar si está archivada
     if (gallery.archived_at) {
-      return { 
-        success: false, 
-        error: 'Esta galería ha sido archivada' 
+      return {
+        success: false,
+        error: 'Esta galería ha sido archivada'
       };
     }
 
@@ -145,7 +168,11 @@ export async function getGalleryWithToken(slug, token) {
       }
     } else if (token) {
       // Si es pública PERO tiene token, también incrementar vistas
-      await validateShareToken(token, gallery.id);
+      try {
+        await validateShareToken(token, gallery.id);
+      } catch (err) {
+        // Si falla validar el token pero la galería es pública, continuar de todas formas
+      }
     }
 
     // 4. Obtener fotos
@@ -156,20 +183,20 @@ export async function getGalleryWithToken(slug, token) {
       .order('display_order', { ascending: true });
 
     if (photosError) {
-      console.error('Error fetching photos:', photosError);
+      // No fallar si no hay fotos, devolver array vacío
     }
 
-    return { 
-      success: true, 
-      gallery, 
-      photos: photos || [] 
+    return {
+      success: true,
+      gallery,
+      photos: photos || []
     };
 
   } catch (error) {
     console.error('Error getting gallery with token:', error);
-    return { 
-      success: false, 
-      error: 'Error al cargar la galería' 
+    return {
+      success: false,
+      error: error.message || 'Error al cargar la galería'
     };
   }
 }
@@ -177,7 +204,7 @@ export async function getGalleryWithToken(slug, token) {
 /**
  * Cron job / Tarea programada
  *
- * Desactivar todos los enlaces vencidos
+ * Eliminar todos los enlaces vencidos
  * Ejecutar diariamente a medianoche
  */
 export async function deactivateExpiredLinks() {
@@ -186,22 +213,18 @@ export async function deactivateExpiredLinks() {
 
     const now = new Date().toISOString();
 
-    const { data, error } = await supabase
+    // 1. Primero obtener los enlaces vencidos (para enviar notificaciones)
+    const { data: expiredLinks, error: fetchError } = await supabase
       .from('gallery_shares')
-      .update({ is_active: false })
+      .select('*')
       .eq('is_active', true)
-      .lt('expires_at', now)
-      .select();
+      .lt('expires_at', now);
 
-    if (error) throw error;
+    if (fetchError) throw fetchError;
 
-    console.log(`Desactivados ${data?.length || 0} enlaces vencidos`);
-
-    // Enviar notificaciones para cada enlace expirado
-    if (data && data.length > 0) {
-      console.log(`📧 Enviando notificaciones para ${data.length} enlaces expirados...`);
-
-      for (const share of data) {
+    // 2. Enviar notificaciones para cada enlace expirado ANTES de eliminar
+    if (expiredLinks && expiredLinks.length > 0) {
+      for (const share of expiredLinks) {
         try {
           await notifyLinkExpired(share.id);
         } catch (notifyError) {
@@ -211,13 +234,22 @@ export async function deactivateExpiredLinks() {
       }
     }
 
+    // 3. Eliminar los enlaces vencidos
+    const { error: deleteError } = await supabase
+      .from('gallery_shares')
+      .delete()
+      .eq('is_active', true)
+      .lt('expires_at', now);
+
+    if (deleteError) throw deleteError;
+
     return {
       success: true,
-      deactivated: data?.length || 0
+      deleted: expiredLinks?.length || 0
     };
 
   } catch (error) {
-    console.error('Error deactivating expired links:', error);
+    console.error('Error deleting expired links:', error);
     return {
       success: false,
       error: error.message
