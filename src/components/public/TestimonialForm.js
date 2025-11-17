@@ -12,8 +12,14 @@ import { createTestimonial } from '@/app/actions/testimonial-actions';
  * sobre su experiencia con la galería/fotógrafo
  */
 export default function TestimonialForm({ galleryId, galleryTitle, clientEmail: initialEmail = '' }) {
+  // Pre-cargar nombre y email desde localStorage si están disponibles
+  const getInitialName = () => {
+    if (typeof window === 'undefined') return '';
+    return localStorage.getItem(`gallery_${galleryId}_name`) || '';
+  };
+
   const [formData, setFormData] = useState({
-    clientName: '',
+    clientName: getInitialName(),
     clientEmail: initialEmail,
     message: '',
     rating: 0,
@@ -85,8 +91,8 @@ export default function TestimonialForm({ galleryId, galleryTitle, clientEmail: 
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
-            <MessageSquare size={24} className="text-white" />
+          <div className="p-3 bg-gradient-to-br from-[#79502A] to-[#8B5A2F] rounded-xl">
+            <Star size={24} className="text-yellow-300 fill-yellow-300" />
           </div>
           <div>
             <h2 className="font-voga text-2xl md:text-3xl text-black">
@@ -139,7 +145,7 @@ export default function TestimonialForm({ galleryId, galleryTitle, clientEmail: 
               value={formData.clientName}
               onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
               placeholder="Ej: María García"
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl font-fira text-sm text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl font-fira text-sm text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent transition-all"
               disabled={isSubmitting}
             />
           </div>
@@ -154,7 +160,7 @@ export default function TestimonialForm({ galleryId, galleryTitle, clientEmail: 
               value={formData.clientEmail}
               onChange={(e) => setFormData(prev => ({ ...prev, clientEmail: e.target.value }))}
               placeholder="Ej: maria@ejemplo.com"
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl font-fira text-sm text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl font-fira text-sm text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent transition-all"
               disabled={isSubmitting}
             />
             <p className="font-fira text-xs text-gray-500 mt-2">
@@ -206,7 +212,7 @@ export default function TestimonialForm({ galleryId, galleryTitle, clientEmail: 
               onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
               placeholder="Cuéntanos sobre tu experiencia con las fotos..."
               rows={5}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl font-fira text-sm text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl font-fira text-sm text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent transition-all resize-none"
               disabled={isSubmitting}
             />
             <p className="font-fira text-xs text-gray-500 mt-2">
@@ -218,7 +224,7 @@ export default function TestimonialForm({ galleryId, galleryTitle, clientEmail: 
           <button
             type="submit"
             disabled={isSubmitting || !formData.clientName.trim() || !formData.clientEmail.trim() || !formData.message.trim()}
-            className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:from-gray-300 disabled:to-gray-300 text-white rounded-xl font-fira font-semibold flex items-center justify-center gap-2 transition-all disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+            className="w-full py-3 bg-gradient-to-r from-[#79502A] to-[#8B5A2F] hover:from-[#8B5A2F] hover:to-[#9A6B3C] disabled:from-gray-300 disabled:to-gray-300 text-white rounded-xl font-fira font-semibold flex items-center justify-center gap-2 transition-all disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
           >
             {isSubmitting ? (
               <>

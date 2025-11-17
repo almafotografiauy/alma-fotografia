@@ -5,7 +5,7 @@ import Image from 'next/image';
 import {
   Download, X, ChevronLeft, ChevronRight, Heart,
   Share2, Check, Mail, Lock, Loader2, AlertCircle,
-  ChevronDown, Play, Pause, MessageSquare
+  ChevronDown, Play, Pause, MessageSquare, Info, Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TestimonialForm from '@/components/public/TestimonialForm';
@@ -742,9 +742,9 @@ export default function PublicGalleryView({ gallery, token }) {
                   className="relative p-2 hover:bg-black/5 rounded-full transition-colors"
                   title="Mensaje del fotógrafo"
                 >
-                  <MessageSquare size={18} strokeWidth={1.5} className="text-black/70" />
+                  <Info size={18} strokeWidth={1.5} className="text-black/70" />
                   {!hasSeenMessage && (
-                    <span className="absolute -top-1 -right-1 bg-blue-500 w-2.5 h-2.5 rounded-full" />
+                    <span className="absolute -top-1 -right-1 bg-[#79502A] w-2.5 h-2.5 rounded-full" />
                   )}
                 </button>
               )}
@@ -765,8 +765,8 @@ export default function PublicGalleryView({ gallery, token }) {
                     className={favoritePhotoIds.length > 0 ? 'fill-rose-500 text-rose-500' : 'text-black/70'}
                   />
                   {favoritePhotoIds.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-medium rounded-full w-4 h-4 flex items-center justify-center">
-                      {favoritePhotoIds.length}
+                    <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-semibold rounded-full px-1.5 py-0.5 flex items-center justify-center whitespace-nowrap">
+                      {favoritePhotoIds.length}/{maxFavorites}
                     </span>
                   )}
                 </button>
@@ -783,13 +783,27 @@ export default function PublicGalleryView({ gallery, token }) {
               )}
 
               {allowComments && (
-                <button
+                <motion.button
                   onClick={() => setShowTestimonialModal(true)}
-                  className="p-2 hover:bg-black/5 rounded-full transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-[#79502A] to-[#8B5A2F] hover:from-[#8B5A2F] hover:to-[#79502A] text-white rounded-full transition-all shadow-md hover:shadow-lg"
                   title="Dejar testimonio"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  animate={{
+                    boxShadow: [
+                      '0 4px 6px rgba(121, 80, 42, 0.2)',
+                      '0 6px 10px rgba(121, 80, 42, 0.3)',
+                      '0 4px 6px rgba(121, 80, 42, 0.2)',
+                    ]
+                  }}
+                  transition={{
+                    boxShadow: { duration: 2, repeat: Infinity, ease: 'easeInOut' }
+                  }}
                 >
-                  <MessageSquare size={18} strokeWidth={1.5} className="text-black/70" />
-                </button>
+                  <Star size={16} strokeWidth={2} className="fill-yellow-300 text-yellow-300" />
+                  <span className="font-fira text-xs font-semibold hidden sm:inline">Dejar Testimonio</span>
+                  <span className="font-fira text-xs font-semibold sm:hidden">Testimonio</span>
+                </motion.button>
               )}
             </div>
           </div>
@@ -851,8 +865,8 @@ export default function PublicGalleryView({ gallery, token }) {
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-50 rounded-lg">
-                    <MessageSquare size={24} className="text-blue-600" strokeWidth={1.5} />
+                  <div className="p-2 bg-[#F5EDE0] rounded-lg">
+                    <Info size={24} className="text-[#79502A]" strokeWidth={1.5} />
                   </div>
                   <h2 className="font-serif text-2xl text-black" style={{ fontFamily: 'Cormorant Garamond, serif' }}>
                     Mensaje del fotógrafo
