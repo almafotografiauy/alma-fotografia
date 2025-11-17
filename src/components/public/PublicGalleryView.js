@@ -642,7 +642,6 @@ export default function PublicGalleryView({ gallery, token }) {
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = photo.file_name || `foto-${photo.id}.jpg`;
-      link.target = '_blank';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -660,20 +659,61 @@ export default function PublicGalleryView({ gallery, token }) {
     }
   };
 
-  // Descargar todas las fotos
+  // Descargar todas las fotos como ZIP
   const handleDownloadAll = async () => {
     if (!downloadEnabled) return;
 
-    showToast({
-      message: `Descargando ${photos.length} fotos...`,
-      type: 'info'
-    });
+    try {
+      showToast({
+        message: `Preparando descarga de ${photos.length} fotos...`,
+        type: 'info'
+      });
 
-    // Descargar fotos una por una con un pequeño delay
-    for (let i = 0; i < photos.length; i++) {
-      await handleDownloadPhoto(photos[i]);
-      // Pequeño delay para no saturar el navegador
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Construir URL de la API con parámetros
+      const params = new URLSearchParams({
+        galleryId: galleryId,
+      });
+
+      // Agregar PIN solo si existe
+      if (galleryDownloadPin) {
+        params.append('pin', downloadPin);
+      }
+
+      const apiUrl = `/api/download-gallery?${params.toString()}`;
+
+      // Descargar el ZIP
+      const response = await fetch(apiUrl);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al generar el ZIP');
+      }
+
+      // Obtener el blob del ZIP
+      const blob = await response.blob();
+
+      // Crear URL temporal y descargar
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${gallerySlug || 'galeria'}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Liberar memoria
+      window.URL.revokeObjectURL(url);
+
+      showToast({
+        message: '¡ZIP descargado exitosamente!',
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('Error downloading gallery:', error);
+      showToast({
+        message: error.message || 'Error al descargar la galería',
+        type: 'error'
+      });
     }
   };
 
