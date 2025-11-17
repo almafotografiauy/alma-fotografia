@@ -1246,23 +1246,23 @@ export default function PublicGalleryView({ gallery, token }) {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-xl bg-white rounded-xl sm:rounded-2xl shadow-2xl z-50 max-h-[95vh] flex flex-col"
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] sm:w-full max-w-xl bg-white rounded-xl sm:rounded-2xl shadow-2xl z-50 max-h-[90vh] overflow-hidden"
             >
               {/* Header del Modal */}
-              <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between rounded-t-xl sm:rounded-t-2xl flex-shrink-0">
-                <h3 className="font-voga text-xl sm:text-2xl text-black">
+              <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between flex-shrink-0">
+                <h3 className="font-voga text-lg sm:text-xl text-black">
                   Dejar un Testimonio
                 </h3>
                 <button
                   onClick={() => setShowTestimonialModal(false)}
-                  className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
+                  className="p-1.5 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
                 >
-                  <X size={18} strokeWidth={1.5} className="text-black/60 sm:w-5 sm:h-5" />
+                  <X size={18} strokeWidth={1.5} className="text-black/60" />
                 </button>
               </div>
 
               {/* Contenido del Modal */}
-              <div className="p-4 sm:p-6 overflow-y-auto flex-1">
+              <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-4rem)]">
                 <TestimonialForm
                   galleryId={galleryId}
                   galleryTitle={title}
