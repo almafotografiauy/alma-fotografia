@@ -65,6 +65,8 @@ async function GalleryContent({ slug, token }) {
         customMessage: gallery.custom_message,
         watermarkEnabled: gallery.watermark_enabled,
         password: gallery.password,
+        allowShareFavorites: gallery.allow_share_favorites || false,
+        downloadPin: gallery.download_pin,
         photos: validPhotos,
       }}
       token={token}

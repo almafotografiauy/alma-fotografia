@@ -27,7 +27,8 @@ async function FavoritesContent({ galleryId }) {
       title,
       slug,
       client_email,
-      max_favorites
+      max_favorites,
+      allow_share_favorites
     `)
     .eq('id', galleryId)
     .single();

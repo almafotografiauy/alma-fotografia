@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TestimonialForm from '@/components/public/TestimonialForm';
-import { toggleFavorite, getClientFavorites } from '@/app/actions/favorites-actions';
+import { toggleFavorite, getClientFavorites, submitFavoritesSelection } from '@/app/actions/favorites-actions';
 import { useToast } from '@/components/ui/Toast';
 
 /**
@@ -108,6 +108,7 @@ export default function PublicGalleryView({ gallery, token }) {
   const [showEmailTooltip, setShowEmailTooltip] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [hasSeenMessage, setHasSeenMessage] = useState(false);
+  const favoritesDebounceRef = useRef(null);
   const { showToast } = useToast();
 
   const {
@@ -122,6 +123,7 @@ export default function PublicGalleryView({ gallery, token }) {
     customMessage,
     allowComments,
     downloadPin: galleryDownloadPin,
+    allowShareFavorites,
   } = gallery;
 
   // Formatear fecha elegante
@@ -236,6 +238,42 @@ export default function PublicGalleryView({ gallery, token }) {
     loadFavorites(trimmedEmail);
   };
 
+  // Auto-submit de favoritos después de 5 minutos de inactividad
+  const scheduleAutoSubmit = useCallback(() => {
+    // Limpiar timer anterior si existe
+    if (favoritesDebounceRef.current) {
+      clearTimeout(favoritesDebounceRef.current);
+    }
+
+    // Programar nuevo auto-submit para 5 minutos (300000 ms)
+    favoritesDebounceRef.current = setTimeout(async () => {
+      if (clientEmail && favoritePhotoIds.length > 0 && !hasSubmitted) {
+        console.log('[Auto-Submit] Enviando favoritos después de 5 minutos de inactividad...');
+        try {
+          const result = await submitFavoritesSelection(galleryId, clientEmail, clientName);
+          if (result.success) {
+            setHasSubmitted(true);
+            showToast({
+              message: 'Tu selección ha sido enviada automáticamente',
+              type: 'success'
+            });
+          }
+        } catch (error) {
+          console.error('[Auto-Submit] Error:', error);
+        }
+      }
+    }, 300000); // 5 minutos
+  }, [clientEmail, clientName, favoritePhotoIds.length, galleryId, hasSubmitted, showToast]);
+
+  // Limpiar timer al desmontar componente
+  useEffect(() => {
+    return () => {
+      if (favoritesDebounceRef.current) {
+        clearTimeout(favoritesDebounceRef.current);
+      }
+    };
+  }, []);
+
   // Toggle favorito
   const handleToggleFavorite = async (photoId) => {
     if (hasSubmitted && !isEditingAfterSubmit) {
@@ -267,6 +305,9 @@ export default function PublicGalleryView({ gallery, token }) {
           setFavoritePhotoIds(prev => prev.filter(id => id !== photoId));
         }
         showToast({ message: result.error || 'Error al actualizar favorita', type: 'error' });
+      } else {
+        // Resetear el timer de auto-submit después de cada cambio exitoso
+        scheduleAutoSubmit();
       }
     } catch (error) {
       if (wasFavorite) {
@@ -422,30 +463,72 @@ export default function PublicGalleryView({ gallery, token }) {
     document.getElementById('gallery-start')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Compartir - copiar enlace
+  // Compartir - copiar enlace (galería completa)
   const handleCopyLink = async () => {
     const shareUrl = window.location.href;
     try {
       await navigator.clipboard.writeText(shareUrl);
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
+      showToast({ message: 'Enlace copiado al portapapeles', type: 'success' });
     } catch (error) {
       showToast({ message: 'Error al copiar el enlace', type: 'error' });
     }
   };
 
-  // Compartir por WhatsApp
+  // Compartir por WhatsApp (galería completa)
   const handleShareWhatsApp = () => {
     const shareUrl = window.location.href;
     const text = `Mira esta galería: ${title}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + shareUrl)}`, '_blank');
   };
 
-  // Compartir por Email
+  // Compartir por Email (galería completa)
   const handleShareEmail = () => {
     const shareUrl = window.location.href;
     const subject = `Galería: ${title}`;
     const body = `Te comparto esta galería: ${shareUrl}`;
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  // Generar URL de favoritos compartidos
+  const generateFavoritesUrl = () => {
+    if (!clientEmail || !gallerySlug || !token) return '';
+    const hash = btoa(clientEmail.toLowerCase().trim());
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${origin}/galeria/${gallerySlug}/favoritos/${hash}?token=${token}`;
+  };
+
+  // Compartir favoritos - copiar enlace
+  const handleCopyFavoritesLink = async () => {
+    const favUrl = generateFavoritesUrl();
+    if (!favUrl) {
+      showToast({ message: 'Error al generar el enlace', type: 'error' });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(favUrl);
+      showToast({ message: 'Enlace de favoritos copiado', type: 'success' });
+    } catch (error) {
+      showToast({ message: 'Error al copiar el enlace', type: 'error' });
+    }
+  };
+
+  // Compartir favoritos por WhatsApp
+  const handleShareFavoritesWhatsApp = () => {
+    const favUrl = generateFavoritesUrl();
+    if (!favUrl) return;
+    const text = `Mira mis fotos favoritas de la galería`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + favUrl)}`, '_blank');
+  };
+
+  // Compartir favoritos por Email
+  const handleShareFavoritesEmail = () => {
+    const favUrl = generateFavoritesUrl();
+    if (!favUrl) return;
+    const subject = `Mis Fotos Favoritas`;
+    const body = `Te comparto mi selección de fotos favoritas:\n\n${favUrl}`;
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
@@ -904,42 +987,105 @@ export default function PublicGalleryView({ gallery, token }) {
                 </button>
               </div>
 
-              <div className="space-y-3">
-                <button
-                  onClick={handleCopyLink}
-                  className="w-full flex items-center gap-3 px-4 py-3 border border-black/10 hover:border-black/20 rounded-sm transition-colors text-left"
-                >
-                  {linkCopied ? (
-                    <Check size={18} strokeWidth={1.5} className="text-green-600" />
-                  ) : (
-                    <Share2 size={18} strokeWidth={1.5} className="text-black/60" />
-                  )}
-                  <span className="text-sm text-black/80 font-light">
-                    {linkCopied ? 'Enlace copiado' : 'Copiar enlace'}
-                  </span>
-                </button>
+              <div className="space-y-6">
+                {/* Compartir Galería Completa */}
+                <div>
+                  <h4 className="font-light text-xs text-black/50 uppercase tracking-wider mb-3">
+                    Galería Completa
+                  </h4>
+                  <div className="space-y-2">
+                    <button
+                      onClick={handleCopyLink}
+                      className="w-full flex items-center gap-3 px-4 py-3 border border-black/10 hover:border-black/20 rounded-sm transition-colors text-left"
+                    >
+                      {linkCopied ? (
+                        <Check size={18} strokeWidth={1.5} className="text-green-600" />
+                      ) : (
+                        <Share2 size={18} strokeWidth={1.5} className="text-black/60" />
+                      )}
+                      <span className="text-sm text-black/80 font-light">
+                        {linkCopied ? 'Enlace copiado' : 'Copiar enlace'}
+                      </span>
+                    </button>
 
-                <button
-                  onClick={handleShareWhatsApp}
-                  className="w-full flex items-center gap-3 px-4 py-3 border border-black/10 hover:border-black/20 rounded-sm transition-colors text-left"
-                >
-                  <svg className="w-[18px] h-[18px] text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                  </svg>
-                  <span className="text-sm text-black/80 font-light">
-                    Compartir por WhatsApp
-                  </span>
-                </button>
+                    <button
+                      onClick={handleShareWhatsApp}
+                      className="w-full flex items-center gap-3 px-4 py-3 border border-black/10 hover:border-black/20 rounded-sm transition-colors text-left"
+                    >
+                      <svg className="w-[18px] h-[18px] text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                      </svg>
+                      <span className="text-sm text-black/80 font-light">
+                        Compartir por WhatsApp
+                      </span>
+                    </button>
 
-                <button
-                  onClick={handleShareEmail}
-                  className="w-full flex items-center gap-3 px-4 py-3 border border-black/10 hover:border-black/20 rounded-sm transition-colors text-left"
-                >
-                  <Mail size={18} strokeWidth={1.5} className="text-black/60" />
-                  <span className="text-sm text-black/80 font-light">
-                    Compartir por email
-                  </span>
-                </button>
+                    <button
+                      onClick={handleShareEmail}
+                      className="w-full flex items-center gap-3 px-4 py-3 border border-black/10 hover:border-black/20 rounded-sm transition-colors text-left"
+                    >
+                      <Mail size={18} strokeWidth={1.5} className="text-black/60" />
+                      <span className="text-sm text-black/80 font-light">
+                        Compartir por email
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Compartir Mis Favoritos */}
+                {maxFavorites > 0 && (
+                  <div>
+                    <h4 className="font-light text-xs text-black/50 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <Heart size={14} className="text-pink-500 fill-pink-500" />
+                      Mis Favoritos ({favoritePhotoIds.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {!allowShareFavorites || favoritePhotoIds.length === 0 ? (
+                        <div className="px-4 py-3 border border-black/10 rounded-sm bg-black/5">
+                          <p className="text-xs text-black/40 font-light">
+                            {!allowShareFavorites
+                              ? 'El fotógrafo no ha habilitado compartir favoritos'
+                              : 'Primero selecciona algunas fotos favoritas'}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onClick={handleCopyFavoritesLink}
+                            className="w-full flex items-center gap-3 px-4 py-3 border border-black/10 hover:border-black/20 rounded-sm transition-colors text-left"
+                          >
+                            <Share2 size={18} strokeWidth={1.5} className="text-pink-600" />
+                            <span className="text-sm text-black/80 font-light">
+                              Copiar enlace de favoritos
+                            </span>
+                          </button>
+
+                          <button
+                            onClick={handleShareFavoritesWhatsApp}
+                            className="w-full flex items-center gap-3 px-4 py-3 border border-black/10 hover:border-black/20 rounded-sm transition-colors text-left"
+                          >
+                            <svg className="w-[18px] h-[18px] text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                            </svg>
+                            <span className="text-sm text-black/80 font-light">
+                              Compartir por WhatsApp
+                            </span>
+                          </button>
+
+                          <button
+                            onClick={handleShareFavoritesEmail}
+                            className="w-full flex items-center gap-3 px-4 py-3 border border-black/10 hover:border-black/20 rounded-sm transition-colors text-left"
+                          >
+                            <Mail size={18} strokeWidth={1.5} className="text-black/60" />
+                            <span className="text-sm text-black/80 font-light">
+                              Compartir por email
+                            </span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           </>

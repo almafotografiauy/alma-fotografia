@@ -32,11 +32,13 @@ import {
   FolderPlus,
   History,
   Plus,
-  Minus
+  Minus,
+  Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { updateAllowShareFavorites } from '@/app/actions/gallery-actions';
 
 /**
  * ClientFavoritesSection - Sección de favoritas de un cliente
@@ -1004,6 +1006,8 @@ export default function FavoritesView({ gallery, favoritesByClient }) {
   const [sortBy, setSortBy] = useState('recent'); // recent, email, count
   const [filterStatus, setFilterStatus] = useState('all'); // all, submitted, selecting
   const [showFilters, setShowFilters] = useState(false);
+  const [allowShareFavorites, setAllowShareFavorites] = useState(gallery.allow_share_favorites || false);
+  const [isUpdatingShareSetting, setIsUpdatingShareSetting] = useState(false);
 
   // Cargar notas existentes al estado inicial
   const initialNotes = {};
@@ -1019,6 +1023,33 @@ export default function FavoritesView({ gallery, favoritesByClient }) {
   const [clientStatuses, setClientStatuses] = useState({});
 
   const gallerySlug = gallery.slug || gallery.title.toLowerCase().replace(/\s+/g, '-');
+  const { showToast } = useToast();
+
+  // Manejar toggle de compartir favoritos
+  const handleToggleShareFavorites = async () => {
+    setIsUpdatingShareSetting(true);
+    const newValue = !allowShareFavorites;
+
+    try {
+      const result = await updateAllowShareFavorites(gallery.id, newValue);
+
+      if (result.success) {
+        setAllowShareFavorites(newValue);
+        showToast({
+          message: newValue
+            ? 'Los clientes ahora pueden compartir sus favoritos'
+            : 'Se deshabilitó el compartir favoritos',
+          type: 'success'
+        });
+      } else {
+        showToast({ message: result.error || 'Error al actualizar configuración', type: 'error' });
+      }
+    } catch (error) {
+      showToast({ message: 'Error al actualizar configuración', type: 'error' });
+    } finally {
+      setIsUpdatingShareSetting(false);
+    }
+  };
 
   // Auto-refresh cada 3 minutos
   useEffect(() => {
@@ -1262,13 +1293,38 @@ export default function FavoritesView({ gallery, favoritesByClient }) {
     <div className="w-full">
       {/* Header mejorado */}
       <div className="mb-6 px-4 sm:px-6">
-        <button
-          onClick={() => router.push(`/dashboard/galerias/${gallery.id}`)}
-          className="mb-4 flex items-center gap-2 text-[#C6A97D] hover:text-[#D4B896] transition-colors font-fira text-sm font-semibold group"
-        >
-          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-          Volver a la galería
-        </button>
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => router.push(`/dashboard/galerias/${gallery.id}`)}
+            className="flex items-center gap-2 text-[#C6A97D] hover:text-[#D4B896] transition-colors font-fira text-sm font-semibold group"
+          >
+            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+            Volver a la galería
+          </button>
+
+          {/* Toggle de compartir favoritos */}
+          <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-4 py-2.5 shadow-sm">
+            <div className="flex items-center gap-2">
+              <Share2 size={16} className="text-gray-500" />
+              <span className="font-fira text-sm text-gray-700">
+                Permitir compartir favoritos
+              </span>
+            </div>
+            <button
+              onClick={handleToggleShareFavorites}
+              disabled={isUpdatingShareSetting}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:ring-offset-2 ${
+                allowShareFavorites ? 'bg-[#79502A]' : 'bg-gray-300'
+              } ${isUpdatingShareSetting ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <span
+                className={`${
+                  allowShareFavorites ? 'translate-x-6' : 'translate-x-1'
+                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+              />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Lista de clientes */}

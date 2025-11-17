@@ -495,3 +495,54 @@ export async function cleanOrphanedPhotos() {
     };
   }
 }
+
+// ============================================
+// ACTUALIZAR CONFIGURACIÓN DE COMPARTIR FAVORITOS
+// ============================================
+
+/**
+ * Actualizar el permiso para compartir favoritos
+ *
+ * - Permite al fotógrafo controlar si los clientes pueden compartir sus favoritas
+ * - Solo actualiza el campo allow_share_favorites de la galería
+ *
+ * @param {string} galleryId - ID de la galería
+ * @param {boolean} allowShare - Si se permite compartir favoritos
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+export async function updateAllowShareFavorites(galleryId, allowShare) {
+  try {
+    const supabase = await createClient();
+
+    // Obtener el usuario actual
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    // Actualizar galería
+    const { error: updateError } = await supabase
+      .from('galleries')
+      .update({ allow_share_favorites: allowShare })
+      .eq('id', galleryId)
+      .eq('created_by', user.id);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    // Revalidar caché
+    revalidatePath('/dashboard/galerias');
+    revalidatePath(`/dashboard/galerias/${galleryId}`);
+    revalidatePath(`/dashboard/galerias/${galleryId}/favoritos`);
+
+    return { success: true };
+
+  } catch (error) {
+    console.error('❌ Error en updateAllowShareFavorites:', error.message);
+    return {
+      success: false,
+      error: `No se pudo actualizar la configuración: ${error.message}`
+    };
+  }
+}
