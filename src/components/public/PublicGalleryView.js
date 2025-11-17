@@ -1347,7 +1347,7 @@ export default function PublicGalleryView({ gallery, token }) {
                         onChange={(e) => setDownloadEmail(e.target.value)}
                         placeholder="tu@email.com"
                         required
-                        className="w-full pl-10 pr-4 py-3 border border-black/10 rounded-sm text-sm focus:outline-none focus:border-black/30 transition-colors"
+                        className="w-full pl-10 pr-4 py-3 border border-black/10 rounded-sm text-sm placeholder:text-gray-500 focus:outline-none focus:border-black/30 transition-colors"
                       />
                     </div>
                   </div>
@@ -1365,7 +1365,7 @@ export default function PublicGalleryView({ gallery, token }) {
                         placeholder="Ingresa tu PIN"
                         required
                         maxLength={6}
-                        className="w-full pl-10 pr-4 py-3 border border-black/10 rounded-sm text-sm placeholder:text-black focus:outline-none focus:border-black/30 transition-colors"
+                        className="w-full pl-10 pr-4 py-3 border border-black/10 rounded-sm text-sm placeholder:text-gray-500 focus:outline-none focus:border-black/30 transition-colors"
                       />
                     </div>
                   </div>

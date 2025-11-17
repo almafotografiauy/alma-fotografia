@@ -288,7 +288,7 @@ export default function EditGalleryModal({ gallery, hasActiveLink, onClose, onSu
                   onChange={handleChange}
                   required
                   placeholder="Ej: Boda María & Pedro"
-                  className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 border border-gray-300 rounded-lg font-fira text-xs sm:text-sm text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent"
+                  className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 border border-gray-300 rounded-lg font-fira text-xs sm:text-sm text-black placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent"
                 />
               </div>
 
@@ -303,7 +303,7 @@ export default function EditGalleryModal({ gallery, hasActiveLink, onClose, onSu
                   onChange={handleChange}
                   rows={3}
                   placeholder="Describe brevemente esta sesión fotográfica..."
-                  className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 border border-gray-300 rounded-lg font-fira text-xs sm:text-sm text-black placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent"
+                  className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 border border-gray-300 rounded-lg font-fira text-xs sm:text-sm text-black placeholder:text-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent"
                 />
               </div>
 
@@ -362,7 +362,7 @@ export default function EditGalleryModal({ gallery, hasActiveLink, onClose, onSu
                   value={formData.client_email}
                   onChange={handleChange}
                   placeholder="cliente@ejemplo.com"
-                  className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 border border-gray-300 rounded-lg font-fira text-xs sm:text-sm text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent"
+                  className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 border border-gray-300 rounded-lg font-fira text-xs sm:text-sm text-black placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent"
                 />
                 <p className="font-fira text-[10px] sm:text-xs text-gray-500 mt-1">
                   Para enviar notificaciones
@@ -382,7 +382,7 @@ export default function EditGalleryModal({ gallery, hasActiveLink, onClose, onSu
                   placeholder="Ej: ¡Hola María! Acá están tus fotos 💕"
                   rows={3}
                   maxLength={300}
-                  className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 border border-gray-300 rounded-lg font-fira text-xs sm:text-sm text-black placeholder:text-gray-400 resize-y focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent"
+                  className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 border border-gray-300 rounded-lg font-fira text-xs sm:text-sm text-black placeholder:text-gray-500 resize-y focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent"
                 />
                 <div className="flex items-center justify-between mt-1">
                   <p className="font-fira text-[10px] sm:text-xs text-gray-500">
@@ -468,7 +468,7 @@ export default function EditGalleryModal({ gallery, hasActiveLink, onClose, onSu
                         onChange={handleChange}
                         placeholder="Ej: 1234"
                         maxLength={6}
-                        className="flex-1 px-3 py-1.5 sm:py-2 border border-gray-300 rounded-lg font-fira text-[11px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent"
+                        className="flex-1 px-3 py-1.5 sm:py-2 border border-gray-300 rounded-lg font-fira text-[11px] sm:text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent"
                       />
                       <button
                         type="button"
@@ -540,7 +540,7 @@ export default function EditGalleryModal({ gallery, hasActiveLink, onClose, onSu
                         onChange={handleChange}
                         placeholder={hasActiveLink ? "No se puede cambiar con enlace activo" : "Dejar vacío para sin contraseña"}
                         disabled={hasActiveLink}
-                        className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 pr-10 sm:pr-12 border border-gray-300 rounded-lg font-fira text-xs sm:text-sm text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-500"
+                        className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 pr-10 sm:pr-12 border border-gray-300 rounded-lg font-fira text-xs sm:text-sm text-black placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-500"
                       />
                       <button
                         type="button"
