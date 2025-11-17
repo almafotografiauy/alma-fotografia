@@ -23,6 +23,7 @@ export default function EditGalleryModal({ gallery, hasActiveLink, onClose, onSu
     custom_message: '',
     password: '',
     max_favorites: 150,
+    download_pin: '',
   });
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
@@ -46,6 +47,7 @@ export default function EditGalleryModal({ gallery, hasActiveLink, onClose, onSu
         is_public: gallery.is_public || false,
         allow_downloads: gallery.allow_downloads ?? true,
         allow_comments: gallery.allow_comments ?? false,
+        download_pin: gallery.download_pin || '',
         custom_message: gallery.custom_message || '',
         password: gallery.password || '',
         max_favorites: gallery.max_favorites || 150,
@@ -184,6 +186,7 @@ export default function EditGalleryModal({ gallery, hasActiveLink, onClose, onSu
         custom_message: formData.custom_message.trim() || null,
         password: formData.password.trim() || null,
         max_favorites: formData.max_favorites,
+        download_pin: formData.download_pin.trim() || null,
       };
 
       const { data, error: updateError } = await supabase
@@ -450,9 +453,42 @@ export default function EditGalleryModal({ gallery, hasActiveLink, onClose, onSu
                     </p>
                   </div>
                 </label>
+
+                {/* PIN de descarga (solo si descargas están habilitadas) */}
+                {formData.allow_downloads && (
+                  <div className="mt-3 sm:mt-4 pl-7 sm:pl-8">
+                    <label className="block font-fira text-[11px] sm:text-xs font-medium text-black mb-1.5 sm:mb-2">
+                      PIN de descarga (opcional)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        name="download_pin"
+                        value={formData.download_pin}
+                        onChange={handleChange}
+                        placeholder="Ej: 1234"
+                        maxLength={6}
+                        className="flex-1 px-3 py-1.5 sm:py-2 border border-gray-300 rounded-lg font-fira text-[11px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#79502A] focus:border-transparent"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const pin = Math.floor(1000 + Math.random() * 9000).toString();
+                          setFormData(prev => ({ ...prev, download_pin: pin }));
+                        }}
+                        className="px-3 py-1.5 sm:py-2 bg-[#79502A] hover:bg-[#8B5A2F] text-white rounded-lg font-fira text-[10px] sm:text-xs font-medium transition-colors whitespace-nowrap"
+                      >
+                        Generar
+                      </button>
+                    </div>
+                    <p className="font-fira text-[9px] sm:text-[10px] text-gray-500 mt-1">
+                      Deja vacío para no requerir PIN. Los clientes lo necesitarán para descargar.
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {/* Permitir comentarios */}
+              {/* Permitir testimonios */}
               <div className="bg-white rounded-lg p-2.5 sm:p-3 md:p-4 border border-gray-200">
                 <label className="flex items-start gap-2 sm:gap-3 cursor-pointer">
                   <input
@@ -464,10 +500,10 @@ export default function EditGalleryModal({ gallery, hasActiveLink, onClose, onSu
                   />
                   <div className="flex-1">
                     <span className="font-fira text-[11px] sm:text-xs md:text-sm font-medium text-black">
-                      Permitir comentarios
+                      Permitir testimonios
                     </span>
                     <p className="font-fira text-[10px] sm:text-xs text-gray-600 mt-0.5">
-                      Los clientes podrán comentar cada foto
+                      Los clientes podrán dejar testimonios sobre tu trabajo
                     </p>
                   </div>
                 </label>

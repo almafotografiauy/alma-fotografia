@@ -22,6 +22,8 @@ const PhotoGrid = memo(({
   onToggleFavorite,
   favoritePhotoIds,
   maxFavorites,
+  downloadEnabled,
+  onDownloadPhoto,
 }) => {
   return (
     <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-2 space-y-2">
@@ -73,6 +75,24 @@ const PhotoGrid = memo(({
                   />
                 </button>
               )}
+
+              {/* Botón de descarga - solo si downloadEnabled */}
+              {downloadEnabled && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDownloadPhoto(photo);
+                  }}
+                  className="absolute bottom-3 right-3 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-md opacity-0 group-hover:opacity-100 hover:bg-white transition-all duration-300"
+                  title="Descargar foto"
+                >
+                  <Download
+                    size={18}
+                    className="text-gray-700"
+                    strokeWidth={1.5}
+                  />
+                </button>
+              )}
             </div>
           </div>
         );
@@ -97,10 +117,11 @@ export default function PublicGalleryView({ gallery, token }) {
   const [isEditingAfterSubmit, setIsEditingAfterSubmit] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
-  const [downloadEmail, setDownloadEmail] = useState('');
+  const [downloadEmail, setDownloadEmail] = useState(clientEmail || '');
   const [downloadPin, setDownloadPin] = useState('');
   const [downloadError, setDownloadError] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadEnabled, setDownloadEnabled] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(true);
   const [headerSticky, setHeaderSticky] = useState(false);
@@ -573,6 +594,13 @@ export default function PublicGalleryView({ gallery, token }) {
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
+  // Actualizar downloadEmail cuando cambie clientEmail
+  useEffect(() => {
+    if (clientEmail && !downloadEmail) {
+      setDownloadEmail(clientEmail);
+    }
+  }, [clientEmail]);
+
   // Sistema de descarga con PIN
   const handleDownloadSubmit = async (e) => {
     e.preventDefault();
@@ -583,26 +611,70 @@ export default function PublicGalleryView({ gallery, token }) {
       return;
     }
 
-    // Verificar PIN (simulado por ahora - en producción verificar con el PIN real)
-    const correctPin = galleryDownloadPin || '1234'; // PIN por defecto
-    if (downloadPin !== correctPin) {
+    // Verificar PIN
+    if (galleryDownloadPin && downloadPin !== galleryDownloadPin) {
       setDownloadError('PIN incorrecto. Contacta al fotógrafo si no lo tienes.');
       return;
     }
 
-    setIsDownloading(true);
+    // PIN correcto - habilitar descargas
+    setDownloadEnabled(true);
+    setShowDownloadModal(false);
+    showToast({
+      message: '¡Descargas habilitadas exitosamente!',
+      type: 'success'
+    });
+  };
 
-    // Simular preparación de archivos
-    setTimeout(() => {
-      setIsDownloading(false);
+  // Descargar foto individual
+  const handleDownloadPhoto = async (photo) => {
+    try {
+      const url = photo.cloudinary_url || photo.file_path;
+
+      // Si es URL de Cloudinary, obtener la versión de máxima calidad
+      let downloadUrl = url;
+      if (url.includes('cloudinary.com')) {
+        // Reemplazar transformaciones para obtener imagen original
+        downloadUrl = url.replace(/\/upload\/.*?\//g, '/upload/fl_attachment/');
+      }
+
+      // Crear elemento 'a' temporal para forzar descarga
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = photo.file_name || `foto-${photo.id}.jpg`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
       showToast({
-        message: 'Te enviaremos un correo cuando tu descarga esté lista',
+        message: 'Descargando foto...',
         type: 'success'
       });
-      setShowDownloadModal(false);
-      setDownloadEmail('');
-      setDownloadPin('');
-    }, 2000);
+    } catch (error) {
+      console.error('Error downloading photo:', error);
+      showToast({
+        message: 'Error al descargar la foto',
+        type: 'error'
+      });
+    }
+  };
+
+  // Descargar todas las fotos
+  const handleDownloadAll = async () => {
+    if (!downloadEnabled) return;
+
+    showToast({
+      message: `Descargando ${photos.length} fotos...`,
+      type: 'info'
+    });
+
+    // Descargar fotos una por una con un pequeño delay
+    for (let i = 0; i < photos.length; i++) {
+      await handleDownloadPhoto(photos[i]);
+      // Pequeño delay para no saturar el navegador
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
   };
 
   return (
@@ -806,11 +878,35 @@ export default function PublicGalleryView({ gallery, token }) {
 
               {allowDownloads && (
                 <button
-                  onClick={() => setShowDownloadModal(true)}
-                  className="p-1.5 sm:p-2 hover:bg-black/5 rounded-full transition-colors"
-                  title="Descargar"
+                  onClick={() => {
+                    if (downloadEnabled) {
+                      // Si las descargas ya están habilitadas, descargar todas
+                      handleDownloadAll();
+                    } else if (!galleryDownloadPin) {
+                      // Si no hay PIN configurado, habilitar descargas inmediatamente
+                      setDownloadEnabled(true);
+                      showToast({
+                        message: '¡Descargas habilitadas exitosamente!',
+                        type: 'success'
+                      });
+                    } else {
+                      // Si hay PIN, mostrar modal
+                      setShowDownloadModal(true);
+                    }
+                  }}
+                  className={`${
+                    downloadEnabled
+                      ? 'flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-black/5 rounded-full'
+                      : 'p-1.5 sm:p-2 rounded-full'
+                  } hover:bg-black/10 transition-colors`}
+                  title={downloadEnabled ? "Descargar todas las fotos" : "Descargar"}
                 >
                   <Download size={16} strokeWidth={1.5} className="text-black/70 sm:w-[18px] sm:h-[18px]" />
+                  {downloadEnabled && (
+                    <span className="font-fira text-[10px] sm:text-xs font-semibold text-black/70">
+                      Descargar Todas
+                    </span>
+                  )}
                 </button>
               )}
 
@@ -850,6 +946,8 @@ export default function PublicGalleryView({ gallery, token }) {
             onToggleFavorite={handleToggleFavorite}
             favoritePhotoIds={favoritePhotoIds}
             maxFavorites={maxFavorites}
+            downloadEnabled={downloadEnabled}
+            onDownloadPhoto={handleDownloadPhoto}
           />
         )}
       </main>
@@ -1227,7 +1325,7 @@ export default function PublicGalleryView({ gallery, token }) {
                         placeholder="Ingresa tu PIN"
                         required
                         maxLength={6}
-                        className="w-full pl-10 pr-4 py-3 border border-black/10 rounded-sm text-sm focus:outline-none focus:border-black/30 transition-colors"
+                        className="w-full pl-10 pr-4 py-3 border border-black/10 rounded-sm text-sm placeholder:text-black focus:outline-none focus:border-black/30 transition-colors"
                       />
                     </div>
                   </div>
