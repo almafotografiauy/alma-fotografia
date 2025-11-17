@@ -44,10 +44,14 @@ async function FavoritesGalleryContent({ slug, hash, token }) {
 
   // Decodificar hash para obtener email
   const clientEmail = decodeHash(hash);
+  console.log('[FavoritesGallery] Decoded email from hash:', clientEmail);
+
   if (!clientEmail) {
     console.error('❌ Invalid hash');
     notFound();
   }
+
+  console.log('[FavoritesGallery] Looking for share with token:', token);
 
   // Obtener share activo
   const { data: shareData, error: shareError } = await supabase
@@ -56,8 +60,22 @@ async function FavoritesGalleryContent({ slug, hash, token }) {
     .eq('share_token', token)
     .single();
 
-  if (shareError || !shareData || !shareData.is_active) {
-    console.error('❌ Share not found or inactive');
+  console.log('[FavoritesGallery] Share result:', {
+    hasData: !!shareData,
+    isActive: shareData?.is_active,
+    expiresAt: shareData?.expires_at,
+    error: shareError,
+    errorType: typeof shareError
+  });
+
+  // Verificar error real de share
+  if (shareError && (shareError.message || shareError.code)) {
+    console.error('❌ Share query error', { shareError });
+    notFound();
+  }
+
+  if (!shareData || !shareData.is_active) {
+    console.error('❌ Share not found or inactive', { shareData });
     notFound();
   }
 
@@ -85,13 +103,22 @@ async function FavoritesGalleryContent({ slug, hash, token }) {
   const { data: gallery, error: galleryError } = galleryResult;
   const { data: favorites, error: favError } = favoritesResult;
 
-  if (galleryError || !gallery) {
-    console.error('❌ Gallery not found');
+  console.log('[FavoritesGallery] Gallery result:', { hasGallery: !!gallery, error: galleryError });
+  console.log('[FavoritesGallery] Favorites result:', { count: favorites?.length, error: favError });
+
+  // Verificar errores reales
+  if (galleryError && (galleryError.message || galleryError.code)) {
+    console.error('❌ Gallery query error:', galleryError);
     notFound();
   }
 
-  if (favError) {
-    console.error('❌ Error loading favorites:', favError);
+  if (!gallery) {
+    console.error('❌ Gallery not found for slug:', slug);
+    notFound();
+  }
+
+  if (favError && (favError.message || favError.code)) {
+    console.error('❌ Favorites query error:', favError);
     notFound();
   }
 
@@ -102,17 +129,30 @@ async function FavoritesGalleryContent({ slug, hash, token }) {
 
   const favoritePhotoIds = favorites.map(f => f.photo_id);
 
-  // Obtener SOLO las fotos favoritas (query optimizada)
+  console.log('[FavoritesGallery] Favorite photo IDs:', favoritePhotoIds);
+  console.log('[FavoritesGallery] Gallery ID:', gallery.id);
+
+  // Obtener SOLO las fotos favoritas
   const { data: photos, error: photosError } = await supabase
     .from('photos')
-    .select('id, gallery_id, file_name, file_path, cloudinary_url, display_order, created_at')
+    .select('*')
     .eq('gallery_id', gallery.id)
     .in('id', favoritePhotoIds)
     .order('display_order', { ascending: true });
 
-  if (photosError) {
+  console.log('[FavoritesGallery] Photos result:', { count: photos?.length, error: photosError });
+
+  // Verificar errores significativos (no objetos vacíos)
+  if (photosError && (photosError.message || photosError.code || Object.keys(photosError).length > 0)) {
     console.error('❌ Error loading photos:', photosError);
-    notFound();
+    console.error('❌ Error details:', JSON.stringify(photosError, null, 2));
+    return <ErrorPage message="Error al cargar las fotos. Por favor intenta más tarde." />;
+  }
+
+  // Si no hay fotos (puede pasar si fueron eliminadas o la query no trajo resultados)
+  if (!photos || photos.length === 0) {
+    console.log('[FavoritesGallery] No photos found for IDs:', favoritePhotoIds);
+    return <ErrorPage message="Las fotos favoritas ya no están disponibles." />;
   }
 
   // Filtrar fotos válidas
