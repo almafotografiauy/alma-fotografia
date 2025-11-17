@@ -18,6 +18,7 @@ import { useToast } from '@/components/ui/Toast';
 const PhotoGrid = memo(({
   photos,
   galleryTitle,
+  gallerySlug,
   onPhotoClick,
   onToggleFavorite,
   favoritePhotoIds,
@@ -81,7 +82,7 @@ const PhotoGrid = memo(({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDownloadPhoto(photo);
+                    onDownloadPhoto(photo, index, gallerySlug);
                   }}
                   className="absolute bottom-3 right-3 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-md opacity-0 group-hover:opacity-100 hover:bg-white transition-all duration-300"
                   title="Descargar foto"
@@ -122,6 +123,7 @@ export default function PublicGalleryView({ gallery, token }) {
   const [downloadError, setDownloadError] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadEnabled, setDownloadEnabled] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
   const [linkCopied, setLinkCopied] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(true);
   const [headerSticky, setHeaderSticky] = useState(false);
@@ -627,7 +629,7 @@ export default function PublicGalleryView({ gallery, token }) {
   };
 
   // Descargar foto individual
-  const handleDownloadPhoto = async (photo) => {
+  const handleDownloadPhoto = async (photo, photoIndex, slug) => {
     try {
       const url = photo.file_path;
 
@@ -638,10 +640,15 @@ export default function PublicGalleryView({ gallery, token }) {
         downloadUrl = url.replace(/\/upload\/.*?\//g, '/upload/fl_attachment/');
       }
 
+      // Generar nombre coherente: slug-galeria-001.jpg
+      const paddedNumber = String(photoIndex + 1).padStart(3, '0');
+      const extension = photo.file_name ? photo.file_name.split('.').pop() : 'jpg';
+      const fileName = `${slug || 'galeria'}-${paddedNumber}.${extension}`;
+
       // Crear elemento 'a' temporal para forzar descarga
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = photo.file_name || `foto-${photo.id}.jpg`;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -661,13 +668,24 @@ export default function PublicGalleryView({ gallery, token }) {
 
   // Descargar todas las fotos como ZIP
   const handleDownloadAll = async () => {
-    if (!downloadEnabled) return;
+    if (!downloadEnabled || isDownloading) return;
 
     try {
+      setIsDownloading(true);
+      setDownloadProgress(0);
+
       showToast({
         message: `Preparando descarga de ${photos.length} fotos...`,
         type: 'info'
       });
+
+      // Simular progreso mientras se genera el ZIP
+      const progressInterval = setInterval(() => {
+        setDownloadProgress(prev => {
+          if (prev >= 90) return prev;
+          return prev + 10;
+        });
+      }, 300);
 
       // Construir URL de la API con parámetros
       const params = new URLSearchParams({
@@ -692,6 +710,9 @@ export default function PublicGalleryView({ gallery, token }) {
       // Obtener el blob del ZIP
       const blob = await response.blob();
 
+      clearInterval(progressInterval);
+      setDownloadProgress(100);
+
       // Crear URL temporal y descargar
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -708,12 +729,20 @@ export default function PublicGalleryView({ gallery, token }) {
         message: '¡ZIP descargado exitosamente!',
         type: 'success'
       });
+
+      // Reset después de un momento
+      setTimeout(() => {
+        setDownloadProgress(0);
+        setIsDownloading(false);
+      }, 1000);
     } catch (error) {
       console.error('Error downloading gallery:', error);
       showToast({
         message: error.message || 'Error al descargar la galería',
         type: 'error'
       });
+      setDownloadProgress(0);
+      setIsDownloading(false);
     }
   };
 
@@ -934,17 +963,33 @@ export default function PublicGalleryView({ gallery, token }) {
                       setShowDownloadModal(true);
                     }
                   }}
+                  disabled={isDownloading}
                   className={`${
                     downloadEnabled
                       ? 'flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-black/5 rounded-full'
-                      : 'p-1.5 sm:p-2 rounded-full'
-                  } hover:bg-black/10 transition-colors`}
-                  title={downloadEnabled ? "Descargar todas las fotos" : "Descargar"}
+                      : 'p-1.5 sm:p-2 rounded-full relative'
+                  } hover:bg-black/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                  title={downloadEnabled ? (isDownloading ? "Descargando..." : "Descargar todas las fotos") : "Descargar"}
                 >
-                  <Download size={16} strokeWidth={1.5} className="text-black/70 sm:w-[18px] sm:h-[18px]" />
+                  {/* Círculo de progreso verde */}
+                  {isDownloading && downloadEnabled && (
+                    <svg className="absolute -inset-1 sm:-inset-1.5 w-[calc(100%+8px)] h-[calc(100%+8px)] sm:w-[calc(100%+12px)] sm:h-[calc(100%+12px)] -rotate-90">
+                      <circle
+                        cx="50%"
+                        cy="50%"
+                        r="45%"
+                        fill="none"
+                        stroke="#22c55e"
+                        strokeWidth="3"
+                        strokeDasharray={`${2 * Math.PI * 45 * downloadProgress / 100}, ${2 * Math.PI * 45}`}
+                        className="transition-all duration-300"
+                      />
+                    </svg>
+                  )}
+                  <Download size={16} strokeWidth={1.5} className={`${isDownloading ? 'text-green-600' : 'text-black/70'} sm:w-[18px] sm:h-[18px]`} />
                   {downloadEnabled && (
-                    <span className="font-fira text-[10px] sm:text-xs font-semibold text-black/70">
-                      Descargar Todas
+                    <span className={`font-fira text-[10px] sm:text-xs font-semibold ${isDownloading ? 'text-green-600' : 'text-black/70'}`}>
+                      {isDownloading ? 'Descargando...' : 'Descargar Todas'}
                     </span>
                   )}
                 </button>
@@ -982,6 +1027,7 @@ export default function PublicGalleryView({ gallery, token }) {
           <PhotoGrid
             photos={photos}
             galleryTitle={title}
+            gallerySlug={gallerySlug}
             onPhotoClick={openLightbox}
             onToggleFavorite={handleToggleFavorite}
             favoritePhotoIds={favoritePhotoIds}
