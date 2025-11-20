@@ -37,8 +37,9 @@ export default function FavoritesSelector({
   isEditingAfterSubmit = false,
   onEnableEditing,
   onSubmitAfterEdit,
+  showModal = false,
+  onCloseModal,
 }) {
-  const [showModal, setShowModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -110,7 +111,7 @@ export default function FavoritesSelector({
         }
 
         setTimeout(() => {
-          setShowModal(false);
+          onCloseModal?.();
           setSubmitSuccess(false);
         }, 2000);
       } else {
@@ -123,31 +124,8 @@ export default function FavoritesSelector({
     }
   };
 
-  if (!hasSelection) return null;
-
   return (
     <>
-      {/* Floating Button */}
-      <motion.button
-        onClick={() => setShowModal(true)}
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0, opacity: 0 }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full shadow-2xl p-4 flex items-center gap-3 group"
-      >
-        <Heart size={24} className="fill-white" />
-        <div className="flex flex-col items-start pr-2">
-          <span className="font-fira text-xs font-semibold">
-            {favoritesCount} / {maxFavorites}
-          </span>
-          <span className="font-fira text-[10px] opacity-90">
-            Favoritas
-          </span>
-        </div>
-      </motion.button>
-
       {/* Modal */}
       <AnimatePresence>
         {showModal && (
@@ -157,7 +135,7 @@ export default function FavoritesSelector({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowModal(false)}
+              onClick={onCloseModal}
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
             />
 
@@ -179,7 +157,7 @@ export default function FavoritesSelector({
                   </p>
                 </div>
                 <button
-                  onClick={() => setShowModal(false)}
+                  onClick={onCloseModal}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                 >
                   <X size={24} className="text-gray-600" />

@@ -162,6 +162,7 @@ export default function PublicGalleryView({ gallery, token }) {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [hasSeenMessage, setHasSeenMessage] = useState(false);
   const [showTestimonialModal, setShowTestimonialModal] = useState(false);
+  const [showFavoritesModal, setShowFavoritesModal] = useState(false);
   const [sections, setSections] = useState([]);
   const [selectedSection, setSelectedSection] = useState(null); // Auto-selección de primera sección
   const favoritesDebounceRef = useRef(null);
@@ -1053,6 +1054,8 @@ export default function PublicGalleryView({ gallery, token }) {
                   onClick={() => {
                     if (!clientEmail) {
                       setShowEmailPrompt(true);
+                    } else {
+                      setShowFavoritesModal(true);
                     }
                   }}
                   className="relative p-1.5 sm:p-2 hover:bg-black/5 rounded-full transition-colors"
@@ -1934,7 +1937,7 @@ export default function PublicGalleryView({ gallery, token }) {
         )}
       </AnimatePresence>
 
-      {/* ===== SELECTOR DE FAVORITAS (Floating Button + Modal) ===== */}
+      {/* ===== SELECTOR DE FAVORITAS (Modal desde header) ===== */}
       {maxFavorites > 0 && clientEmail && (
         <FavoritesSelector
           favoritesCount={favoritePhotoIds.length}
@@ -1954,6 +1957,8 @@ export default function PublicGalleryView({ gallery, token }) {
             setHasSubmitted(true);
             setIsEditingAfterSubmit(false);
           }}
+          showModal={showFavoritesModal}
+          onCloseModal={() => setShowFavoritesModal(false)}
         />
       )}
     </div>
