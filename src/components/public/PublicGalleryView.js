@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TestimonialForm from '@/components/public/TestimonialForm';
+import FavoritesSelector from '@/components/public/FavoritesSelector';
 import { toggleFavorite, getClientFavorites, submitFavoritesSelection } from '@/app/actions/favorites-actions';
 import { getGallerySections, getPhotosGroupedBySections } from '@/app/actions/photo-sections-actions';
 import { useToast } from '@/components/ui/Toast';
@@ -375,6 +376,8 @@ export default function PublicGalleryView({ gallery, token }) {
     };
 
     loadSections();
+    // Note: selectedSection is intentionally not in dependencies to only auto-select on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [galleryId]);
 
   // Filtrar fotos según sección seleccionada
@@ -383,7 +386,9 @@ export default function PublicGalleryView({ gallery, token }) {
       const filtered = photos.filter(photo => photo.section_id === selectedSection);
       setFilteredPhotos(filtered);
     } else {
-      setFilteredPhotos([]);
+      // Si no hay sección seleccionada aún, mostrar todas las fotos
+      // (esto permite que funcionen los favoritos mientras carga)
+      setFilteredPhotos(photos);
     }
   }, [selectedSection, photos]);
 
@@ -1928,6 +1933,29 @@ export default function PublicGalleryView({ gallery, token }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ===== SELECTOR DE FAVORITAS (Floating Button + Modal) ===== */}
+      {maxFavorites > 0 && clientEmail && (
+        <FavoritesSelector
+          favoritesCount={favoritePhotoIds.length}
+          maxFavorites={maxFavorites}
+          selectedPhotoIds={favoritePhotoIds}
+          photos={photos}
+          galleryId={galleryId}
+          gallerySlug={gallerySlug}
+          shareToken={token}
+          clientEmail={clientEmail}
+          clientName={clientName}
+          onRemoveFavorite={handleToggleFavorite}
+          hasSubmitted={hasSubmitted}
+          isEditingAfterSubmit={isEditingAfterSubmit}
+          onEnableEditing={() => setIsEditingAfterSubmit(true)}
+          onSubmitAfterEdit={() => {
+            setHasSubmitted(true);
+            setIsEditingAfterSubmit(false);
+          }}
+        />
+      )}
     </div>
   );
 }
