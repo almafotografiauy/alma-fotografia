@@ -404,8 +404,9 @@ export async function cleanupOldNotifications() {
  *
  * @param {string} galleryId - ID de la galería vista
  * @param {string} clientInfo - Info del cliente (IP, navegador, etc.) - opcional
+ * @param {boolean} isFavoritesView - Si es vista de galería de favoritos compartidos
  */
-export async function notifyGalleryView(galleryId, clientInfo = null) {
+export async function notifyGalleryView(galleryId, clientInfo = null, isFavoritesView = false) {
   try {
     const supabase = await createClient();
 
@@ -447,7 +448,14 @@ export async function notifyGalleryView(galleryId, clientInfo = null) {
     }
 
     const clientName = gallery.client_email ? gallery.client_email.split('@')[0] : 'Un cliente';
-    const message = `${clientName} acaba de ver la galería "${gallery.title}"`;
+
+    // Mensaje diferente según tipo de vista
+    const message = isFavoritesView
+      ? `${clientName} acaba de ver su galería de favoritos compartidos de "${gallery.title}"`
+      : `${clientName} acaba de ver la galería "${gallery.title}"`;
+
+    // Tipo de notificación diferente
+    const notificationType = isFavoritesView ? 'favorites_gallery_view' : 'gallery_view';
 
     let notificationResult = null;
 
@@ -455,10 +463,12 @@ export async function notifyGalleryView(galleryId, clientInfo = null) {
     if (prefs && prefs.inapp_enabled && prefs.email_on_gallery_view) {
       notificationResult = await createNotification({
         userId: gallery.created_by,
-        type: 'gallery_view',
+        type: notificationType,
         message,
         galleryId: gallery.id,
-        actionUrl: `/dashboard/galerias/${gallery.id}`,
+        actionUrl: isFavoritesView
+          ? `/dashboard/galerias/${gallery.id}/favoritos`
+          : `/dashboard/galerias/${gallery.id}`,
       });
     }
 

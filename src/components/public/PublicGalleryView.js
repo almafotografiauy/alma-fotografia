@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TestimonialForm from '@/components/public/TestimonialForm';
-import FavoritesSelector from '@/components/public/FavoritesSelector';
 import { toggleFavorite, getClientFavorites, submitFavoritesSelection } from '@/app/actions/favorites-actions';
 import { getGallerySections, getPhotosGroupedBySections } from '@/app/actions/photo-sections-actions';
 import { useToast } from '@/components/ui/Toast';
@@ -50,11 +49,15 @@ const PhotoGrid = memo(({
   maxFavorites,
   downloadEnabled,
   onDownloadPhoto,
+  isSelectingFavorites,
+  tempFavoriteIds,
+  onToggleTemp,
 }) => {
   return (
     <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-2 space-y-2">
       {photos.map((photo, index) => {
         const isFavorite = favoritePhotoIds.includes(photo.id);
+        const isSelected = isSelectingFavorites ? tempFavoriteIds.includes(photo.id) : false;
 
         return (
           <div
@@ -62,8 +65,16 @@ const PhotoGrid = memo(({
             className="group relative break-inside-avoid"
           >
             <div
-              className="relative w-full bg-gray-100 overflow-hidden cursor-pointer"
-              onClick={() => onPhotoClick(photo, index)}
+              className={`relative w-full bg-gray-100 overflow-hidden cursor-pointer ${
+                isSelectingFavorites && isSelected ? 'ring-4 ring-rose-500 rounded-lg' : ''
+              }`}
+              onClick={() => {
+                if (isSelectingFavorites) {
+                  onToggleTemp(photo.id);
+                } else {
+                  onPhotoClick(photo, index);
+                }
+              }}
             >
               <Image
                 src={photo.file_path}
@@ -77,47 +88,71 @@ const PhotoGrid = memo(({
                 unoptimized
               />
 
-              {/* Overlay en hover */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
+              {/* Overlay en modo selección */}
+              {isSelectingFavorites && (
+                <>
+                  {/* Overlay blanco para NO seleccionadas */}
+                  {!isSelected && (
+                    <div className="absolute inset-0 bg-white/60 transition-all duration-300" />
+                  )}
 
-              {/* Botón de favorito - solo si maxFavorites > 0 */}
-              {maxFavorites > 0 && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleFavorite(photo.id);
-                  }}
-                  className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-300 ${
-                    isFavorite
-                      ? 'bg-white shadow-md opacity-100'
-                      : 'bg-white/80 backdrop-blur-sm opacity-0 group-hover:opacity-100'
-                  }`}
-                  title={isFavorite ? 'Quitar de favoritas' : 'Agregar a favoritas'}
-                >
-                  <Heart
-                    size={18}
-                    className={isFavorite ? 'fill-rose-500 text-rose-500' : 'text-gray-700'}
-                    strokeWidth={1.5}
-                  />
-                </button>
+                  {/* Corazón para seleccionadas */}
+                  {isSelected && (
+                    <div className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-lg">
+                      <Heart size={20} className="fill-rose-500 text-rose-500" strokeWidth={1.5} />
+                    </div>
+                  )}
+                </>
               )}
 
-              {/* Botón de descarga - solo si downloadEnabled */}
-              {downloadEnabled && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDownloadPhoto(photo, index, gallerySlug);
-                  }}
-                  className="absolute bottom-3 right-3 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-md opacity-0 group-hover:opacity-100 hover:bg-white transition-all duration-300"
-                  title="Descargar foto"
-                >
-                  <Download
-                    size={18}
-                    className="text-gray-700"
-                    strokeWidth={1.5}
-                  />
-                </button>
+              {/* Overlay en hover (solo cuando NO está en modo selección) */}
+              {!isSelectingFavorites && (
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
+              )}
+
+              {/* Botones de favorito y descarga (ocultos en modo selección) */}
+              {!isSelectingFavorites && (
+                <>
+                  {/* Botón de favorito - solo si maxFavorites > 0 */}
+                  {maxFavorites > 0 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleFavorite(photo.id);
+                      }}
+                      className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-300 ${
+                        isFavorite
+                          ? 'bg-white shadow-md opacity-100'
+                          : 'bg-white/80 backdrop-blur-sm opacity-0 group-hover:opacity-100'
+                      }`}
+                      title={isFavorite ? 'Quitar de favoritas' : 'Agregar a favoritas'}
+                    >
+                      <Heart
+                        size={18}
+                        className={isFavorite ? 'fill-rose-500 text-rose-500' : 'text-gray-700'}
+                        strokeWidth={1.5}
+                      />
+                    </button>
+                  )}
+
+                  {/* Botón de descarga - solo si downloadEnabled */}
+                  {downloadEnabled && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDownloadPhoto(photo, index, gallerySlug);
+                      }}
+                      className="absolute bottom-3 right-3 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-md opacity-0 group-hover:opacity-100 hover:bg-white transition-all duration-300"
+                      title="Descargar foto"
+                    >
+                      <Download
+                        size={18}
+                        className="text-gray-700"
+                        strokeWidth={1.5}
+                      />
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -132,7 +167,7 @@ PhotoGrid.displayName = 'PhotoGrid';
 /**
  * Componente principal - Vista pública tipo Pixieset
  */
-export default function PublicGalleryView({ gallery, token }) {
+export default function PublicGalleryView({ gallery, token, isFavoritesView = false }) {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [clientEmail, setClientEmail] = useState('');
   const [clientName, setClientName] = useState('');
@@ -162,11 +197,13 @@ export default function PublicGalleryView({ gallery, token }) {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [hasSeenMessage, setHasSeenMessage] = useState(false);
   const [showTestimonialModal, setShowTestimonialModal] = useState(false);
-  const [showFavoritesModal, setShowFavoritesModal] = useState(false);
+  const [isSelectingFavorites, setIsSelectingFavorites] = useState(false);
+  const [tempFavoriteIds, setTempFavoriteIds] = useState([]);
   const [sections, setSections] = useState([]);
   const [selectedSection, setSelectedSection] = useState(null); // Auto-selección de primera sección
   const favoritesDebounceRef = useRef(null);
   const lastNotificationSentRef = useRef(false);
+  const isSubmittingRef = useRef(false); // Flag para evitar submissions simultáneas
   const { showToast } = useToast();
 
   const {
@@ -299,7 +336,7 @@ export default function PublicGalleryView({ gallery, token }) {
     loadFavorites(trimmedEmail);
   };
 
-  // Auto-submit de favoritos después de 5 minutos de inactividad
+  // Auto-submit de favoritos después de 1 minuto de inactividad
   const scheduleAutoSubmit = useCallback(() => {
     // Limpiar timer anterior si existe
     if (favoritesDebounceRef.current) {
@@ -327,7 +364,14 @@ export default function PublicGalleryView({ gallery, token }) {
         return;
       }
 
+      // ANTI-DUPLICADOS: Si ya hay una submission en proceso, cancelar
+      if (isSubmittingRef.current) {
+        console.log('[Debounce] Ya hay una submission en proceso, cancelando');
+        return;
+      }
+
       try {
+        isSubmittingRef.current = true;
         console.log(`[Debounce] Enviando notificación para ${favoritePhotoIds.length} favoritos`);
         const result = await submitFavoritesSelection(galleryId, clientEmail, clientName);
 
@@ -343,11 +387,13 @@ export default function PublicGalleryView({ gallery, token }) {
         }
       } catch (error) {
         console.error('[Debounce] Error inesperado:', error);
+      } finally {
+        isSubmittingRef.current = false;
       }
     }, 300000); // 5 minutos
 
     console.log('[Debounce] Nuevo timer de 5 minutos iniciado');
-  }, [clientEmail, clientName, galleryId, showToast]);
+  }, [clientEmail, clientName, galleryId, favoritePhotoIds, showToast]);
 
   // Limpiar timer al desmontar componente
   useEffect(() => {
@@ -381,6 +427,66 @@ export default function PublicGalleryView({ gallery, token }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [galleryId]);
 
+  // Enviar notificación al salir de la página si hay cambios pendientes
+  useEffect(() => {
+    const sendPendingNotification = () => {
+      // Si hay timer activo, significa que hay cambios sin notificar
+      if (favoritesDebounceRef.current && clientEmail && favoritePhotoIds.length > 0) {
+        // ANTI-DUPLICADOS: Si ya hay una submission en proceso, no enviar otra
+        if (isSubmittingRef.current) {
+          console.log('[Exit] Ya hay una submission en proceso, cancelando');
+          return;
+        }
+
+        // Cancelar timer
+        clearTimeout(favoritesDebounceRef.current);
+        favoritesDebounceRef.current = null;
+
+        try {
+          isSubmittingRef.current = true;
+          // Enviar notificación de forma síncrona con keepalive
+          // keepalive garantiza que la petición se complete incluso si se cierra la página
+          submitFavoritesSelection(galleryId, clientEmail, clientName).then(() => {
+            console.log('[Exit] Notificación enviada antes de salir');
+            isSubmittingRef.current = false;
+          }).catch((error) => {
+            console.error('[Exit] Error al enviar notificación:', error);
+            isSubmittingRef.current = false;
+          });
+        } catch (error) {
+          console.error('[Exit] Error al enviar notificación:', error);
+          isSubmittingRef.current = false;
+        }
+      }
+    };
+
+    // beforeunload: cuando cierra pestaña/ventana
+    const handleBeforeUnload = (e) => {
+      if (favoritesDebounceRef.current && clientEmail && favoritePhotoIds.length > 0) {
+        sendPendingNotification();
+      }
+    };
+
+    // pagehide: cuando la página se oculta (más confiable que beforeunload en algunos casos)
+    const handlePageHide = (e) => {
+      if (favoritesDebounceRef.current && clientEmail && favoritePhotoIds.length > 0) {
+        sendPendingNotification();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
+
+    // Cleanup: limpiar timer y listeners cuando el componente se desmonte
+    return () => {
+      if (favoritesDebounceRef.current) {
+        clearTimeout(favoritesDebounceRef.current);
+      }
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
+    };
+  }, [clientEmail, clientName, galleryId, favoritePhotoIds.length]);
+
   // Filtrar fotos según sección seleccionada
   useEffect(() => {
     if (selectedSection) {
@@ -392,6 +498,19 @@ export default function PublicGalleryView({ gallery, token }) {
       setFilteredPhotos(photos);
     }
   }, [selectedSection, photos]);
+
+  // Toggle selección temporal (modo selección)
+  const handleToggleTemp = (photoId) => {
+    if (tempFavoriteIds.includes(photoId)) {
+      setTempFavoriteIds(prev => prev.filter(id => id !== photoId));
+    } else {
+      if (tempFavoriteIds.length >= maxFavorites) {
+        showToast({ message: `Máximo ${maxFavorites} favoritas`, type: 'error' });
+        return;
+      }
+      setTempFavoriteIds(prev => [...prev, photoId]);
+    }
+  };
 
   // Toggle favorito
   const handleToggleFavorite = async (photoId) => {
@@ -470,7 +589,10 @@ export default function PublicGalleryView({ gallery, token }) {
         await fetch('/api/galleries/view', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ galleryId: gallery.id }),
+          body: JSON.stringify({
+            galleryId: gallery.id,
+            isFavoritesView,
+          }),
         });
       } catch (error) {
         console.error('Error registering gallery view:', error);
@@ -480,7 +602,7 @@ export default function PublicGalleryView({ gallery, token }) {
     };
 
     registerView();
-  }, [gallery.id]);
+  }, [gallery.id, isFavoritesView]);
 
   // Lightbox
   const openLightbox = useCallback((photo, index) => {
@@ -1014,14 +1136,87 @@ export default function PublicGalleryView({ gallery, token }) {
 
             {/* Acciones */}
             <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
-              {/* Botones Desktop - Ocultos en mobile */}
-              <button
-                onClick={() => setShowShareModal(true)}
-                className="hidden sm:flex p-1.5 sm:p-2 hover:bg-black/5 rounded-full transition-colors"
-                title="Compartir"
-              >
-                <Share2 size={16} className="text-black/70 sm:w-[18px] sm:h-[18px]" strokeWidth={1.5} />
-              </button>
+              {isSelectingFavorites ? (
+                /* Botones de modo selección */
+                <>
+                  <span className="text-xs sm:text-sm text-black/60 font-fira mr-1">
+                    {tempFavoriteIds.length}/{maxFavorites}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setIsSelectingFavorites(false);
+                      setTempFavoriteIds([]);
+                    }}
+                    className="px-3 py-1.5 text-xs sm:text-sm font-fira text-black/70 hover:bg-black/5 rounded-lg transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={async () => {
+                      // Cancelar timer de auto-submit
+                      if (favoritesDebounceRef.current) {
+                        clearTimeout(favoritesDebounceRef.current);
+                        favoritesDebounceRef.current = null;
+                      }
+
+                      // Guardar selecciones
+                      const added = tempFavoriteIds.filter(id => !favoritePhotoIds.includes(id));
+                      const removed = favoritePhotoIds.filter(id => !tempFavoriteIds.includes(id));
+
+                      // ANTI-DUPLICADOS: Verificar si ya hay una submission en proceso
+                      if (isSubmittingRef.current) {
+                        console.log('[Confirmar] Ya hay una submission en proceso, cancelando');
+                        showToast({ message: 'Procesando selección...', type: 'info' });
+                        return;
+                      }
+
+                      // Procesar cambios SIN resetear el timer (lo cancelamos arriba)
+                      for (const photoId of added) {
+                        const result = await toggleFavorite(galleryId, photoId, clientEmail, maxFavorites, clientName);
+                        if (result.success) {
+                          setFavoritePhotoIds(prev => [...prev, photoId]);
+                        }
+                      }
+                      for (const photoId of removed) {
+                        const result = await toggleFavorite(galleryId, photoId, clientEmail, maxFavorites, clientName);
+                        if (result.success) {
+                          setFavoritePhotoIds(prev => prev.filter(id => id !== photoId));
+                        }
+                      }
+
+                      // Enviar notificación inmediatamente
+                      try {
+                        isSubmittingRef.current = true;
+                        const submitResult = await submitFavoritesSelection(galleryId, clientEmail, clientName);
+
+                        if (submitResult.success) {
+                          showToast({ message: 'Selección enviada a la fotógrafa', type: 'success' });
+                          setHasSubmitted(true);
+                        } else {
+                          showToast({ message: 'Favoritas actualizadas', type: 'success' });
+                        }
+                      } finally {
+                        isSubmittingRef.current = false;
+                      }
+
+                      setIsSelectingFavorites(false);
+                      setTempFavoriteIds([]);
+                    }}
+                    className="px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-fira font-semibold bg-rose-500 hover:bg-rose-600 text-white rounded-lg transition-colors"
+                  >
+                    Confirmar
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* Botones Desktop - Ocultos en mobile */}
+                  <button
+                    onClick={() => setShowShareModal(true)}
+                    className="hidden sm:flex p-1.5 sm:p-2 hover:bg-black/5 rounded-full transition-colors"
+                    title="Compartir"
+                  >
+                    <Share2 size={16} className="text-black/70 sm:w-[18px] sm:h-[18px]" strokeWidth={1.5} />
+                  </button>
 
               <button
                 onClick={toggleSlideshow}
@@ -1048,18 +1243,20 @@ export default function PublicGalleryView({ gallery, token }) {
                 </button>
               )}
 
-              {/* Botón de favoritas - Siempre visible */}
-              {maxFavorites > 0 && (
+              {/* Botón de favoritas - Modo selección */}
+              {maxFavorites > 0 && !isSelectingFavorites && (
                 <button
                   onClick={() => {
                     if (!clientEmail) {
                       setShowEmailPrompt(true);
                     } else {
-                      setShowFavoritesModal(true);
+                      // Entrar en modo selección
+                      setTempFavoriteIds([...favoritePhotoIds]);
+                      setIsSelectingFavorites(true);
                     }
                   }}
                   className="relative p-1.5 sm:p-2 hover:bg-black/5 rounded-full transition-colors"
-                  title="Mis favoritas"
+                  title="Seleccionar favoritas"
                 >
                   <Heart
                     size={16}
@@ -1137,6 +1334,8 @@ export default function PublicGalleryView({ gallery, token }) {
                   <Star size={14} strokeWidth={0.5} className="fill-yellow-400 text-black sm:w-4 sm:h-4" />
                   <span className="font-fira text-[10px] sm:text-xs font-semibold">Testimonio</span>
                 </motion.button>
+              )}
+              </>
               )}
 
               {/* Menú de tres puntos - Solo mobile */}
@@ -1351,6 +1550,9 @@ export default function PublicGalleryView({ gallery, token }) {
                           maxFavorites={maxFavorites}
                           downloadEnabled={downloadEnabled}
                           onDownloadPhoto={handleDownloadPhoto}
+                          isSelectingFavorites={isSelectingFavorites}
+                          tempFavoriteIds={tempFavoriteIds}
+                          onToggleTemp={handleToggleTemp}
                         />
                       )}
                     </div>
@@ -1371,6 +1573,9 @@ export default function PublicGalleryView({ gallery, token }) {
             maxFavorites={maxFavorites}
             downloadEnabled={downloadEnabled}
             onDownloadPhoto={handleDownloadPhoto}
+            isSelectingFavorites={isSelectingFavorites}
+            tempFavoriteIds={tempFavoriteIds}
+            onToggleTemp={handleToggleTemp}
           />
         )}
       </main>
@@ -1937,30 +2142,6 @@ export default function PublicGalleryView({ gallery, token }) {
         )}
       </AnimatePresence>
 
-      {/* ===== SELECTOR DE FAVORITAS (Modal desde header) ===== */}
-      {maxFavorites > 0 && clientEmail && (
-        <FavoritesSelector
-          favoritesCount={favoritePhotoIds.length}
-          maxFavorites={maxFavorites}
-          selectedPhotoIds={favoritePhotoIds}
-          photos={photos}
-          galleryId={galleryId}
-          gallerySlug={gallerySlug}
-          shareToken={token}
-          clientEmail={clientEmail}
-          clientName={clientName}
-          onRemoveFavorite={handleToggleFavorite}
-          hasSubmitted={hasSubmitted}
-          isEditingAfterSubmit={isEditingAfterSubmit}
-          onEnableEditing={() => setIsEditingAfterSubmit(true)}
-          onSubmitAfterEdit={() => {
-            setHasSubmitted(true);
-            setIsEditingAfterSubmit(false);
-          }}
-          showModal={showFavoritesModal}
-          onCloseModal={() => setShowFavoritesModal(false)}
-        />
-      )}
     </div>
   );
 }

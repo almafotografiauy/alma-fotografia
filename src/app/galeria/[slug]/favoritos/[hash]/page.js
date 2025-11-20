@@ -192,6 +192,7 @@ async function FavoritesGalleryContent({ slug, hash, token }) {
         photos: validPhotos,
       }}
       token={token}
+      isFavoritesView={true}
     />
   );
 }

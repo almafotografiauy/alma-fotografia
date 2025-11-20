@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell, X, Check, AlertTriangle, Info, LinkIcon, Archive, Trash2, Calendar, CheckSquare, Square } from 'lucide-react';
+import { Bell, X, Check, AlertTriangle, Info, LinkIcon, Archive, Trash2, Calendar, CheckSquare, Square, Heart } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
 /**
@@ -263,6 +263,8 @@ export default function NotificationBell({ className = '', isMobile = false }) {
         return <Check {...iconProps} className="text-green-600" />;
       case 'gallery_view':
         return <Info {...iconProps} className="text-blue-600" />;
+      case 'favorites_gallery_view':
+        return <Heart {...iconProps} className="text-pink-600" />;
       case 'favorites_selected':
         return <Check {...iconProps} className="text-purple-600" />;
       case 'link_expired':

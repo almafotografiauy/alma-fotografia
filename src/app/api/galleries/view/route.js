@@ -8,12 +8,13 @@ import { notifyGalleryView } from '@/lib/notifications/notification-helpers';
  *
  * Body:
  * {
- *   galleryId: string
+ *   galleryId: string,
+ *   isFavoritesView?: boolean  // true si está viendo la galería de favoritos compartidos
  * }
  */
 export async function POST(request) {
   try {
-    const { galleryId } = await request.json();
+    const { galleryId, isFavoritesView = false } = await request.json();
 
     console.log('📊 [API View] Recibiendo solicitud para galería:', galleryId);
 
@@ -26,8 +27,8 @@ export async function POST(request) {
     }
 
     // Crear notificación (solo si está habilitado en preferencias)
-    console.log('🔔 [API View] Intentando crear notificación...');
-    const result = await notifyGalleryView(galleryId);
+    console.log('🔔 [API View] Intentando crear notificación...', { isFavoritesView });
+    const result = await notifyGalleryView(galleryId, null, isFavoritesView);
 
     console.log('✅ [API View] Resultado:', result);
 
