@@ -240,14 +240,14 @@ function SortablePhoto({ photo, photoIndex, isCover, isReorderMode, handleSetAsC
           src={photo.file_path}
           alt={photo.file_name || `Foto ${photoIndex + 1}`}
           width={800}
-          height={800}
+          height={1200}
           className="w-full h-auto"
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
           unoptimized={true}
           loading="lazy"
           placeholder="blur"
           blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjgwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjgwMCIgZmlsbD0iI2UwZTBlMCIvPjwvc3ZnPg=="
-          style={{ minHeight: '200px' }}
+          style={{ minHeight: '200px', maxWidth: '100%', height: 'auto' }}
         />
 
         {/* Drag handle - SOLO desde el icono para permitir scroll */}

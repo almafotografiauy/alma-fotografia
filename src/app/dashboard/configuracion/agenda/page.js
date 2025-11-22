@@ -238,10 +238,10 @@ function WorkingHoursTab() {
             return (
               <div
                 key={day.value}
-                className="flex flex-col md:flex-row md:items-center gap-4 p-4 border border-gray-200 rounded-lg"
+                className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 p-4 border border-gray-200 rounded-lg"
               >
                 {/* Día de la semana */}
-                <div className="w-32">
+                <div className="md:w-32">
                   <p className="font-fira font-medium text-gray-900">{day.label}</p>
                 </div>
 
@@ -260,8 +260,8 @@ function WorkingHoursTab() {
 
                 {/* Horarios */}
                 {dayData?.is_working_day && (
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="flex-1">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+                    <div className="flex-1 min-w-0">
                       <label className="block font-fira text-xs text-gray-600 mb-1">Desde</label>
                       <input
                         type="time"
@@ -271,7 +271,7 @@ function WorkingHoursTab() {
                       />
                     </div>
 
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <label className="block font-fira text-xs text-gray-600 mb-1">Hasta</label>
                       <input
                         type="time"

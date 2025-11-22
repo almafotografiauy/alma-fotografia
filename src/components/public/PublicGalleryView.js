@@ -80,15 +80,15 @@ const PhotoGrid = memo(({
                 src={photo.file_path}
                 alt={`${galleryTitle} - ${photo.file_name || `Foto ${index + 1}`}`}
                 width={1200}
-                height={1200}
-                className="w-full h-auto object-cover transition-all duration-700 group-hover:scale-105"
+                height={1600}
+                className="w-full h-auto transition-all duration-700 group-hover:scale-105"
                 sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
                 loading="lazy"
                 quality={90}
                 unoptimized
                 placeholder="blur"
                 blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2YzZjRmNiIvPjwvc3ZnPg=="
-                style={{ minHeight: '200px' }}
+                style={{ minHeight: '200px', maxWidth: '100%', height: 'auto' }}
               />
 
               {/* Overlay en modo selección */}

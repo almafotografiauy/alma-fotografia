@@ -58,7 +58,13 @@ export async function createSection(galleryId, sectionData) {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // Manejo específico para nombre duplicado
+      if (error.code === '23505' && error.message.includes('unique_section_name_per_gallery')) {
+        return { success: false, error: 'Ya existe una sección con ese nombre en esta galería. Por favor, elige otro nombre.' };
+      }
+      throw error;
+    }
 
     return { success: true, section: data };
   } catch (error) {
@@ -81,7 +87,13 @@ export async function updateSection(sectionId, updates) {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // Manejo específico para nombre duplicado
+      if (error.code === '23505' && error.message.includes('unique_section_name_per_gallery')) {
+        return { success: false, error: 'Ya existe una sección con ese nombre en esta galería. Por favor, elige otro nombre.' };
+      }
+      throw error;
+    }
 
     return { success: true, section: data };
   } catch (error) {
