@@ -18,7 +18,7 @@ export default function RecentNotificationsWidget({ notifications = [] }) {
       case 'booking_confirmed':
         return <CheckCircle size={16} className="text-green-600" />;
       case 'new_testimonial':
-        return <User size={16} className="text-purple-600" />;
+        return <User size={16} className="text-amber-700" />;
       case 'gallery_shared':
         return <ImageIcon size={16} className="text-indigo-600" />;
       default:
@@ -37,7 +37,7 @@ export default function RecentNotificationsWidget({ notifications = [] }) {
       case 'booking_confirmed':
         return 'bg-green-50';
       case 'new_testimonial':
-        return 'bg-purple-50';
+        return 'bg-amber-50';
       case 'gallery_shared':
         return 'bg-indigo-50';
       default:
@@ -92,8 +92,8 @@ export default function RecentNotificationsWidget({ notifications = [] }) {
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-100 rounded-lg">
-            <Bell className="text-purple-600" size={24} />
+          <div className="p-2 bg-amber-100 rounded-lg">
+            <Bell className="text-[#8B5E3C]" size={24} />
           </div>
           <div>
             <h3 className="font-voga text-lg text-gray-900">Notificaciones Recientes</h3>
@@ -103,7 +103,7 @@ export default function RecentNotificationsWidget({ notifications = [] }) {
           </div>
         </div>
         {unreadCount > 0 && (
-          <div className="flex items-center justify-center w-8 h-8 bg-purple-500 text-white rounded-full font-fira text-sm font-bold">
+          <div className="flex items-center justify-center w-8 h-8 bg-[#8B5E3C] text-white rounded-full font-fira text-sm font-bold">
             {unreadCount}
           </div>
         )}
@@ -119,8 +119,8 @@ export default function RecentNotificationsWidget({ notifications = [] }) {
             className={`p-3 rounded-xl border ${
               notification.read
                 ? 'bg-white border-gray-100'
-                : 'bg-purple-50/50 border-purple-100'
-            } hover:border-purple-200 transition-all duration-200`}
+                : 'bg-amber-50/50 border-amber-100'
+            } hover:border-amber-200 transition-all duration-200`}
           >
             <div className="flex items-start gap-3">
               <div className={`p-2 ${getNotificationBgColor(notification.type)} rounded-lg flex-shrink-0`}>
@@ -137,7 +137,7 @@ export default function RecentNotificationsWidget({ notifications = [] }) {
               </div>
 
               {!notification.read && (
-                <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0 mt-2" />
+                <div className="w-2 h-2 bg-[#8B5E3C] rounded-full flex-shrink-0 mt-2" />
               )}
             </div>
           </motion.div>
@@ -148,7 +148,7 @@ export default function RecentNotificationsWidget({ notifications = [] }) {
         <div className="mt-4 text-center">
           <Link
             href="/dashboard/notificaciones"
-            className="font-fira text-sm text-purple-600 hover:text-purple-700 font-semibold transition-colors duration-200"
+            className="font-fira text-sm text-[#8B5E3C] hover:text-[#6d4a2f] font-semibold transition-colors duration-200"
           >
             Ver todas las notificaciones →
           </Link>

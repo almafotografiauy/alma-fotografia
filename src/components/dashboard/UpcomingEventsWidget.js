@@ -30,7 +30,7 @@ export default function UpcomingEventsWidget({ events = [] }) {
     if (event.type === 'private') {
       return <Briefcase size={16} className="text-[#8B5E3C]" />;
     }
-    return <Calendar size={16} className="text-blue-600" />;
+    return <Calendar size={16} className="text-amber-600" />;
   };
 
   const getEventTypeLabel = (event) => {
@@ -48,8 +48,8 @@ export default function UpcomingEventsWidget({ events = [] }) {
         className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
       >
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Calendar className="text-blue-600" size={24} />
+          <div className="p-2 bg-amber-100 rounded-lg">
+            <Calendar className="text-[#8B5E3C]" size={24} />
           </div>
           <div>
             <h3 className="font-voga text-lg text-gray-900">Próximos Eventos</h3>
@@ -74,8 +74,8 @@ export default function UpcomingEventsWidget({ events = [] }) {
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Calendar className="text-blue-600" size={24} />
+          <div className="p-2 bg-amber-100 rounded-lg">
+            <Calendar className="text-[#8B5E3C]" size={24} />
           </div>
           <div>
             <h3 className="font-voga text-lg text-gray-900">Próximos Eventos</h3>
@@ -96,7 +96,7 @@ export default function UpcomingEventsWidget({ events = [] }) {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-blue-200 transition-all duration-200 hover:shadow-sm"
+              className="p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-amber-200 transition-all duration-200 hover:shadow-sm"
             >
               <div className="flex items-start gap-3">
                 <div className={`${dateLabel.color} text-white px-2.5 py-1 rounded-lg flex-shrink-0`}>
@@ -148,7 +148,7 @@ export default function UpcomingEventsWidget({ events = [] }) {
         <div className="mt-4 text-center">
           <Link
             href="/dashboard/agenda"
-            className="font-fira text-sm text-blue-600 hover:text-blue-700 font-semibold transition-colors duration-200"
+            className="font-fira text-sm text-[#8B5E3C] hover:text-[#6d4a2f] font-semibold transition-colors duration-200"
           >
             Ver todos los eventos →
           </Link>
@@ -158,7 +158,7 @@ export default function UpcomingEventsWidget({ events = [] }) {
       <div className="mt-4 pt-4 border-t border-gray-100">
         <Link
           href="/dashboard/agenda"
-          className="w-full block text-center px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-fira text-sm font-semibold transition-all duration-200"
+          className="w-full block text-center px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-[#8B5E3C] rounded-lg font-fira text-sm font-semibold transition-all duration-200"
         >
           Ver agenda completa
         </Link>

@@ -204,29 +204,42 @@ async function DashboardWidgets() {
     return timeA.localeCompare(timeB);
   });
 
+  const hasPendingBookings = (pendingBookings || []).length > 0;
+
   return (
     <>
-      {/* Widgets de Reservas y Eventos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      {/* Reservas Pendientes - Prioridad Alta */}
+      {hasPendingBookings && (
         <AnimatedSection delay={0.3}>
-          <PendingBookingsWidget initialBookings={pendingBookings || []} />
+          <div className="mb-6">
+            <PendingBookingsWidget initialBookings={pendingBookings || []} />
+          </div>
+        </AnimatedSection>
+      )}
+
+      {/* Grid de Próximos Eventos y Notificaciones */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <AnimatedSection delay={hasPendingBookings ? 0.4 : 0.3}>
+          <UpcomingEventsWidget events={upcomingEvents} />
         </AnimatedSection>
 
-        <AnimatedSection delay={0.4}>
-          <UpcomingEventsWidget events={upcomingEvents} />
+        <AnimatedSection delay={hasPendingBookings ? 0.5 : 0.4}>
+          <RecentNotificationsWidget notifications={notifications || []} />
         </AnimatedSection>
       </div>
 
-      {/* Widget de Notificaciones */}
-      <AnimatedSection delay={0.5}>
-        <RecentNotificationsWidget notifications={notifications || []} />
-      </AnimatedSection>
+      {/* Reservas Pendientes - Si no hay, mostrar en el grid inferior */}
+      {!hasPendingBookings && (
+        <AnimatedSection delay={0.5}>
+          <div className="mb-6">
+            <PendingBookingsWidget initialBookings={[]} />
+          </div>
+        </AnimatedSection>
+      )}
 
       {/* Storage Card */}
-      <AnimatedSection delay={0.6}>
-        <div className="mt-8">
-          <StorageCard />
-        </div>
+      <AnimatedSection delay={hasPendingBookings ? 0.6 : 0.6}>
+        <StorageCard />
       </AnimatedSection>
     </>
   );
@@ -245,11 +258,11 @@ export default async function DashboardHome() {
       variant: 'primary',
     },
     {
-      id: 'view-agenda',
-      href: '/dashboard/agenda',
-      iconName: 'Calendar',
-      title: 'Ver agenda',
-      description: 'Gestionar reservas y eventos',
+      id: 'manage-testimonials',
+      href: '/dashboard/testimonios',
+      iconName: 'MessageSquare',
+      title: 'Gestionar testimonios',
+      description: 'Ver y moderar opiniones',
       variant: 'secondary',
     },
   ];
