@@ -79,7 +79,6 @@ export default function CambiarContrasenaPage() {
       setSuccessMsg('Contraseña cambiada correctamente. Redirigiendo...');
       setTimeout(() => {
         router.replace('/dashboard');
-        window.location.href = '/dashboard';
       }, 1500);
     } catch (error) {
       setErrorMsg('Error al cambiar la contraseña');

@@ -379,9 +379,32 @@ export async function changeUserPassword({ userId, newPassword }) {
   try {
     const cookieStore = await cookies();
 
+    // Cliente para autenticación del usuario actual
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // Handle error if needed
+            }
+          },
+        },
+      }
+    );
+
+    // Cliente admin para operaciones privilegiadas
+    const supabaseAdmin = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
       {
         cookies: {
           getAll() {
@@ -446,8 +469,8 @@ export async function changeUserPassword({ userId, newPassword }) {
       return { success: false, error: 'La contraseña debe contener al menos un número' };
     }
 
-    // Cambiar contraseña usando Admin API
-    const { error } = await supabase.auth.admin.updateUserById(userId, {
+    // Cambiar contraseña usando Admin API con cliente admin
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
       password: newPassword
     });
 
@@ -477,9 +500,32 @@ export async function deleteUser(userId) {
   try {
     const cookieStore = await cookies();
 
+    // Cliente para autenticación del usuario actual
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // Handle error if needed
+            }
+          },
+        },
+      }
+    );
+
+    // Cliente admin para operaciones privilegiadas
+    const supabaseAdmin = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
       {
         cookies: {
           getAll() {
@@ -532,7 +578,8 @@ export async function deleteUser(userId) {
       return { success: false, error: 'No se puede eliminar al usuario admin principal' };
     }
 
-    const { error } = await supabase.auth.admin.deleteUser(userId);
+    // Usar cliente admin para eliminar el usuario
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
     if (error) {
       return { success: false, error: error.message };

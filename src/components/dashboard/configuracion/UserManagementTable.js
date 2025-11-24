@@ -26,6 +26,7 @@ export default function UserManagementTable({ initialUsers }) {
   const [users, setUsers] = useState(initialUsers);
   const [editingUser, setEditingUser] = useState(null);
   const [changingPassword, setChangingPassword] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
@@ -322,7 +323,7 @@ export default function UserManagementTable({ initialUsers }) {
                         </button>
 
                         <button
-                          onClick={() => handleDeleteUser(user.id)}
+                          onClick={() => setDeletingUser(user)}
                           disabled={loading}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Eliminar usuario"
@@ -551,18 +552,20 @@ export default function UserManagementTable({ initialUsers }) {
 
       {/* Modal de confirmación de eliminación */}
       <AnimatePresence>
-        {message?.type === 'confirm_delete' && (
+        {deletingUser && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setDeletingUser(null)}
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="text-center mb-6">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center">
@@ -571,24 +574,32 @@ export default function UserManagementTable({ initialUsers }) {
                 <h3 className="font-voga text-xl text-gray-900 mb-2">
                   ¿Eliminar usuario?
                 </h3>
-                <p className="font-fira text-sm text-gray-600">
+                <p className="font-fira text-sm text-gray-600 mb-4">
                   Esta acción no se puede deshacer. El usuario será eliminado permanentemente.
                 </p>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="font-fira text-sm font-semibold text-gray-900">
+                    {deletingUser.full_name}
+                  </p>
+                  <p className="font-fira text-xs text-gray-600">{deletingUser.email}</p>
+                </div>
               </div>
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => {
-                    handleDeleteUser(message.userId);
-                    setMessage(null);
+                  onClick={async () => {
+                    await handleDeleteUser(deletingUser.id);
+                    setDeletingUser(null);
                   }}
-                  className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-fira text-sm font-semibold hover:bg-red-700 transition-all"
+                  disabled={loading}
+                  className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-fira text-sm font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
-                  Eliminar
+                  {loading ? 'Eliminando...' : 'Eliminar'}
                 </button>
                 <button
-                  onClick={() => setMessage(null)}
-                  className="flex-1 px-4 py-2.5 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg font-fira text-sm font-semibold hover:bg-gray-100 transition-colors"
+                  onClick={() => setDeletingUser(null)}
+                  disabled={loading}
+                  className="flex-1 px-4 py-2.5 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg font-fira text-sm font-semibold hover:bg-gray-100 disabled:opacity-50 transition-colors"
                 >
                   Cancelar
                 </button>

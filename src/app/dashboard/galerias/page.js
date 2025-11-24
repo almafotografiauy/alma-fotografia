@@ -40,7 +40,6 @@ async function GalleriesContent() {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Error fetching galleries:', error);
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <p className="font-fira text-black/60">Error al cargar las galerías</p>

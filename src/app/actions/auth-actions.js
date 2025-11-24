@@ -77,8 +77,12 @@ export async function registerUser({ username, email, password, full_name }) {
     });
 
     if (error) {
+      console.error('❌ Error creando usuario en Auth:', error);
       return { success: false, error: error.message };
     }
+
+    console.log('✅ Usuario creado en Auth:', data.user.id);
+    console.log('✅ Perfil creado automáticamente por trigger');
 
     return {
       success: true,

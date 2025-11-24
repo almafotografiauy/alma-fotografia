@@ -6,7 +6,6 @@ import {
   Briefcase,
   User,
   Bell,
-  Palette,
   Shield,
   Database,
   Calendar,
@@ -44,13 +43,6 @@ const quickActions = [
     disabled: false
   },
   {
-    icon: Palette,
-    title: 'Apariencia',
-    description: 'Personaliza tu marca',
-    href: '/dashboard/configuracion/apariencia',
-    disabled: true
-  },
-  {
     icon: Shield,
     title: 'Seguridad',
     description: 'Contraseña y sesiones',
@@ -60,9 +52,9 @@ const quickActions = [
   {
     icon: Database,
     title: 'Almacenamiento',
-    description: 'Uso de espacio',
+    description: 'Gestiona tu espacio en la nube',
     href: '/dashboard/configuracion/almacenamiento',
-    disabled: true
+    disabled: false
   },
 ];
 

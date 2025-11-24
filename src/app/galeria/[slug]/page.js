@@ -34,7 +34,6 @@ async function GalleryContent({ slug, token }) {
   const result = await getGalleryWithToken(slug, token);
 
   if (!result.success) {
-    console.error('❌ Gallery access denied:', result.error);
     notFound();
   }
 
@@ -86,7 +85,6 @@ export default async function PublicGalleryPage({ params, searchParams }) {
 
   // Validación básica
   if (!token) {
-    console.log('🔒 No token provided for gallery:', slug);
     return <ErrorPage message="Esta galería requiere un enlace válido para acceder." />;
   }
 
