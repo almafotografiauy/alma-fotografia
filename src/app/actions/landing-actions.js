@@ -9,24 +9,81 @@ export async function getFeaturedTestimonials() {
   try {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    // Obtener testimonios destacados (sin relaciones complejas)
+    const { data: testimonials, error: testimonialsError } = await supabase
       .from('testimonials')
-      .select(`
-        id,
-        client_name,
-        rating,
-        comment,
-        created_at,
-        service_type:service_types(name, icon)
-      `)
-      .eq('is_active', true)
+      .select('id, client_name, rating, message, created_at, gallery_id')
+      .eq('is_featured', true)
       .order('created_at', { ascending: false })
-      .limit(6);
+      .limit(10);
 
-    if (error) throw error;
+    if (testimonialsError) {
+      console.error('Error obteniendo testimonials:', testimonialsError);
+      throw testimonialsError;
+    }
 
-    return { success: true, testimonials: data || [] };
+    console.log('Testimonios destacados encontrados:', testimonials?.length || 0);
+
+    // Si no hay testimonios, retornar array vacío
+    if (!testimonials || testimonials.length === 0) {
+      return { success: true, testimonials: [] };
+    }
+
+    // Obtener las galerías para los testimonios
+    const galleryIds = [...new Set(testimonials.map(t => t.gallery_id).filter(Boolean))];
+
+    let galleriesMap = {};
+    if (galleryIds.length > 0) {
+      const { data: galleries } = await supabase
+        .from('galleries')
+        .select('id, service_type')
+        .in('id', galleryIds);
+
+      if (galleries) {
+        // Obtener los slugs de service_type para buscar los nombres
+        const serviceTypeSlugs = [...new Set(galleries.map(g => g.service_type).filter(Boolean))];
+
+        let serviceTypesMap = {};
+        if (serviceTypeSlugs.length > 0) {
+          const { data: serviceTypes } = await supabase
+            .from('service_types')
+            .select('slug, name')
+            .in('slug', serviceTypeSlugs);
+
+          if (serviceTypes) {
+            serviceTypesMap = serviceTypes.reduce((acc, st) => {
+              acc[st.slug] = st;
+              return acc;
+            }, {});
+          }
+        }
+
+        galleriesMap = galleries.reduce((acc, g) => {
+          acc[g.id] = {
+            service_type: g.service_type ? serviceTypesMap[g.service_type] : null
+          };
+          return acc;
+        }, {});
+      }
+    }
+
+    // Transformar datos para que coincidan con lo que espera el componente
+    const formattedTestimonials = testimonials.map(t => ({
+      id: t.id,
+      client_name: t.client_name,
+      rating: t.rating,
+      comment: t.message, // Renombrar 'message' a 'comment' para el componente
+      created_at: t.created_at,
+      service_type: t.gallery_id && galleriesMap[t.gallery_id]
+        ? galleriesMap[t.gallery_id].service_type
+        : null
+    }));
+
+    console.log('Primer testimonio formateado:', JSON.stringify(formattedTestimonials[0], null, 2));
+
+    return { success: true, testimonials: formattedTestimonials };
   } catch (error) {
+    console.error('Error en getFeaturedTestimonials:', error);
     return { success: false, testimonials: [], error: error.message };
   }
 }
