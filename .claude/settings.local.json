@@ -46,7 +46,8 @@
       "Bash(grep:*)",
       "Bash(find:*)",
       "Bash(echo:*)",
-      "Bash(check_triggers.sql)"
+      "Bash(check_triggers.sql)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

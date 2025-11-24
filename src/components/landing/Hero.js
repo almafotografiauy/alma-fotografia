@@ -1,147 +1,84 @@
 'use client';
 
 /**
- * Hero Section - Client Component
- *
- * Fullscreen hero con parallax sutil, animaciones fluidas
- * y CTAs principales de la landing.
+ * Hero - Sección principal
+ * Diseño minimalista, premium y elegante
+ * Color predominante: #2d2d2d con acentos marrones
  */
 
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { Calendar, Image as ImageIcon, Download } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowDown } from 'lucide-react';
 
-export default function HeroClient() {
-  // Parallax effect en scroll
-  const { scrollY } = useScroll();
-  const y = useTransform(scrollY, [0, 500], [0, 150]);
-  const opacity = useTransform(scrollY, [0, 300], [1, 0]);
-
+export default function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#f8f6f3] via-white to-[#faf8f5]">
-      {/* Elementos decorativos con blur */}
-      <motion.div
-        style={{ y }}
-        className="absolute inset-0 overflow-hidden pointer-events-none"
-      >
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.05 }}
-          transition={{ duration: 2 }}
-          className="absolute top-20 left-10 w-96 h-96 bg-[#8B5E3C] rounded-full blur-3xl"
-        />
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.05 }}
-          transition={{ duration: 2, delay: 0.5 }}
-          className="absolute bottom-20 right-10 w-96 h-96 bg-[#B89968] rounded-full blur-3xl"
-        />
-      </motion.div>
+    <section className="relative min-h-screen flex items-center justify-center bg-[#2d2d2d] overflow-hidden">
+      {/* Patrón sutil de fondo */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'radial-gradient(circle at 1px 1px, #B89968 1px, transparent 0)',
+          backgroundSize: '40px 40px'
+        }} />
+      </div>
 
-      <motion.div
-        style={{ opacity }}
-        className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 z-10"
-      >
-        <div className="text-center">
-          {/* Logo/Título */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="mb-6"
-          >
-            <h1 className="font-voga text-6xl sm:text-7xl lg:text-8xl text-gray-900 mb-4">
-              Alma Fotografía
-            </h1>
-            <div className="w-24 h-1 bg-gradient-to-r from-[#8B5E3C] to-[#B89968] mx-auto rounded-full" />
-          </motion.div>
+      {/* Contenido */}
+      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-20">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          {/* Título principal */}
+          <h1 className="font-voga text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-white mb-6 leading-tight">
+            Alma Fotografía
+          </h1>
+
+          {/* Línea decorativa */}
+          <div className="flex items-center justify-center gap-4 mb-8">
+            <div className="h-px w-16 bg-gradient-to-r from-transparent to-[#B89968]" />
+            <div className="w-1.5 h-1.5 rounded-full bg-[#B89968]" />
+            <div className="h-px w-16 bg-gradient-to-l from-transparent to-[#B89968]" />
+          </div>
 
           {/* Subtítulo */}
-          <motion.p
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="font-fira text-lg sm:text-xl text-gray-700 max-w-2xl mx-auto mb-12 leading-relaxed"
-          >
-            Capturamos pedacitos de vida para que puedas recordarlos siempre que sientas esa nostalgia en el corazón.
-          </motion.p>
+          <p className="font-fira text-lg sm:text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-12 leading-relaxed">
+            Capturamos pedacitos de vida para que puedas recordarlos siempre que sientas esa nostalgia en el corazón
+          </p>
 
-          {/* Features */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="flex flex-wrap justify-center gap-6 sm:gap-8 mb-12"
-          >
-            <Feature icon={Calendar} text="Sesiones personalizadas" />
-            <Feature icon={ImageIcon} text="Galería online privada" />
-            <Feature icon={Download} text="Descarga digital HD" />
-          </motion.div>
-
-          {/* CTAs */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-          >
-            <motion.a
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a
               href="#contacto"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="group px-8 py-4 bg-[#8B5E3C] text-white rounded-full font-fira font-semibold text-base hover:bg-[#6d4a2f] transition-all duration-300 shadow-lg hover:shadow-xl flex items-center gap-2 w-full sm:w-auto justify-center"
+              className="group px-8 py-4 bg-[#B89968] text-[#2d2d2d] rounded-sm font-fira text-sm font-semibold uppercase tracking-wider hover:bg-[#8B5E3C] transition-all duration-300"
             >
               Solicitar Reserva
-              <motion.span
-                className="inline-block"
-                animate={{ x: [0, 4, 0] }}
-                transition={{ repeat: Infinity, duration: 1.5 }}
-              >
-                →
-              </motion.span>
-            </motion.a>
-
-            <motion.a
+            </a>
+            <a
               href="#servicios"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-8 py-4 bg-white text-[#8B5E3C] border-2 border-[#8B5E3C] rounded-full font-fira font-semibold text-base hover:bg-[#8B5E3C]/5 transition-all duration-300 w-full sm:w-auto text-center"
+              className="px-8 py-4 border border-[#B89968]/30 text-[#B89968] rounded-sm font-fira text-sm font-semibold uppercase tracking-wider hover:bg-[#B89968]/10 transition-all duration-300"
             >
               Ver Portafolio
-            </motion.a>
-          </motion.div>
+            </a>
+          </div>
+        </motion.div>
 
-          {/* Scroll indicator */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 1 }}
-            className="absolute bottom-10 left-1/2 -translate-x-1/2 hidden md:block"
-          >
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1, duration: 0.8 }}
+          className="absolute bottom-12 left-1/2 -translate-x-1/2"
+        >
+          <a href="#servicios" className="flex flex-col items-center gap-2 text-gray-400 hover:text-[#B89968] transition-colors">
+            <span className="font-fira text-xs uppercase tracking-wider">Explorar</span>
             <motion.div
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="w-6 h-10 border-2 border-[#8B5E3C] rounded-full flex items-start justify-center p-2"
+              animate={{ y: [0, 8, 0] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
             >
-              <motion.div className="w-1.5 h-1.5 bg-[#8B5E3C] rounded-full" />
+              <ArrowDown size={20} />
             </motion.div>
-          </motion.div>
-        </div>
-      </motion.div>
-    </section>
-  );
-}
-
-// Feature component con microanimación
-function Feature({ icon: Icon, text }) {
-  return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      className="flex items-center gap-2 text-gray-700"
-    >
-      <div className="w-10 h-10 rounded-full bg-[#8B5E3C]/10 flex items-center justify-center">
-        <Icon size={18} className="text-[#8B5E3C]" />
+          </a>
+        </motion.div>
       </div>
-      <span className="font-fira text-sm font-medium">{text}</span>
-    </motion.div>
+    </section>
   );
 }

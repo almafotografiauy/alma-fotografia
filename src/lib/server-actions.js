@@ -113,23 +113,25 @@ export async function getProfileInfo() {
 
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('full_name, instagram, facebook, tiktok')
+      .select('full_name')
       .eq('username', 'admin') // Perfil principal de Fernanda
       .single();
 
     if (error) throw error;
 
-    return { success: true, profile: data };
+    return {
+      success: true,
+      profile: {
+        full_name: data?.full_name || 'Fernanda'
+      }
+    };
   } catch (error) {
     console.error('Error fetching profile:', error);
     // Fallback con datos por defecto si falla
     return {
       success: false,
       profile: {
-        full_name: 'Fernanda',
-        instagram: '@almafotografiauy',
-        facebook: 'Alma Fotografía',
-        tiktok: '@almafotografiauy'
+        full_name: 'Fernanda'
       }
     };
   }

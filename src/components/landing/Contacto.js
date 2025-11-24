@@ -1,308 +1,246 @@
 'use client';
 
 /**
- * Contacto - Client Component
- *
- * Formulario de reserva pública con validación
- * Integra con API /api/public-booking que valida disponibilidad
+ * Contacto - Formulario de reserva
+ * Diseño minimalista premium
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import {
-  Send,
-  User,
-  Mail,
-  Phone,
-  Calendar,
-  Clock,
-  MessageSquare,
-  CheckCircle,
-  AlertCircle,
-  Loader2
-} from 'lucide-react';
-import { getActiveServices } from '@/lib/server-actions';
+import { Send, CheckCircle, AlertCircle } from 'lucide-react';
 
-export default function ContactoClient() {
-  const [services, setServices] = useState([]);
+export default function Contacto({ services }) {
   const [formData, setFormData] = useState({
-    serviceTypeId: '',
-    clientName: '',
-    clientEmail: '',
-    clientPhone: '',
-    eventDate: '',
-    eventTime: '',
-    message: '',
+    service_type_id: '',
+    client_name: '',
+    client_email: '',
+    client_phone: '',
+    event_date: '',
+    event_time: '',
+    message: ''
   });
 
+  const [status, setStatus] = useState({ type: '', message: '' });
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
-
-  // Cargar servicios al montar
-  useEffect(() => {
-    getActiveServices().then(({ services }) => {
-      setServices(services || []);
-    });
-  }, []);
-
-  const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setError(''); // Limpiar error al escribir
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    setSuccess(false);
+    setStatus({ type: '', message: '' });
 
     try {
       const response = await fetch('/api/public-booking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          serviceTypeId: formData.service_type_id,
+          clientName: formData.client_name,
+          clientEmail: formData.client_email,
+          clientPhone: formData.client_phone,
+          eventDate: formData.event_date,
+          eventTime: formData.event_time,
+          message: formData.message
+        })
       });
 
-      const result = await response.json();
+      const data = await response.json();
 
-      if (!result.success) {
-        setError(result.error || 'Error al enviar la reserva');
-        setLoading(false);
-        return;
+      if (response.ok) {
+        setStatus({
+          type: 'success',
+          message: '¡Reserva enviada! Te contactaremos pronto.'
+        });
+        setFormData({
+          service_type_id: '',
+          client_name: '',
+          client_email: '',
+          client_phone: '',
+          event_date: '',
+          event_time: '',
+          message: ''
+        });
+      } else {
+        setStatus({
+          type: 'error',
+          message: data.error || 'Error al enviar la reserva'
+        });
       }
-
-      // Éxito
-      setSuccess(true);
-      setFormData({
-        serviceTypeId: '',
-        clientName: '',
-        clientEmail: '',
-        clientPhone: '',
-        eventDate: '',
-        eventTime: '',
-        message: '',
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message: 'Error de conexión. Intenta nuevamente.'
       });
-
-      // Auto-ocultar mensaje de éxito después de 5s
-      setTimeout(() => setSuccess(false), 5000);
-
-    } catch (err) {
-      console.error('Error submitting form:', err);
-      setError('Error al enviar la reserva. Por favor intentá de nuevo.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <section id="contacto" className="py-20 bg-gradient-to-br from-[#f8f6f3] via-white to-[#faf8f5]">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="contacto" className="py-32 bg-white">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          className="text-center mb-16"
         >
-          <h2 className="font-voga text-4xl sm:text-5xl text-gray-900 mb-4">
-            Solicitar Reserva
+          <h2 className="font-voga text-5xl md:text-6xl text-[#2d2d2d] mb-4">
+            Contacto
           </h2>
-          <div className="w-20 h-1 bg-gradient-to-r from-[#8B5E3C] to-[#B89968] mx-auto rounded-full mb-6" />
-          <p className="font-fira text-gray-600 max-w-2xl mx-auto">
-            Completá el formulario y me pondré en contacto con vos a la brevedad
+          <div className="w-16 h-px bg-[#B89968] mx-auto mb-6" />
+          <p className="font-fira text-lg text-gray-600">
+            Reserva tu sesión y capturemos juntos momentos inolvidables
           </p>
         </motion.div>
 
-        {/* Form */}
-        <motion.div
+        {/* Formulario */}
+        <motion.form
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 border border-gray-100"
+          onSubmit={handleSubmit}
+          className="space-y-6"
         >
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Service Type */}
-            <div>
-              <label className="block font-fira text-sm font-semibold text-gray-700 mb-2">
-                Tipo de servicio *
-              </label>
-              <select
-                value={formData.serviceTypeId}
-                onChange={(e) => handleChange('serviceTypeId', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#8B5E3C] focus:ring-2 focus:ring-[#8B5E3C]/10 font-fira text-sm text-gray-900 transition-all"
-                required
-              >
-                <option value="">Seleccionar servicio...</option>
-                {services.map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Name */}
-            <div>
-              <label className="block font-fira text-sm font-semibold text-gray-700 mb-2">
-                Nombre completo *
-              </label>
-              <div className="relative">
-                <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  value={formData.clientName}
-                  onChange={(e) => handleChange('clientName', e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#8B5E3C] focus:ring-2 focus:ring-[#8B5E3C]/10 font-fira text-sm text-gray-900 transition-all"
-                  placeholder="Tu nombre"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Email & Phone */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block font-fira text-sm font-semibold text-gray-700 mb-2">
-                  Email *
-                </label>
-                <div className="relative">
-                  <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="email"
-                    value={formData.clientEmail}
-                    onChange={(e) => handleChange('clientEmail', e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#8B5E3C] focus:ring-2 focus:ring-[#8B5E3C]/10 font-fira text-sm text-gray-900 transition-all"
-                    placeholder="tu@email.com"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-fira text-sm font-semibold text-gray-700 mb-2">
-                  Teléfono *
-                </label>
-                <div className="relative">
-                  <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="tel"
-                    value={formData.clientPhone}
-                    onChange={(e) => handleChange('clientPhone', e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#8B5E3C] focus:ring-2 focus:ring-[#8B5E3C]/10 font-fira text-sm text-gray-900 transition-all"
-                    placeholder="099 123 456"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Event Date & Time */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block font-fira text-sm font-semibold text-gray-700 mb-2">
-                  Fecha del evento (opcional)
-                </label>
-                <div className="relative">
-                  <Calendar size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="date"
-                    value={formData.eventDate}
-                    onChange={(e) => handleChange('eventDate', e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#8B5E3C] focus:ring-2 focus:ring-[#8B5E3C]/10 font-fira text-sm text-gray-900 transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-fira text-sm font-semibold text-gray-700 mb-2">
-                  Hora estimada (opcional)
-                </label>
-                <div className="relative">
-                  <Clock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="time"
-                    value={formData.eventTime}
-                    onChange={(e) => handleChange('eventTime', e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#8B5E3C] focus:ring-2 focus:ring-[#8B5E3C]/10 font-fira text-sm text-gray-900 transition-all"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Message */}
-            <div>
-              <label className="block font-fira text-sm font-semibold text-gray-700 mb-2">
-                Mensaje adicional (opcional)
-              </label>
-              <div className="relative">
-                <MessageSquare size={18} className="absolute left-3 top-3 text-gray-400" />
-                <textarea
-                  value={formData.message}
-                  onChange={(e) => handleChange('message', e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#8B5E3C] focus:ring-2 focus:ring-[#8B5E3C]/10 font-fira text-sm text-gray-900 transition-all resize-none"
-                  placeholder="Contanos sobre tu evento, ideas, o cualquier detalle especial..."
-                  rows={4}
-                />
-              </div>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3"
-              >
-                <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="font-fira text-sm text-red-800">{error}</p>
-              </motion.div>
-            )}
-
-            {/* Success Message */}
-            {success && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3"
-              >
-                <CheckCircle size={20} className="text-green-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-fira text-sm text-green-800 font-semibold mb-1">
-                    ¡Reserva enviada con éxito!
-                  </p>
-                  <p className="font-fira text-xs text-green-700">
-                    Me pondré en contacto con vos a la brevedad para confirmar los detalles.
-                  </p>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Submit Button */}
-            <motion.button
-              type="submit"
-              disabled={loading}
-              whileHover={{ scale: loading ? 1 : 1.02 }}
-              whileTap={{ scale: loading ? 1 : 0.98 }}
-              className="w-full px-6 py-3.5 bg-[#8B5E3C] text-white rounded-lg font-fira text-sm font-semibold hover:bg-[#6d4a2f] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2"
+          {/* Servicio */}
+          <div>
+            <label className="block font-fira text-sm font-medium text-[#2d2d2d] mb-2">
+              Tipo de sesión *
+            </label>
+            <select
+              required
+              value={formData.service_type_id}
+              onChange={(e) => setFormData({ ...formData, service_type_id: e.target.value })}
+              className="w-full px-4 py-3 border-2 border-gray-200 font-fira text-base focus:border-[#B89968] focus:outline-none transition-colors"
             >
-              {loading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  <span>Enviando...</span>
-                </>
+              <option value="">Selecciona un servicio</option>
+              {services?.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Nombre */}
+          <div>
+            <label className="block font-fira text-sm font-medium text-[#2d2d2d] mb-2">
+              Nombre completo *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.client_name}
+              onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+              className="w-full px-4 py-3 border-2 border-gray-200 font-fira text-base focus:border-[#B89968] focus:outline-none transition-colors"
+              placeholder="Tu nombre"
+            />
+          </div>
+
+          {/* Email y Teléfono */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block font-fira text-sm font-medium text-[#2d2d2d] mb-2">
+                Email *
+              </label>
+              <input
+                type="email"
+                required
+                value={formData.client_email}
+                onChange={(e) => setFormData({ ...formData, client_email: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-200 font-fira text-base focus:border-[#B89968] focus:outline-none transition-colors"
+                placeholder="tu@email.com"
+              />
+            </div>
+
+            <div>
+              <label className="block font-fira text-sm font-medium text-[#2d2d2d] mb-2">
+                Teléfono *
+              </label>
+              <input
+                type="tel"
+                required
+                value={formData.client_phone}
+                onChange={(e) => setFormData({ ...formData, client_phone: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-200 font-fira text-base focus:border-[#B89968] focus:outline-none transition-colors"
+                placeholder="099 123 456"
+              />
+            </div>
+          </div>
+
+          {/* Fecha y Hora (opcional) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block font-fira text-sm font-medium text-[#2d2d2d] mb-2">
+                Fecha preferida
+              </label>
+              <input
+                type="date"
+                value={formData.event_date}
+                onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-200 font-fira text-base focus:border-[#B89968] focus:outline-none transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block font-fira text-sm font-medium text-[#2d2d2d] mb-2">
+                Hora preferida
+              </label>
+              <input
+                type="time"
+                value={formData.event_time}
+                onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-200 font-fira text-base focus:border-[#B89968] focus:outline-none transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* Mensaje */}
+          <div>
+            <label className="block font-fira text-sm font-medium text-[#2d2d2d] mb-2">
+              Mensaje (opcional)
+            </label>
+            <textarea
+              rows={4}
+              value={formData.message}
+              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+              className="w-full px-4 py-3 border-2 border-gray-200 font-fira text-base focus:border-[#B89968] focus:outline-none transition-colors resize-none"
+              placeholder="Cuéntanos sobre tu sesión..."
+            />
+          </div>
+
+          {/* Status Message */}
+          {status.message && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`flex items-center gap-2 p-4 ${
+                status.type === 'success'
+                  ? 'bg-green-50 text-green-800 border border-green-200'
+                  : 'bg-red-50 text-red-800 border border-red-200'
+              }`}
+            >
+              {status.type === 'success' ? (
+                <CheckCircle size={20} />
               ) : (
-                <>
-                  <Send size={18} />
-                  <span>Enviar solicitud</span>
-                </>
+                <AlertCircle size={20} />
               )}
-            </motion.button>
-          </form>
-        </motion.div>
+              <span className="font-fira text-sm">{status.message}</span>
+            </motion.div>
+          )}
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full px-8 py-4 bg-[#2d2d2d] text-white font-fira text-sm font-semibold uppercase tracking-wider hover:bg-[#B89968] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {loading ? 'Enviando...' : 'Enviar Reserva'}
+            <Send size={18} />
+          </button>
+        </motion.form>
       </div>
     </section>
   );
