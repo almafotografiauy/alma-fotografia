@@ -163,10 +163,10 @@ export default function DashboardLayoutClient({ children, userName }) {
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-[#8B5E3C] hover:bg-[#6d4a2f] text-white transition-all duration-200 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-[#8B5E3C] hover:bg-[#6d4a2f] !text-white transition-all duration-200 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
           >
-            <LogOut size={18} strokeWidth={2} />
-            <span className="font-medium text-sm">
+            <LogOut size={18} strokeWidth={2} className="!text-white" />
+            <span className="font-medium text-sm !text-white">
               Salir
             </span>
           </button>
@@ -277,10 +277,10 @@ export default function DashboardLayoutClient({ children, userName }) {
 
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-[#8B5E3C] hover:bg-[#6d4a2f] text-white transition-all duration-200 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-[#8B5E3C] hover:bg-[#6d4a2f] !text-white transition-all duration-200 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <LogOut size={18} strokeWidth={2} />
-                  <span className="font-medium text-sm">
+                  <LogOut size={18} strokeWidth={2} className="!text-white" />
+                  <span className="font-medium text-sm !text-white">
                     Salir
                   </span>
                 </button>
