@@ -7,12 +7,17 @@ import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { useSimpleAutoRefresh } from '@/hooks/useAutoRefresh';
 import { supabase } from '@/lib/supabaseClient';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function RecentNotificationsWidget({ notifications: initialNotifications = [] }) {
   const [notifications, setNotifications] = useState(initialNotifications);
   const router = useRouter();
+
+  // Sincronizar con props cuando cambien (ej: después de eliminar desde el modal)
+  useEffect(() => {
+    setNotifications(initialNotifications);
+  }, [initialNotifications]);
 
   // Auto-refresh cada 10 minutos
   useSimpleAutoRefresh(10);

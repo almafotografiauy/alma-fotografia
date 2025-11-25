@@ -483,9 +483,9 @@ export default function CreateGalleryForm() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="w-full p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto"
+            className="w-full max-w-full overflow-x-hidden p-3 sm:p-4 md:p-6 lg:p-8"
         >
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 sm:space-y-8">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6 md:space-y-8 max-w-4xl mx-auto">
 
 
                 <button
@@ -534,14 +534,15 @@ export default function CreateGalleryForm() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.15 }}
+                    className="max-w-full overflow-hidden"
                 >
                     <label className="block font-fira text-sm font-medium text-black mb-2">
                         URL de la galería *
                     </label>
-                    <div className="flex flex-col sm:flex-row items-stretch gap-2">
-                        <div className="flex items-center px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg">
-                            <span className="font-fira text-sm text-black/60 whitespace-nowrap text-xs sm:text-sm">
-                                {origin || 'tudominio.com'}/galeria/
+                    <div className="flex flex-col sm:flex-row items-stretch gap-2 max-w-full">
+                        <div className="flex items-center px-2 sm:px-4 py-2 sm:py-3 bg-gray-50 border border-gray-300 rounded-lg overflow-hidden min-w-0">
+                            <span className="font-fira text-[10px] sm:text-xs md:text-sm text-black/60 truncate">
+                                {origin ? `${origin.replace('https://', '').replace('http://', '')}/galeria/` : 'tudominio.com/galeria/'}
                             </span>
                         </div>
                         <input
