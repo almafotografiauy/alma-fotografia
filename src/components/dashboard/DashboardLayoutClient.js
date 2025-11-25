@@ -119,8 +119,8 @@ export default function DashboardLayoutClient({ children, userName }) {
                   group relative flex items-center gap-3 px-4 py-3.5 rounded-lg
                   overflow-hidden transition-all duration-200 ease-in-out
                   ${isActive
-                    ? 'bg-[#8B5E3C] text-white shadow-md'
-                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                    ? 'bg-[#8B5E3C] !text-white shadow-md'
+                    : '!text-white/70 hover:bg-white/10 hover:!text-white'
                   }
                 `}
               >
@@ -131,13 +131,13 @@ export default function DashboardLayoutClient({ children, userName }) {
                     className={`
                       transition-all duration-200
                       ${isActive
-                        ? 'text-white'
-                        : 'text-white/70 group-hover:text-white group-hover:scale-110'
+                        ? '!text-white'
+                        : '!text-white/70 group-hover:!text-white group-hover:scale-110'
                       }
                     `}
                     strokeWidth={2}
                   />
-                  <span className={`font-medium text-sm transition-colors duration-200 ${isActive ? 'text-white' : ''}`}>
+                  <span className={`font-medium text-sm transition-colors duration-200 ${isActive ? '!text-white' : '!text-white/70 group-hover:!text-white'}`}>
                     {item.label}
                   </span>
                 </div>
@@ -237,8 +237,8 @@ export default function DashboardLayoutClient({ children, userName }) {
                         group relative flex items-center gap-3 px-4 py-3.5 rounded-lg
                         overflow-hidden transition-all duration-200 ease-in-out
                         ${isActive
-                          ? 'bg-[#8B5E3C] text-white shadow-md'
-                          : 'text-white/70 hover:bg-white/10 hover:text-white'
+                          ? 'bg-[#8B5E3C] !text-white shadow-md'
+                          : '!text-white/70 hover:bg-white/10 hover:!text-white'
                         }
                       `}
                     >
@@ -249,13 +249,13 @@ export default function DashboardLayoutClient({ children, userName }) {
                           className={`
                             transition-all duration-200
                             ${isActive
-                              ? 'text-white'
-                              : 'text-white/70 group-hover:text-white group-hover:scale-110'
+                              ? '!text-white'
+                              : '!text-white/70 group-hover:!text-white group-hover:scale-110'
                             }
                           `}
                           strokeWidth={2}
                         />
-                        <span className={`font-medium text-sm transition-colors duration-200 ${isActive ? 'text-white' : ''}`}>
+                        <span className={`font-medium text-sm transition-colors duration-200 ${isActive ? '!text-white' : '!text-white/70 group-hover:!text-white'}`}>
                           {item.label}
                         </span>
                       </div>
