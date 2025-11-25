@@ -377,327 +377,256 @@ function ClientFavoritesSection({
 
   return (
     <div className="bg-white">
-      {/* Header oscuro estilo GalleryDetailView */}
-      <div className="bg-gradient-to-br from-[#2D2D2D] to-[#1a1a1a] text-white rounded-2xl shadow-sm border border-gray-200">
-        <div className="px-5 sm:px-6 lg:px-8 py-4 sm:py-6">
-
-          <div className="flex flex-col gap-4 mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
-                  <h3 className="font-voga text-xl sm:text-2xl lg:text-3xl break-words">
-                    Fotos favoritas
-                  </h3>
-                  {getWorkflowBadge()}
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-white/60">
-                  <div className="flex items-center gap-2">
-                    <Mail size={14} className="text-white/40 flex-shrink-0" />
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-                      {name && <span className="font-fira font-semibold text-white">{name}</span>}
-                      <span className="font-fira text-white/60">{email}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Heart size={14} className="text-pink-400 fill-pink-400 flex-shrink-0" />
-                    <span className="font-fira">{photos.length} / {maxFavorites} favoritas</span>
-                  </div>
-                  {formattedDate && (
-                    <div className="flex items-center gap-2">
-                      <Calendar size={14} className="text-white/40 flex-shrink-0" />
-                      <span className="font-fira">Enviado: {formattedDate}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex gap-2 flex-shrink-0 flex-wrap">
-                {isSelectMode && selectedPhotos.size > 0 && (
-                  <motion.button
-                    onClick={handleDownloadSelected}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="!text-white flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors font-fira text-xs sm:text-sm font-semibold flex items-center justify-center gap-2"
-                  >
-                    <Download size={16} />
-                    <span className="hidden sm:inline">Descargar {selectedPhotos.size}</span>
-                    <span className="sm:hidden">{selectedPhotos.size}</span>
-                  </motion.button>
-                )}
-
-                <motion.button
-                  onClick={() => {
-                    setIsSelectMode(!isSelectMode);
-                    setSelectedPhotos(new Set());
-                  }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`!text-white flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 ${isSelectMode ? 'bg-pink-500/20 border border-pink-500/30' : 'bg-[#1a1a1a] hover:bg-[#3a3a3a]'} rounded-lg transition-colors font-fira text-xs sm:text-sm font-semibold flex items-center justify-center gap-2`}
-                >
-                  <CheckCircle size={16} />
-                  <span className="hidden md:inline">{isSelectMode ? 'Cancelar' : 'Seleccionar'}</span>
-                  <span className="md:hidden">{isSelectMode ? 'X' : 'Sel'}</span>
-                </motion.button>
-
-                <motion.button
-                  onClick={onRefresh}
-                  disabled={isRefreshing}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="!text-white flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors font-fira text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <RefreshCw size={16} className={`${isRefreshing ? 'animate-spin' : ''}`} />
-                  <span className="hidden lg:inline">Actualizar</span>
-                </motion.button>
-
-                <motion.button
-                  onClick={() => setShowHistory(!showHistory)}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`!text-white flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 ${showHistory ? 'bg-blue-500/20 border border-blue-500/30' : 'bg-white/10 hover:bg-white/20'} rounded-lg transition-colors font-fira text-xs sm:text-sm font-semibold flex items-center justify-center gap-2`}
-                >
-                  <History size={16} />
-                  <span className="hidden lg:inline">Historial</span>
-                </motion.button>
-
-                {/* Toggle Permitir Compartir Favoritas */}
-                <motion.button
-                  onClick={onToggleShareFavorites}
-                  disabled={isUpdatingShareSetting}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  title={allowShareFavorites ? 'Compartir favoritas habilitado' : 'Compartir favoritas deshabilitado'}
-                  className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 ${
-                    allowShareFavorites
-                      ? '!text-pink-300 bg-pink-500/20 hover:bg-pink-500/30 cursor-pointer border border-pink-500/30'
-                      : '!text-white bg-[#8B5E3C] hover:bg-[#6d4a2f] cursor-pointer'
-                  } ${isUpdatingShareSetting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <Share2 size={16} />
-                  <span className="hidden lg:inline">{allowShareFavorites ? 'Compartir ON' : 'Compartir OFF'}</span>
-                </motion.button>
-
-                {photos.length > 0 && (
-                  <motion.button
-                    onClick={handleDownloadAll}
-                    disabled={downloadProgress.show}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="!text-white flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-[#79502A] to-[#8B5A2F] hover:from-[#8B5A2F] hover:to-[#79502A] disabled:opacity-70 rounded-lg transition-colors font-fira text-xs sm:text-sm font-semibold flex items-center justify-center gap-2"
-                  >
-                    {downloadProgress.show ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span className="hidden md:inline">{downloadProgress.current}/{downloadProgress.total}</span>
-                        <span className="md:hidden">{Math.round((downloadProgress.current / downloadProgress.total) * 100)}%</span>
-                      </>
-                    ) : (
-                      <>
-                        <Download size={16} />
-                        <span className="hidden md:inline">Todas</span>
-                      </>
-                    )}
-                  </motion.button>
-                )}
-
-                <div className="relative flex-shrink-0">
-                  <motion.button
-                    onClick={() => setShowActionsMenu(!showActionsMenu)}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="!text-white p-2 sm:p-2.5 hover:bg-white/10 rounded-lg transition-colors"
-                    title="Más acciones"
-                  >
-                    <MoreVertical size={18} className="sm:w-5 sm:h-5" />
-                  </motion.button>
-
-                  <AnimatePresence>
-                    {showActionsMenu && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-40"
-                          onClick={() => setShowActionsMenu(false)}
-                        />
-
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                          transition={{ duration: 0.15 }}
-                          className="absolute right-0 top-full mt-2 w-56 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
-                        >
-                          <div className="py-2">
-                            <button
-                              onClick={handleCopyLightroomList}
-                              className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-white/5 transition-colors text-left"
-                            >
-                              <Copy size={16} className="text-[#C6A97D]" />
-                              <div>
-                                <p className="font-fira text-sm font-medium text-neutral-200">Copiar para Lightroom</p>
-                                <p className="font-fira text-xs text-neutral-400">Lista de archivos</p>
-                              </div>
-                            </button>
-
-                            <button
-                              onClick={handleExportCSV}
-                              className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-white/5 transition-colors text-left"
-                            >
-                              <FileDown size={16} className="text-emerald-400" />
-                              <div>
-                                <p className="font-fira text-sm font-medium text-neutral-200">Exportar CSV</p>
-                                <p className="font-fira text-xs text-neutral-400">Con notas y metadatos</p>
-                              </div>
-                            </button>
-                          </div>
-                        </motion.div>
-                      </>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-            </div>
+      {/* Barra de acciones compacta con fondo claro */}
+      <div className="px-4 sm:px-6 py-3 bg-gray-50 border-b border-gray-200">
+        {/* Info del cliente */}
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm mb-3">
+          <div className="flex items-center gap-2">
+            <Mail size={14} className="text-gray-400" />
+            {name && <span className="font-fira font-semibold text-gray-800">{name}</span>}
+            <span className="font-fira text-gray-500">{email}</span>
           </div>
+          <div className="flex items-center gap-2">
+            <Heart size={14} className="text-pink-500 fill-pink-500" />
+            <span className="font-fira text-gray-600">{photos.length} / {maxFavorites}</span>
+          </div>
+          {getWorkflowBadge()}
+        </div>
 
-          {/* Barra de progreso de descarga */}
-          <AnimatePresence>
-            {downloadProgress.show && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mt-4 p-3 bg-[#79502A]/20 border border-[#C6A97D]/30 rounded-lg"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-fira text-sm text-white/80">
-                    Descargando fotos...
-                  </span>
-                  <span className="font-fira text-sm font-semibold text-[#C6A97D]">
-                    {downloadProgress.current} de {downloadProgress.total}
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-black/30 rounded-full overflow-hidden">
+        {/* Botones de acciones */}
+        <div className="flex gap-2 flex-wrap">
+          {isSelectMode && selectedPhotos.size > 0 && (
+            <motion.button
+              onClick={handleDownloadSelected}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-fira text-xs font-semibold flex items-center gap-1.5"
+            >
+              <Download size={14} />
+              <span>Descargar {selectedPhotos.size}</span>
+            </motion.button>
+          )}
+
+          <motion.button
+            onClick={() => {
+              setIsSelectMode(!isSelectMode);
+              setSelectedPhotos(new Set());
+            }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className={`px-3 py-1.5 rounded-lg transition-colors font-fira text-xs font-semibold flex items-center gap-1.5 ${
+              isSelectMode
+                ? 'bg-pink-100 text-pink-700 border border-pink-300'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+            }`}
+          >
+            <CheckCircle size={14} />
+            <span>{isSelectMode ? 'Cancelar' : 'Seleccionar'}</span>
+          </motion.button>
+
+          <motion.button
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors font-fira text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+            <span className="hidden sm:inline">Actualizar</span>
+          </motion.button>
+
+          <motion.button
+            onClick={() => setShowHistory(!showHistory)}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className={`px-3 py-1.5 rounded-lg transition-colors font-fira text-xs font-semibold flex items-center gap-1.5 ${
+              showHistory
+                ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+            }`}
+          >
+            <History size={14} />
+            <span className="hidden sm:inline">Historial</span>
+          </motion.button>
+
+          <motion.button
+            onClick={onToggleShareFavorites}
+            disabled={isUpdatingShareSetting}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            title={allowShareFavorites ? 'Compartir favoritas habilitado' : 'Compartir favoritas deshabilitado'}
+            className={`px-3 py-1.5 rounded-lg transition-all font-fira text-xs font-semibold flex items-center gap-1.5 ${
+              allowShareFavorites
+                ? 'bg-pink-100 text-pink-700 border border-pink-300'
+                : 'bg-[#8B5E3C] hover:bg-[#6d4a2f] text-white'
+            } ${isUpdatingShareSetting ? 'opacity-50' : ''}`}
+          >
+            <Share2 size={14} />
+            <span className="hidden sm:inline">{allowShareFavorites ? 'Compartir ON' : 'Compartir OFF'}</span>
+          </motion.button>
+
+          {photos.length > 0 && (
+            <motion.button
+              onClick={handleDownloadAll}
+              disabled={downloadProgress.show}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="px-3 py-1.5 bg-[#79502A] hover:bg-[#8B5A2F] text-white rounded-lg transition-colors font-fira text-xs font-semibold flex items-center gap-1.5 disabled:opacity-70"
+            >
+              {downloadProgress.show ? (
+                <>
+                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>{Math.round((downloadProgress.current / downloadProgress.total) * 100)}%</span>
+                </>
+              ) : (
+                <>
+                  <Download size={14} />
+                  <span>Descargar ZIP</span>
+                </>
+              )}
+            </motion.button>
+          )}
+
+          <div className="relative">
+            <motion.button
+              onClick={() => setShowActionsMenu(!showActionsMenu)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="p-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors"
+              title="Más acciones"
+            >
+              <MoreVertical size={16} />
+            </motion.button>
+
+            <AnimatePresence>
+              {showActionsMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowActionsMenu(false)} />
                   <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(downloadProgress.current / downloadProgress.total) * 100}%` }}
-                    className="h-full bg-gradient-to-r from-[#79502A] to-[#C6A97D] rounded-full"
-                    transition={{ duration: 0.3 }}
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Historial de actividad expandible */}
-          <AnimatePresence>
-            {showHistory && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden border-t border-white/10 pt-4"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 mb-3">
-                    <History size={16} className="text-blue-400" />
-                    <h4 className="font-fira text-sm font-semibold text-neutral-200">Historial de Actividad</h4>
-                  </div>
-
-                  {activityHistory.length === 0 ? (
-                    <div className="p-4 bg-neutral-900/40 rounded-lg border border-white/10 text-center">
-                      <p className="font-fira text-sm text-neutral-400">
-                        No hay envíos registrados aún
-                      </p>
-                      <p className="font-fira text-xs text-neutral-500 mt-1">
-                        El historial se crea cuando el cliente presiona "Enviar Selección"
-                      </p>
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    className="absolute right-0 top-full mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50"
+                  >
+                    <div className="py-1">
+                      <button
+                        onClick={handleCopyLightroomList}
+                        className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <Copy size={14} className="text-[#8B5E3C]" />
+                        <div>
+                          <p className="font-fira text-sm font-medium text-gray-800">Copiar para Lightroom</p>
+                          <p className="font-fira text-xs text-gray-500">Lista de archivos</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={handleExportCSV}
+                        className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <FileDown size={14} className="text-emerald-600" />
+                        <div>
+                          <p className="font-fira text-sm font-medium text-gray-800">Exportar CSV</p>
+                          <p className="font-fira text-xs text-gray-500">Con notas y metadatos</p>
+                        </div>
+                      </button>
                     </div>
-                  ) : activityHistory.map((activity, idx) => {
-                    const getActivityConfig = () => {
-                      const { type, count, addedCount, removedCount, isFirst } = activity;
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
 
-                      let message;
-                      let icon;
-                      let bg;
+        {/* Barra de progreso de descarga */}
+        <AnimatePresence>
+          {downloadProgress.show && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-3 p-3 bg-[#79502A]/10 border border-[#C6A97D]/30 rounded-lg"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-fira text-sm text-gray-700">Descargando fotos...</span>
+                <span className="font-fira text-sm font-semibold text-[#79502A]">
+                  {downloadProgress.current} de {downloadProgress.total}
+                </span>
+              </div>
+              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(downloadProgress.current / downloadProgress.total) * 100}%` }}
+                  className="h-full bg-gradient-to-r from-[#79502A] to-[#C6A97D] rounded-full"
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-                      if (type === 'added' && isFirst) {
-                        icon = <Plus size={14} className="text-emerald-400" />;
-                        bg = 'bg-emerald-500/20';
-                        message = <>Seleccionó <span className="font-semibold text-emerald-400">{count} {count === 1 ? 'foto' : 'fotos'}</span> favoritas</>;
-                      } else if (type === 'edited' || (addedCount > 0 && removedCount > 0)) {
-                        icon = <AlertCircle size={14} className="text-blue-400" />;
-                        bg = 'bg-blue-500/20';
-                        message = (
-                          <>
-                            Editó su selección: eliminó <span className="font-semibold text-red-400">{removedCount}</span> y agregó <span className="font-semibold text-emerald-400">{addedCount}</span> (Total: <span className="font-semibold text-blue-400">{count}</span>)
-                          </>
-                        );
-                      } else if (type === 'added' || addedCount > 0) {
-                        icon = <Plus size={14} className="text-emerald-400" />;
-                        bg = 'bg-emerald-500/20';
-                        message = (
-                          <>
-                            Agregó <span className="font-semibold text-emerald-400">{addedCount} {addedCount === 1 ? 'foto' : 'fotos'}</span> (Total: <span className="font-semibold text-emerald-400">{count}</span>)
-                          </>
-                        );
-                      } else if (type === 'removed' || removedCount > 0) {
-                        icon = <Minus size={14} className="text-red-400" />;
-                        bg = 'bg-red-500/20';
-                        message = (
-                          <>
-                            Eliminó <span className="font-semibold text-red-400">{removedCount} {removedCount === 1 ? 'foto' : 'fotos'}</span> (Quedan: <span className="font-semibold text-red-400">{count}</span>)
-                          </>
-                        );
-                      } else if (type === 'submitted') {
-                        icon = <CheckCircle size={14} className="text-blue-400" />;
-                        bg = 'bg-blue-500/20';
-                        message = <>Envió su selección final (<span className="font-semibold text-blue-400">{count} fotos</span>)</>;
-                      } else {
-                        icon = <AlertCircle size={14} className="text-neutral-400" />;
-                        bg = 'bg-neutral-500/20';
-                        message = <>Actividad desconocida</>;
-                      }
+        {/* Historial de actividad */}
+        <AnimatePresence>
+          {showHistory && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden mt-3 pt-3 border-t border-gray-200"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <History size={14} className="text-blue-500" />
+                <h4 className="font-fira text-sm font-semibold text-gray-700">Historial de Actividad</h4>
+              </div>
 
-                      return { icon, bg, message };
-                    };
+              {activityHistory.length === 0 ? (
+                <div className="p-3 bg-gray-100 rounded-lg text-center">
+                  <p className="font-fira text-sm text-gray-500">No hay envíos registrados aún</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {activityHistory.map((activity, idx) => {
+                    const { type, count, addedCount, removedCount, isFirst } = activity;
+                    let message, icon, bg;
 
-                    const config = getActivityConfig();
+                    if (type === 'added' && isFirst) {
+                      icon = <Plus size={12} className="text-emerald-600" />;
+                      bg = 'bg-emerald-50';
+                      message = <span>Seleccionó <b className="text-emerald-600">{count}</b> fotos</span>;
+                    } else if (type === 'edited' || (addedCount > 0 && removedCount > 0)) {
+                      icon = <AlertCircle size={12} className="text-blue-600" />;
+                      bg = 'bg-blue-50';
+                      message = <span>Editó: -<b className="text-red-500">{removedCount}</b> +<b className="text-emerald-600">{addedCount}</b> (Total: {count})</span>;
+                    } else if (type === 'added' || addedCount > 0) {
+                      icon = <Plus size={12} className="text-emerald-600" />;
+                      bg = 'bg-emerald-50';
+                      message = <span>Agregó <b className="text-emerald-600">{addedCount}</b> (Total: {count})</span>;
+                    } else if (type === 'removed' || removedCount > 0) {
+                      icon = <Minus size={12} className="text-red-600" />;
+                      bg = 'bg-red-50';
+                      message = <span>Eliminó <b className="text-red-600">{removedCount}</b> (Quedan: {count})</span>;
+                    } else {
+                      icon = <CheckCircle size={12} className="text-blue-600" />;
+                      bg = 'bg-blue-50';
+                      message = <span>Envió selección ({count} fotos)</span>;
+                    }
 
                     return (
-                      <div
-                        key={idx}
-                        className="flex items-start gap-3 p-3 bg-neutral-900/40 rounded-lg border border-white/10 hover:bg-neutral-900/60 transition-colors"
-                      >
-                        <div className={`p-1.5 rounded-lg ${config.bg}`}>
-                          {config.icon}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <p className="font-fira text-sm text-neutral-100">
-                            {config.message}
-                          </p>
-                          <p className="font-fira text-xs text-neutral-400 mt-1">
-                            {new Date(activity.date).toLocaleDateString('es-ES', {
-                              day: 'numeric',
-                              month: 'long',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                        </div>
+                      <div key={idx} className={`flex items-center gap-2 p-2 ${bg} rounded-lg text-xs`}>
+                        {icon}
+                        <span className="text-gray-700">{message}</span>
+                        <span className="text-gray-400 ml-auto text-[10px]">
+                          {new Date(activity.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                        </span>
                       </div>
                     );
                   })}
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Photos Grid - Masonry Layout directamente en el fondo */}
+      {/* Photos Grid - Masonry Layout */}
       <div className="bg-white py-3 sm:py-4">
         {photos.length === 0 ? (
           <div className="text-center py-16 px-6">
@@ -1360,37 +1289,45 @@ export default function FavoritesView({ gallery, favoritesByClient }) {
 
   return (
     <div className="w-full">
-      {/* Header mejorado - sin padding para alinearse con header principal */}
-      <div className="mb-4 px-4 sm:px-6">
-        <button
-          onClick={() => router.push(`/dashboard/galerias/${gallery.id}`)}
-          className="flex items-center gap-2 text-[#8B5E3C] hover:text-[#6d4a2f] transition-colors font-fira text-sm font-semibold group"
-        >
-          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-          Volver a la galería
-        </button>
+      {/* Header principal de la página */}
+      <div className="bg-[#2D2D2D] border-b border-white/10 shadow-md">
+        <div className="p-6 sm:p-8">
+          <button
+            onClick={() => router.push(`/dashboard/galerias/${gallery.id}`)}
+            className="flex items-center gap-2 text-[#B89968] hover:text-white transition-colors mb-4 text-sm font-medium group"
+          >
+            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+            <span>Volver a la galería</span>
+          </button>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl text-white mb-2 font-light tracking-tight">
+            Fotos Favoritas
+          </h1>
+          <p className="text-sm text-gray-300">
+            Revisa las selecciones de tus clientes • <span className="text-[#C6A97D]">{gallery.title}</span>
+          </p>
+        </div>
       </div>
 
       {/* Lista de clientes */}
-      <div className="space-y-4 px-4 sm:px-6">
+      <div className="space-y-0">
         {filteredAndSortedClients.length === 0 && favoritesByClient.length === 0 ? (
-          <div className="bg-gradient-to-br from-neutral-900/50 to-neutral-900/30 border border-neutral-800 rounded-2xl p-12 sm:p-16 text-center shadow-2xl">
+          <div className="bg-gray-50 p-12 sm:p-16 text-center">
             <div className="max-w-md mx-auto">
-              <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-neutral-800/50 border border-neutral-700 flex items-center justify-center">
-                <Heart size={48} className="text-neutral-600" />
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-100 flex items-center justify-center">
+                <Heart size={40} className="text-gray-300" />
               </div>
-              <h3 className="font-voga text-3xl text-neutral-300 mb-4">
+              <h3 className="font-voga text-2xl text-gray-600 mb-3">
                 Aún no hay favoritas
               </h3>
-              <p className="font-fira text-sm text-neutral-400 leading-relaxed">
-                Cuando tus clientes seleccionen sus fotos favoritas, aparecerán aquí organizadas por cliente
+              <p className="font-fira text-sm text-gray-500 leading-relaxed">
+                Cuando tus clientes seleccionen sus fotos favoritas, aparecerán aquí
               </p>
             </div>
           </div>
         ) : filteredAndSortedClients.length === 0 ? (
-          <div className="bg-gradient-to-br from-neutral-900/50 to-neutral-900/30 border border-neutral-800 rounded-2xl p-12 text-center">
-            <AlertCircle size={40} className="text-neutral-600 mx-auto mb-4" />
-            <p className="font-fira text-neutral-400">
+          <div className="bg-gray-50 p-12 text-center">
+            <AlertCircle size={40} className="text-gray-400 mx-auto mb-4" />
+            <p className="font-fira text-gray-500">
               No se encontraron resultados con los filtros aplicados
             </p>
           </div>

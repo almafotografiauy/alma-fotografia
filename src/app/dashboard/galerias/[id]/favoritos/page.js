@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/server';
-import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import FavoritesView from '@/components/dashboard/galeria/FavoritesView';
 
 /**
@@ -37,7 +36,25 @@ async function FavoritesContent({ galleryId }) {
     notFound();
   }
 
-  // Primero obtener los favoritos
+  // Primero obtener SOLO las fotos de esta galería
+  const { data: galleryPhotos, error: photosError } = await supabase
+    .from('photos')
+    .select('id')
+    .eq('gallery_id', galleryId);
+
+  if (photosError) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-white/60">Error al cargar fotos</p>
+        <p className="text-white/40 text-sm mt-2">{photosError.message}</p>
+      </div>
+    );
+  }
+
+  // IDs de fotos válidas de esta galería
+  const validPhotoIds = new Set((galleryPhotos || []).map(p => p.id));
+
+  // Obtener favoritos SOLO con photo_ids que pertenecen a esta galería
   const { data: favoritesData, error: favoritesError } = await supabase
     .from('favorites')
     .select('id, client_email, client_name, created_at, photo_id')
@@ -53,10 +70,13 @@ async function FavoritesContent({ galleryId }) {
     );
   }
 
-  // Obtener IDs únicos de fotos
-  const photoIds = [...new Set((favoritesData || []).map(f => f.photo_id).filter(Boolean))];
+  // Filtrar favoritos para incluir SOLO los que tienen photo_id válido de esta galería
+  const validFavorites = (favoritesData || []).filter(fav => validPhotoIds.has(fav.photo_id));
 
-  // Obtener datos de las fotos - SOLO de esta galería
+  // Obtener IDs únicos de fotos (ya sabemos que son válidos)
+  const photoIds = [...new Set(validFavorites.map(f => f.photo_id).filter(Boolean))];
+
+  // Obtener datos completos de las fotos
   let photosData = [];
   if (photoIds.length > 0) {
     const { data: photos } = await supabase
@@ -75,7 +95,7 @@ async function FavoritesContent({ galleryId }) {
   });
 
   // Combinar datos de favoritos con fotos
-  const favorites = (favoritesData || []).map(fav => ({
+  const favorites = validFavorites.map(fav => ({
     ...fav,
     photo: photosMap[fav.photo_id] || null
   }));
@@ -152,22 +172,15 @@ export default async function FavoritesPage({ params }) {
   const { id } = await params;
 
   return (
-    <>
-      <DashboardHeader
-        title="Fotos Favoritas"
-        subtitle="Revisa las selecciones de tus clientes"
-      />
-
-      <div className="px-0">
-        <Suspense fallback={
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C6A97D]"></div>
-          </div>
-        }>
-          <FavoritesContent galleryId={id} />
-        </Suspense>
-      </div>
-    </>
+    <div className="px-0">
+      <Suspense fallback={
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C6A97D]"></div>
+        </div>
+      }>
+        <FavoritesContent galleryId={id} />
+      </Suspense>
+    </div>
   );
 }
 
