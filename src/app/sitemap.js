@@ -4,7 +4,13 @@
  * Genera sitemap automáticamente con todas las URLs públicas
  * https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap
  */
-import { createClient } from '@/lib/server';
+import { createClient } from '@supabase/supabase-js';
+
+// Cliente básico para sitemap (no requiere cookies)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export default async function sitemap() {
   const baseUrl = 'https://alma-fotografia.vercel.app';
@@ -20,8 +26,6 @@ export default async function sitemap() {
   ];
 
   try {
-    const supabase = await createClient();
-
     // Obtener galerías públicas (is_public = true)
     const { data: publicGalleries, error } = await supabase
       .from('galleries')
