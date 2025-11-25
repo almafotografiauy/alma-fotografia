@@ -134,7 +134,8 @@ async function FavoritesContent({ galleryId }) {
     }
   });
 
-  const finalData = Object.values(favoritesByClient);
+  // Filtrar solo clientes que tienen al menos una foto válida de esta galería
+  const finalData = Object.values(favoritesByClient).filter(client => client.photos.length > 0);
 
   return (
     <FavoritesView
