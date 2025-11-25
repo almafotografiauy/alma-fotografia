@@ -2,6 +2,7 @@ import { voga, firaSans, cormorantGaramond } from '@/fonts';
 import './globals.css';
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ToastProvider } from '@/components/ui/Toast';
+import ImageProtection from '@/components/ImageProtection';
 
 export const metadata = {
   metadataBase: new URL('https://alma-fotografia.vercel.app'),
@@ -119,6 +120,7 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="font-fira antialiased">
+        <ImageProtection />
         <ToastProvider>
           {children}
           <SpeedInsights />

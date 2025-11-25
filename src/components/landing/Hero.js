@@ -176,7 +176,7 @@ export default function Hero() {
           >
             {/* Botón principal - marrón sólido */}
             <a
-              href="#contacto"
+              href="#reservas"
               className="group relative w-full sm:w-auto overflow-hidden"
             >
               {/* Borde marrón */}

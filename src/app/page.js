@@ -3,16 +3,14 @@ import Header from '@/components/landing/Header';
 import Hero from '@/components/landing/Hero';
 import Servicios from '@/components/landing/Servicios';
 import Testimonios from '@/components/landing/Testimonios';
-import Contacto from '@/components/landing/Contacto';
+import Reservas, { Contacto } from '@/components/landing/Reservas';
 import Footer from '@/components/landing/Footer';
 import ServiciosSkeleton from '@/components/landing/skeletons/ServiciosSkeleton';
 import TestimoniosSkeleton from '@/components/landing/skeletons/TestimoniosSkeleton';
 import {
   getFeaturedTestimonials,
   getPublicGalleriesPreview,
-  getProfileInfo,
 } from '@/app/actions/landing-actions';
-import { createClient } from '@/lib/server';
 
 export const metadata = {
   title: 'Alma Fotografía | Capturando momentos especiales',
@@ -52,24 +50,7 @@ async function ServiciosContent() {
   return <Servicios services={services} />;
 }
 
-// Componente que carga el formulario de contacto
-async function ContactoContent() {
-  const supabase = await createClient();
 
-  // Obtener tipos de servicio para el formulario
-  const { data: services } = await supabase
-    .from('service_types')
-    .select('id, name')
-    .order('name');
-
-  return <Contacto services={services || []} />;
-}
-
-// Componente que carga el footer
-async function FooterContent() {
-  const { profile } = await getProfileInfo();
-  return <Footer profile={profile} />;
-}
 
 // Página principal
 export default function Home() {
@@ -91,15 +72,14 @@ export default function Home() {
         <TestimoniosContent />
       </Suspense>
 
-      {/* Contacto Section con Suspense */}
-      <Suspense fallback={<div className="py-20 bg-gradient-to-br from-[#f8f6f3] via-white to-[#faf8f5]" />}>
-        <ContactoContent />
-      </Suspense>
+      {/* Reservas Section */}
+      <Reservas />
 
-      {/* Footer con Suspense */}
-      <Suspense fallback={<div className="bg-gradient-to-br from-[#2d1f15] to-[#1a1108] py-12" />}>
-        <FooterContent />
-      </Suspense>
+      {/* Contacto Section */}
+      <Contacto />
+
+      {/* Footer */}
+      <Footer />
     </main>
   );
 }

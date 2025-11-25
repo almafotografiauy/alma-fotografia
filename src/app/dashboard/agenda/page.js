@@ -58,6 +58,7 @@ import {
   confirmPublicBooking,
   rejectPublicBooking,
   deletePublicBooking,
+  updatePublicBooking,
 } from '@/app/actions/public-booking-actions';
 
 // Actions privadas
@@ -1295,30 +1296,37 @@ function CreatePrivateBookingModal({ serviceTypes, onClose, onSuccess }) {
   );
 }
 
-// Modal para editar evento privado
+// Modal para editar evento (privado o público)
 function EditPrivateBookingModal({ booking, serviceTypes, onClose, onSuccess }) {
   const [submitting, setSubmitting] = useState(false);
   const [availabilityMessage, setAvailabilityMessage] = useState('');
   const { showToast } = useToast();
 
+  // Detectar si es una reserva pública (tiene booking_type) o privada (tiene service_type)
+  const isPublicBooking = !!booking.booking_type_id || !!booking.booking_type;
+
   const [formData, setFormData] = useState({
-    serviceTypeId: booking.service_type_id,
+    serviceTypeId: booking.service_type_id || '',
     clientName: booking.client_name,
     clientEmail: booking.client_email || '',
     clientPhone: booking.client_phone || '',
     bookingDate: booking.booking_date,
+    startTime: booking.start_time || '',
+    endTime: booking.end_time || '',
     notes: booking.notes || '',
     internalNotes: booking.internal_notes || '',
   });
 
-  // Verificar disponibilidad cuando cambia la fecha
+  // Verificar disponibilidad cuando cambia la fecha (solo para eventos privados)
   useEffect(() => {
-    if (formData.bookingDate && formData.bookingDate !== booking.booking_date) {
-      checkAvailability();
-    } else if (formData.bookingDate === booking.booking_date) {
-      setAvailabilityMessage('✅ Misma fecha actual');
+    if (!isPublicBooking) {
+      if (formData.bookingDate && formData.bookingDate !== booking.booking_date) {
+        checkAvailability();
+      } else if (formData.bookingDate === booking.booking_date) {
+        setAvailabilityMessage('✅ Misma fecha actual');
+      }
     }
-  }, [formData.bookingDate]);
+  }, [formData.bookingDate, isPublicBooking]);
 
   const checkAvailability = async () => {
     const result = await checkDateAvailability(formData.bookingDate);
@@ -1342,18 +1350,35 @@ function EditPrivateBookingModal({ booking, serviceTypes, onClose, onSuccess }) 
     e.preventDefault();
     setSubmitting(true);
 
-    const result = await updatePrivateBooking(booking.id, {
-      service_type_id: formData.serviceTypeId,
-      client_name: formData.clientName,
-      client_email: formData.clientEmail || null,
-      client_phone: formData.clientPhone || null,
-      booking_date: formData.bookingDate,
-      notes: formData.notes,
-      internal_notes: formData.internalNotes,
-    });
+    let result;
+
+    if (isPublicBooking) {
+      // Actualizar reserva pública
+      result = await updatePublicBooking(booking.id, {
+        client_name: formData.clientName,
+        client_email: formData.clientEmail || null,
+        client_phone: formData.clientPhone || null,
+        booking_date: formData.bookingDate,
+        start_time: formData.startTime,
+        end_time: formData.endTime,
+        notes: formData.notes,
+        internal_notes: formData.internalNotes,
+      });
+    } else {
+      // Actualizar reserva privada
+      result = await updatePrivateBooking(booking.id, {
+        service_type_id: formData.serviceTypeId,
+        client_name: formData.clientName,
+        client_email: formData.clientEmail || null,
+        client_phone: formData.clientPhone || null,
+        booking_date: formData.bookingDate,
+        notes: formData.notes,
+        internal_notes: formData.internalNotes,
+      });
+    }
 
     if (result.success) {
-      showToast({ message: 'Evento actualizado correctamente', type: 'success' });
+      showToast({ message: isPublicBooking ? 'Reserva actualizada correctamente' : 'Evento actualizado correctamente', type: 'success' });
       onSuccess();
     } else {
       showToast({ message: result.error, type: 'error' });
@@ -1376,36 +1401,53 @@ function EditPrivateBookingModal({ booking, serviceTypes, onClose, onSuccess }) 
             <Edit2 size={24} className="text-[#8B5E3C]" />
           </div>
           <div>
-            <h3 className="font-voga text-xl text-gray-900">Editar Evento</h3>
-            <p className="font-fira text-sm text-gray-900/70">Modificar detalles del evento</p>
+            <h3 className="font-voga text-xl text-gray-900">
+              {isPublicBooking ? 'Editar Reserva' : 'Editar Evento'}
+            </h3>
+            <p className="font-fira text-sm text-gray-900/70">
+              {isPublicBooking ? 'Modificar detalles de la reserva' : 'Modificar detalles del evento'}
+            </p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Tipo de servicio */}
-          <div>
-            <label className="block font-fira text-sm font-medium text-gray-900 mb-2">
-              Tipo de Evento *
-            </label>
-            <select
-              required
-              value={formData.serviceTypeId}
-              onChange={(e) => handleInputChange('serviceTypeId', e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg font-fira text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C]"
-            >
-              <option value="">Seleccioná un tipo</option>
-              {serviceTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Tipo de evento/reserva - Solo mostrar selector para eventos privados */}
+          {isPublicBooking ? (
+            // Para reservas públicas, mostrar el tipo como info (no editable)
+            <div>
+              <label className="block font-fira text-sm font-medium text-gray-900 mb-2">
+                Tipo de Reserva
+              </label>
+              <div className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg font-fira text-sm text-gray-700">
+                {booking.booking_type?.name || 'Reserva'}
+              </div>
+            </div>
+          ) : (
+            // Para eventos privados, mostrar selector de tipo de servicio
+            <div>
+              <label className="block font-fira text-sm font-medium text-gray-900 mb-2">
+                Tipo de Evento *
+              </label>
+              <select
+                required
+                value={formData.serviceTypeId}
+                onChange={(e) => handleInputChange('serviceTypeId', e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg font-fira text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C]"
+              >
+                <option value="">Seleccioná un tipo</option>
+                {serviceTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Fecha */}
           <div>
             <label className="block font-fira text-sm font-medium text-gray-900 mb-2">
-              Fecha del Evento *
+              {isPublicBooking ? 'Fecha de la Reserva *' : 'Fecha del Evento *'}
             </label>
             <input
               type="date"
@@ -1415,7 +1457,7 @@ function EditPrivateBookingModal({ booking, serviceTypes, onClose, onSuccess }) 
               min={format(new Date(), 'yyyy-MM-dd')}
               className="w-full px-3 py-2.5 border border-gray-200 rounded-lg font-fira text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C]"
             />
-            {availabilityMessage && (
+            {!isPublicBooking && availabilityMessage && (
               <p
                 className={`mt-2 font-fira text-xs ${
                   availabilityMessage.startsWith('✅') ? 'text-green-600' : 'text-amber-700'
@@ -1425,6 +1467,36 @@ function EditPrivateBookingModal({ booking, serviceTypes, onClose, onSuccess }) 
               </p>
             )}
           </div>
+
+          {/* Horarios - Solo para reservas públicas */}
+          {isPublicBooking && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-fira text-sm font-medium text-gray-900 mb-2">
+                  Hora Inicio *
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={formData.startTime?.substring(0, 5) || ''}
+                  onChange={(e) => handleInputChange('startTime', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg font-fira text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C]"
+                />
+              </div>
+              <div>
+                <label className="block font-fira text-sm font-medium text-gray-900 mb-2">
+                  Hora Fin *
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={formData.endTime?.substring(0, 5) || ''}
+                  onChange={(e) => handleInputChange('endTime', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg font-fira text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C]"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Nombre del cliente */}
           <div>
@@ -1519,7 +1591,7 @@ function EditPrivateBookingModal({ booking, serviceTypes, onClose, onSuccess }) 
               ) : (
                 <>
                   <CheckCircle2 size={16} />
-                  Actualizar Evento
+                  {isPublicBooking ? 'Actualizar Reserva' : 'Actualizar Evento'}
                 </>
               )}
             </button>

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/server';
 import { notifyNewPublicBooking, notifyBookingConfirmed } from '@/lib/notifications/notification-helpers';
 import { sendEmail } from '@/lib/email/resend-client';
 import { getEmailTemplate } from '@/lib/email/email-templates';
+import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '@/lib/google-calendar';
 
 /**
  * ============================================
@@ -369,6 +370,26 @@ export async function confirmPublicBooking(bookingId, internalNotes = null) {
 
     if (error) throw error;
 
+    // Crear evento en Google Calendar
+    const calendarResult = await createCalendarEvent({
+      client_name: data.client_name,
+      client_email: data.client_email,
+      client_phone: data.client_phone,
+      booking_date: data.booking_date,
+      start_time: data.start_time,
+      end_time: data.end_time,
+      booking_type_name: data.booking_type?.name,
+      notes: data.notes,
+    });
+
+    // Guardar el google_event_id si se creó exitosamente
+    if (calendarResult.success && calendarResult.eventId) {
+      await supabase
+        .from('public_bookings')
+        .update({ google_event_id: calendarResult.eventId })
+        .eq('id', bookingId);
+    }
+
     // Enviar notificación de reserva confirmada a Fernanda
     await notifyBookingConfirmed(data.id);
 
@@ -470,6 +491,66 @@ export async function rejectPublicBooking(bookingId, reason) {
 }
 
 /**
+ * Actualizar una reserva pública (desde dashboard)
+ */
+export async function updatePublicBooking(bookingId, updates) {
+  try {
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: 'No autenticado' };
+    }
+
+    const { data, error } = await supabase
+      .from('public_bookings')
+      .update({
+        client_name: updates.client_name,
+        client_email: updates.client_email || null,
+        client_phone: updates.client_phone || null,
+        booking_date: updates.booking_date,
+        start_time: updates.start_time,
+        end_time: updates.end_time,
+        notes: updates.notes,
+        internal_notes: updates.internal_notes,
+      })
+      .eq('id', bookingId)
+      .select(`
+        *,
+        booking_type:public_booking_types(id, name, slug)
+      `)
+      .single();
+
+    if (error) throw error;
+
+    // Actualizar evento en Google Calendar si existe
+    if (data.google_event_id) {
+      await updateCalendarEvent(data.google_event_id, {
+        client_name: data.client_name,
+        client_email: data.client_email,
+        client_phone: data.client_phone,
+        booking_date: data.booking_date,
+        start_time: data.start_time,
+        end_time: data.end_time,
+        booking_type_name: data.booking_type?.name,
+        notes: data.notes,
+      });
+    }
+
+    return {
+      success: true,
+      booking: data,
+    };
+  } catch (error) {
+    console.error('[updatePublicBooking] Error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Cancelar una reserva pública
  */
 export async function cancelPublicBooking(bookingId) {
@@ -513,6 +594,11 @@ export async function deletePublicBooking(bookingId) {
       .single();
 
     if (fetchError) throw fetchError;
+
+    // Eliminar evento de Google Calendar si existe
+    if (booking.google_event_id) {
+      await deleteCalendarEvent(booking.google_event_id);
+    }
 
     // Eliminar la reserva
     const { error: deleteError } = await supabase

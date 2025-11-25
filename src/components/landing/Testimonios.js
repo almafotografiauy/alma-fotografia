@@ -77,7 +77,7 @@ export default function Testimonios({ testimonials }) {
         {/* Carrusel */}
         <div className="relative">
           {/* Tarjeta del testimonio */}
-          <div className="relative min-h-[400px] md:min-h-[350px]">
+          <div className="relative h-[480px] md:h-[420px]">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentIndex}

@@ -428,23 +428,10 @@ export async function notifyGalleryView(galleryId, clientInfo = null, isFavorite
       .eq('user_id', gallery.created_by)
       .maybeSingle();
 
-    // Si no tiene preferencias, crear con defaults
+    // Si no tiene preferencias, no intentar crear (el usuario podría no estar autenticado)
+    // Las preferencias se crean cuando el usuario accede al dashboard
     if (!prefs) {
-      const { error: insertError } = await supabase
-        .from('notification_preferences')
-        .insert({
-          user_id: gallery.created_by,
-          inapp_enabled: true,
-          email_on_gallery_view: false,
-          email_on_favorites: false,
-          email_on_link_expiring: true,
-          email_on_link_expired: true,
-          email_on_new_gallery: false,
-        });
-
-      if (insertError) {
-        console.error('[notifyGalleryView] Error creando preferencias:', insertError);
-      }
+      return { success: true, skipped: 'No preferences found' };
     }
 
     const clientName = gallery.client_email ? gallery.client_email.split('@')[0] : 'Un cliente';

@@ -35,7 +35,7 @@ export default function Header() {
   const navLinks = [
     { href: '#servicios', label: 'Portafolio' },
     { href: '#testimonios', label: 'Testimonios' },
-    { href: '#agenda', label: 'Agenda' },
+    { href: '#reservas', label: 'Reservas' },
     { href: '#contacto', label: 'Contacto' },
   ];
 

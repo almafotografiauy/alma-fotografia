@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/server';
 import { hasPermission } from '@/lib/permissions';
+import { createAllDayEvent, updateAllDayEvent, deleteCalendarEvent } from '@/lib/google-calendar';
 
 /**
  * ============================================
@@ -166,6 +167,24 @@ export async function createPrivateBooking({
 
     if (error) throw error;
 
+    // Crear evento de día completo en Google Calendar
+    const calendarResult = await createAllDayEvent({
+      client_name: data.client_name,
+      client_email: data.client_email,
+      client_phone: data.client_phone,
+      booking_date: data.booking_date,
+      service_type_name: data.service_type?.name,
+      notes: data.notes,
+    });
+
+    // Guardar el google_event_id si se creó exitosamente
+    if (calendarResult.success && calendarResult.eventId) {
+      await supabase
+        .from('private_bookings')
+        .update({ google_event_id: calendarResult.eventId })
+        .eq('id', data.id);
+    }
+
     return {
       success: true,
       booking: data,
@@ -219,6 +238,18 @@ export async function updatePrivateBooking(bookingId, updates) {
       .single();
 
     if (error) throw error;
+
+    // Actualizar evento en Google Calendar si existe
+    if (data.google_event_id) {
+      await updateAllDayEvent(data.google_event_id, {
+        client_name: data.client_name,
+        client_email: data.client_email,
+        client_phone: data.client_phone,
+        booking_date: data.booking_date,
+        service_type_name: data.service_type?.name,
+        notes: data.notes,
+      });
+    }
 
     return {
       success: true,
@@ -277,6 +308,20 @@ export async function deletePrivateBooking(bookingId) {
 
     if (!user) {
       return { success: false, error: 'No autenticado' };
+    }
+
+    // Obtener la reserva para conseguir el google_event_id
+    const { data: booking, error: fetchError } = await supabase
+      .from('private_bookings')
+      .select('google_event_id')
+      .eq('id', bookingId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Eliminar evento de Google Calendar si existe
+    if (booking?.google_event_id) {
+      await deleteCalendarEvent(booking.google_event_id);
     }
 
     const { error } = await supabase
