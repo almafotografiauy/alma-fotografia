@@ -34,6 +34,7 @@ import {
   getPublicBookingTypes,
   getAvailableSlots,
   createPublicBooking,
+  getBlockedDates,
 } from '@/app/actions/public-booking-actions';
 
 /**
@@ -53,6 +54,8 @@ export default function Reservas() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
+  const [blockedDates, setBlockedDates] = useState([]);
+  const [nonWorkingDays, setNonWorkingDays] = useState([]);
 
   const [formData, setFormData] = useState({
     clientName: '',
@@ -62,15 +65,27 @@ export default function Reservas() {
   });
 
   useEffect(() => {
-    loadBookingTypes();
+    loadInitialData();
   }, []);
 
-  const loadBookingTypes = async () => {
+  const loadInitialData = async () => {
     setLoading(true);
-    const result = await getPublicBookingTypes();
-    if (result.success) {
-      setBookingTypes(result.bookingTypes);
+
+    // Cargar tipos de reserva y fechas bloqueadas en paralelo
+    const [typesResult, blockedResult] = await Promise.all([
+      getPublicBookingTypes(),
+      getBlockedDates(),
+    ]);
+
+    if (typesResult.success) {
+      setBookingTypes(typesResult.bookingTypes);
     }
+
+    if (blockedResult.success) {
+      setBlockedDates(blockedResult.blockedDates);
+      setNonWorkingDays(blockedResult.nonWorkingDays);
+    }
+
     setLoading(false);
   };
 
@@ -104,8 +119,22 @@ export default function Reservas() {
     setStep(2);
   };
 
+  // Verificar si una fecha está bloqueada
+  const isDateBlocked = (date) => {
+    // Verificar si es un día no laborable (por día de la semana)
+    const dayOfWeek = date.getDay();
+    if (nonWorkingDays.includes(dayOfWeek)) return true;
+
+    // Verificar si está en la lista de fechas bloqueadas específicas
+    const dateStr = format(date, 'yyyy-MM-dd');
+    if (blockedDates.includes(dateStr)) return true;
+
+    return false;
+  };
+
   const handleDateSelect = (date) => {
     if (isBefore(date, startOfToday())) return;
+    if (isDateBlocked(date)) return;
     setSelectedDate(date);
     setSelectedSlot(null);
     setStep(3);
@@ -437,6 +466,8 @@ export default function Reservas() {
                           if (!day) return <div key={`empty-${index}`} />;
 
                           const isPast = isBefore(day, startOfToday());
+                          const isBlocked = isDateBlocked(day);
+                          const isUnavailable = isPast || isBlocked;
                           const isSelected = selectedDate && isSameDay(day, selectedDate);
                           const isCurrentDay = isToday(day);
 
@@ -444,15 +475,16 @@ export default function Reservas() {
                             <button
                               key={day.toString()}
                               onClick={() => handleDateSelect(day)}
-                              disabled={isPast}
+                              disabled={isUnavailable}
                               className={`
                                 aspect-square flex items-center justify-center font-fira text-xs sm:text-sm transition-all duration-200
                                 ${isSelected
                                   ? 'bg-[#8B5E3C] text-white shadow-md'
-                                  : 'text-[#4a4a4a] hover:bg-[#f5f2ee] hover:text-[#8B5E3C]'
+                                  : isUnavailable
+                                    ? 'text-[#c5c0b8] line-through cursor-not-allowed'
+                                    : 'text-[#4a4a4a] hover:bg-[#f5f2ee] hover:text-[#8B5E3C]'
                                 }
-                                ${isCurrentDay && !isSelected ? 'ring-1 ring-[#8B5E3C]/50' : ''}
-                                ${isPast ? 'opacity-30 cursor-not-allowed' : ''}
+                                ${isCurrentDay && !isSelected && !isUnavailable ? 'ring-1 ring-[#8B5E3C]/50' : ''}
                               `}
                             >
                               {format(day, 'd')}

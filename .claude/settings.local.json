@@ -57,7 +57,8 @@
       "Bash(for dir in ./src/app/dashboard/galerias ./src/app/dashboard/testimonios ./src/app/dashboard/agenda ./src/app/dashboard/configuracion)",
       "Bash(do if [ ! -f \"$dir/loading.js\" ])",
       "Bash(then echo \"MISSING: $dir/loading.js\")",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(pnpm run build)"
     ],
     "deny": [],
     "ask": []

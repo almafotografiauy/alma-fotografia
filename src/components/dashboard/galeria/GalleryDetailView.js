@@ -232,23 +232,23 @@ function SortablePhoto({ photo, photoIndex, isCover, isReorderMode, handleSetAsC
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative mb-0.5 sm:mb-2 break-inside-avoid ${
+      className={`group relative mb-0.5 sm:mb-2 break-inside-avoid max-w-full ${
         isDragging ? 'opacity-40' : 'opacity-100'
       }`}
     >
-      <div className="relative w-full bg-gray-200 overflow-hidden">
+      <div className="relative w-full max-w-full bg-gray-200 overflow-hidden">
         <Image
           src={photo.file_path}
           alt={photo.file_name || `Foto ${photoIndex + 1}`}
           width={0}
           height={0}
-          sizes="100vw"
-          className="w-full h-auto"
+          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+          className="w-full max-w-full h-auto block"
           unoptimized={true}
           loading="lazy"
           placeholder="blur"
           blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjgwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjgwMCIgZmlsbD0iI2UwZTBlMCIvPjwvc3ZnPg=="
-          style={{ width: '100%', height: 'auto' }}
+          style={{ width: '100%', maxWidth: '100%', height: 'auto', display: 'block' }}
         />
 
         {/* Drag handle - SOLO desde el icono para permitir scroll */}
@@ -1119,8 +1119,8 @@ export default function GalleryDetailView({ gallery }) {
   // Si está eliminando, mostrar solo el overlay para evitar flash de 404
   if (deletingGallery) {
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8 flex flex-col items-center gap-4 shadow-2xl border border-[#79502A]/30 max-w-sm mx-4">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 px-4">
+        <div className="bg-white rounded-xl sm:rounded-2xl p-6 sm:p-8 flex flex-col items-center gap-3 sm:gap-4 shadow-2xl border border-[#79502A]/30 w-full max-w-sm">
           <Loader2 size={36} className="text-red-600 animate-spin" />
           <p className="font-fira text-sm text-[#2D2D2D] font-medium text-center">
             Eliminando galería...
@@ -1131,12 +1131,12 @@ export default function GalleryDetailView({ gallery }) {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-[2000px] mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <div className="min-h-screen bg-white overflow-x-hidden">
+      <div className="w-full max-w-[2000px] mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
 
         {/* Header oscuro */}
-        <div className="bg-gradient-to-br from-[#2D2D2D] to-[#1a1a1a] text-white rounded-2xl shadow-sm border border-gray-200">
-          <div className="px-6 sm:px-8 lg:px-10 py-6 sm:py-8">
+        <div className="w-full bg-gradient-to-br from-[#2D2D2D] to-[#1a1a1a] text-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200">
+          <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
 
             <button
               onClick={() => router.push('/dashboard/galerias')}
@@ -1146,11 +1146,11 @@ export default function GalleryDetailView({ gallery }) {
               <span>Volver</span>
             </button>
 
-            <div className="flex flex-col gap-4 mb-6">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
-                    <h1 className="font-voga text-xl sm:text-2xl lg:text-3xl break-words">
+            <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                <div className="flex-1 min-w-0 max-w-full">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                    <h1 className="font-voga text-lg sm:text-2xl lg:text-3xl break-words max-w-full">
                       {title}
                     </h1>
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-fira text-xs font-semibold flex-shrink-0 ${is_public
@@ -1240,14 +1240,14 @@ export default function GalleryDetailView({ gallery }) {
                   </div>
                 </div>
 
-                <div className="flex gap-2.5 flex-shrink-0 flex-wrap">
+                <div className="flex gap-2 flex-shrink-0 flex-wrap w-full sm:w-auto">
                   <motion.button
                     onClick={() => favoritesCount > 0 && router.push(`/dashboard/galerias/${gallery.id}/favoritos`)}
                     whileHover={favoritesCount > 0 ? { scale: 1.02 } : {}}
                     whileTap={favoritesCount > 0 ? { scale: 0.98 } : {}}
                     disabled={favoritesCount === 0}
                     title={favoritesCount === 0 ? 'No hay favoritas aún' : `Ver ${favoritesCount} favorita${favoritesCount === 1 ? '' : 's'}`}
-                    className={`flex-1 sm:flex-none px-4 sm:px-5 py-2.5 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center justify-center gap-2 shadow-sm ${
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm ${
                       favoritesCount === 0
                         ? '!text-neutral-500 bg-neutral-800/30 cursor-not-allowed opacity-50'
                         : '!text-pink-300 bg-pink-500/20 hover:bg-pink-500/30 cursor-pointer border border-pink-500/20'
@@ -1260,34 +1260,34 @@ export default function GalleryDetailView({ gallery }) {
                     onClick={() => setShowShareModal(true)}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="!text-white flex-1 sm:flex-none px-4 sm:px-5 py-2.5 bg-[#8B5E3C] hover:bg-[#6d4a2f] rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center justify-center gap-2 shadow-sm"
+                    className="!text-white flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 bg-[#8B5E3C] hover:bg-[#6d4a2f] rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm"
                   >
-                    <Share2 size={16} />
+                    <Share2 size={14} className="sm:w-4 sm:h-4" />
                     <span>Compartir</span>
                   </motion.button>
                   <motion.button
                     onClick={() => setShowEditModal(true)}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="!text-white flex-1 sm:flex-none px-4 sm:px-5 py-2.5 bg-[#79502A] hover:bg-[#5a3c1f] rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center justify-center gap-2 shadow-sm"
+                    className="!text-white flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 bg-[#79502A] hover:bg-[#5a3c1f] rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm"
                   >
-                    <Edit size={16} />
+                    <Edit size={14} className="sm:w-4 sm:h-4" />
                     <span>Editar</span>
                   </motion.button>
                   <motion.button
                     onClick={handleDeleteGallery}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="!text-white flex-1 sm:flex-none px-4 sm:px-5 py-2.5 bg-red-600 hover:bg-red-700 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center justify-center gap-2 shadow-sm"
+                    className="!text-white flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 bg-red-600 hover:bg-red-700 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={14} className="sm:w-4 sm:h-4" />
                     <span className="hidden sm:inline">Eliminar</span>
                   </motion.button>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap gap-3 sm:gap-4 md:gap-6 pt-4 border-t border-white/10">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap gap-2 sm:gap-3 md:gap-4 lg:gap-6 pt-3 sm:pt-4 border-t border-white/10">
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1428,9 +1428,9 @@ export default function GalleryDetailView({ gallery }) {
 
           {/* Portada */}
           {cover_image ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="py-6 sm:py-8 px-4 sm:px-8">
-                <div className="relative w-full max-w-3xl mx-auto aspect-[3/2] bg-gray-100 rounded-xl overflow-hidden shadow-md border border-gray-200">
+            <div className="w-full bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="py-4 sm:py-6 lg:py-8 px-3 sm:px-6 lg:px-8">
+                <div className="relative w-full max-w-3xl mx-auto aspect-[3/2] bg-gray-100 rounded-lg sm:rounded-xl overflow-hidden shadow-md border border-gray-200">
                 <Image
                   src={cover_image}
                   alt="Portada"
@@ -1459,9 +1459,9 @@ export default function GalleryDetailView({ gallery }) {
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="py-6 sm:py-8 px-4 sm:px-8">
-                <div className="max-w-3xl mx-auto border-2 border-dashed border-gray-200 rounded-xl p-8 sm:p-10 text-center bg-gray-50">
+            <div className="w-full bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="py-4 sm:py-6 lg:py-8 px-3 sm:px-6 lg:px-8">
+                <div className="max-w-3xl mx-auto border-2 border-dashed border-gray-200 rounded-lg sm:rounded-xl p-6 sm:p-8 lg:p-10 text-center bg-gray-50">
                   <div className="inline-flex p-3 bg-gray-100 rounded-full mb-3">
                     <ImageIcon size={32} className="text-[#8B5E3C]" />
                   </div>
@@ -1500,8 +1500,8 @@ export default function GalleryDetailView({ gallery }) {
           )}
 
           {/* Uploader */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="py-6 sm:py-8 px-4 sm:px-8">
+          <div className="w-full bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="py-4 sm:py-6 lg:py-8 px-3 sm:px-6 lg:px-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 bg-gray-100 rounded-lg">
                   <Upload size={20} className="text-[#8B5E3C]" />
@@ -1521,9 +1521,9 @@ export default function GalleryDetailView({ gallery }) {
           </div>
 
           {/* Grid de fotos con MASONRY */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="w-full bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             {/* Toolbar */}
-            <div className="py-6 sm:py-8 px-4 sm:px-8 border-b border-gray-200">
+            <div className="py-4 sm:py-6 lg:py-8 px-3 sm:px-6 lg:px-8 border-b border-gray-200">
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 flex-wrap">
                   <div className="flex items-center gap-3">
@@ -1569,31 +1569,31 @@ export default function GalleryDetailView({ gallery }) {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2.5 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100">
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100">
                   {!selectionMode && !reorderMode && (
                     <>
                       <button
                         onClick={() => setSelectionMode(true)}
-                        className="!text-white px-4 sm:px-5 py-2.5 bg-[#8B5E3C] hover:bg-[#6d4a2f] rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap flex-shrink-0 shadow-sm text-white"
+                        className="!text-white px-3 sm:px-4 py-2 sm:py-2.5 bg-[#8B5E3C] hover:bg-[#6d4a2f] rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0 shadow-sm text-white"
                       >
-                        <CheckSquare size={16} />
+                        <CheckSquare size={14} className="sm:w-4 sm:h-4" />
                         <span>Seleccionar</span>
                       </button>
                       {workingPhotos.length > 1 && (
                         <button
                           onClick={() => setReorderMode(true)}
-                          className="px-4 sm:px-5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap flex-shrink-0 shadow-sm text-gray-900"
+                          className="px-3 sm:px-4 py-2 sm:py-2.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0 shadow-sm text-gray-900"
                         >
-                          <GripVertical size={16} />
+                          <GripVertical size={14} className="sm:w-4 sm:h-4" />
                           <span>Reordenar</span>
                         </button>
                       )}
                       <button
                         onClick={() => setShowSectionsModal(true)}
-                        className="p-2.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-all duration-200 flex items-center justify-center whitespace-nowrap flex-shrink-0 shadow-sm text-gray-900"
+                        className="p-2 sm:p-2.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-all duration-200 flex items-center justify-center whitespace-nowrap flex-shrink-0 shadow-sm text-gray-900"
                         title="Gestionar secciones"
                       >
-                        <Folder size={16} />
+                        <Folder size={14} className="sm:w-4 sm:h-4" />
                       </button>
                     </>
                   )}
@@ -1602,7 +1602,7 @@ export default function GalleryDetailView({ gallery }) {
                     <>
                       <button
                         onClick={toggleSelectAll}
-                        className="bg-white border border-gray-200 hover:bg-gray-50 px-4 py-2.5 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium whitespace-nowrap flex-shrink-0 shadow-sm text-gray-900"
+                        className="bg-white border border-gray-200 hover:bg-gray-50 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium whitespace-nowrap flex-shrink-0 shadow-sm text-gray-900"
                       >
                         {selectedPhotos.size === photosToShow.length ? 'Deseleccionar' : 'Todo'}
                       </button>
@@ -1617,7 +1617,7 @@ export default function GalleryDetailView({ gallery }) {
                                 e.target.value = '';
                               }
                             }}
-                            className="px-4 py-2.5 bg-[#8B5E3C] hover:bg-[#6d4a2f] rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium whitespace-nowrap flex-shrink-0 cursor-pointer appearance-none pr-8 shadow-sm text-white"
+                            className="px-3 sm:px-4 py-2 sm:py-2.5 bg-[#8B5E3C] hover:bg-[#6d4a2f] rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium whitespace-nowrap flex-shrink-0 cursor-pointer appearance-none pr-7 sm:pr-8 shadow-sm text-white"
                             defaultValue=""
                           >
                             <option value="" disabled>Asignar a sección</option>
@@ -1633,12 +1633,12 @@ export default function GalleryDetailView({ gallery }) {
                       <button
                         onClick={handleDeleteSelected}
                         disabled={selectedPhotos.size === 0 || deletingPhotos}
-                        className="px-4 py-2.5 bg-red-600 hover:bg-red-700 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0 shadow-sm text-white"
+                        className="px-3 sm:px-4 py-2 sm:py-2.5 bg-red-600 hover:bg-red-700 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center gap-1.5 sm:gap-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0 shadow-sm text-white"
                       >
                         {deletingPhotos ? (
-                          <Loader2 size={14} className="animate-spin" />
+                          <Loader2 size={12} className="sm:w-3.5 sm:h-3.5 animate-spin" />
                         ) : (
-                          <Trash2 size={14} />
+                          <Trash2 size={12} className="sm:w-3.5 sm:h-3.5" />
                         )}
                         <span className="hidden sm:inline">Eliminar</span>
                         {selectedPhotos.size > 0 && ` (${selectedPhotos.size})`}
@@ -1648,7 +1648,7 @@ export default function GalleryDetailView({ gallery }) {
                           setSelectionMode(false);
                           setSelectedPhotos(new Set());
                         }}
-                        className="bg-white border border-gray-200 hover:bg-gray-50 px-4 py-2.5 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium whitespace-nowrap flex-shrink-0 shadow-sm text-gray-900"
+                        className="bg-white border border-gray-200 hover:bg-gray-50 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium whitespace-nowrap flex-shrink-0 shadow-sm text-gray-900"
                       >
                         Cancelar
                       </button>
@@ -1660,23 +1660,23 @@ export default function GalleryDetailView({ gallery }) {
                       <button
                         onClick={saveNewOrder}
                         disabled={savingOrder}
-                        className="!text-white px-4 sm:px-5 py-2.5 bg-green-600 hover:bg-green-700 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center gap-2 disabled:opacity-50 whitespace-nowrap flex-shrink-0 shadow-sm text-white"
+                        className="!text-white px-3 sm:px-4 py-2 sm:py-2.5 bg-green-600 hover:bg-green-700 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium flex items-center gap-1.5 sm:gap-2 disabled:opacity-50 whitespace-nowrap flex-shrink-0 shadow-sm text-white"
                       >
                         {savingOrder ? (
-                          <Loader2 size={14} className="animate-spin" />
+                          <Loader2 size={12} className="sm:w-3.5 sm:h-3.5 animate-spin" />
                         ) : (
-                          <CheckSquare size={14} />
+                          <CheckSquare size={12} className="sm:w-3.5 sm:h-3.5" />
                         )}
                         <span>Guardar</span>
                       </button>
                       <button
                         onClick={cancelReorder}
                         disabled={savingOrder}
-                        className="bg-white border border-gray-200 hover:bg-gray-50 px-4 py-2.5 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium disabled:opacity-50 whitespace-nowrap flex-shrink-0 shadow-sm text-gray-900"
+                        className="bg-white border border-gray-200 hover:bg-gray-50 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-all duration-200 font-fira text-xs sm:text-sm font-medium disabled:opacity-50 whitespace-nowrap flex-shrink-0 shadow-sm text-gray-900"
                       >
                         Cancelar
                       </button>
-                      <span className="font-fira text-xs text-gray-600 font-light ml-2 hidden md:inline whitespace-nowrap">
+                      <span className="font-fira text-xs text-gray-600 font-light ml-1 sm:ml-2 hidden md:inline whitespace-nowrap">
                         Arrastra las fotos para cambiar el orden
                       </span>
                     </>
@@ -1717,7 +1717,7 @@ export default function GalleryDetailView({ gallery }) {
               </div>
             ) : reorderMode ? (
               /* Modo reordenar: Drag & Drop activo */
-              <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+              <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
@@ -1729,7 +1729,7 @@ export default function GalleryDetailView({ gallery }) {
                     items={workingPhotos.map(p => p.id)}
                     strategy={rectSortingStrategy}
                   >
-                    <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-2 space-y-2">
+                    <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-1.5 sm:gap-2 space-y-1.5 sm:space-y-2">
                       {workingPhotos.map((photo, index) => (
                         <SortablePhoto
                           key={photo.id}
@@ -1770,8 +1770,8 @@ export default function GalleryDetailView({ gallery }) {
               </div>
             ) : selectionMode ? (
               /* Modo selección: checkboxes */
-              <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-                <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-2 space-y-2">
+              <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+                <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-1.5 sm:gap-2 space-y-1.5 sm:space-y-2">
                   {photosToShow.map((photo, index) => {
                     const photoIndex = startIdx + index;
                     const isSelected = selectedPhotos.has(photo.id);
@@ -1781,23 +1781,23 @@ export default function GalleryDetailView({ gallery }) {
                       <div
                         key={photo.id}
                         onClick={() => togglePhotoSelection(photo.id)}
-                        className={`group relative mb-0.5 sm:mb-2 break-inside-avoid cursor-pointer transition-all hover:opacity-80 ${
+                        className={`group relative mb-0.5 sm:mb-2 break-inside-avoid max-w-full cursor-pointer transition-all hover:opacity-80 ${
                           isSelected ? 'ring-2 sm:ring-4 ring-[#79502A]' : ''
                         }`}
                       >
-                        <div className="relative w-full bg-gray-200 overflow-hidden">
+                        <div className="relative w-full max-w-full bg-gray-200 overflow-hidden">
                           <Image
                             src={photo.file_path}
                             alt={photo.file_name || `Foto ${photoIndex + 1}`}
                             width={0}
                             height={0}
-                            sizes="100vw"
-                            className="w-full h-auto"
+                            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                            className="w-full max-w-full h-auto block"
                             unoptimized={true}
                             loading="lazy"
                             placeholder="blur"
                             blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjgwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjgwMCIgZmlsbD0iI2UwZTBlMCIvPjwvc3ZnPg=="
-                            style={{ width: '100%', height: 'auto' }}
+                            style={{ width: '100%', maxWidth: '100%', height: 'auto', display: 'block' }}
                           />
 
                           <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 z-10">
@@ -1826,8 +1826,8 @@ export default function GalleryDetailView({ gallery }) {
               </div>
             ) : (
               /* Modo normal: solo visualización con paginación */
-              <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-                <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-2 space-y-2">
+              <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+                <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-1.5 sm:gap-2 space-y-1.5 sm:space-y-2">
                   {photosToShow.map((photo, index) => (
                     <SortablePhoto
                       key={photo.id}
@@ -1849,8 +1849,8 @@ export default function GalleryDetailView({ gallery }) {
       </div>
 
       {changingCover && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 flex flex-col items-center gap-4 shadow-2xl border border-gray-200 max-w-sm mx-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl p-6 sm:p-8 flex flex-col items-center gap-3 sm:gap-4 shadow-2xl border border-gray-200 w-full max-w-sm">
             <Loader2 size={36} className="text-[#8B5E3C] animate-spin" />
             <p className="font-fira text-sm text-gray-900 font-medium text-center">
               Subiendo portada...
@@ -1898,7 +1898,7 @@ export default function GalleryDetailView({ gallery }) {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-2xl bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 max-h-[90vh] overflow-hidden flex flex-col"
+              className="fixed inset-x-3 sm:inset-x-4 top-1/2 -translate-y-1/2 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 w-auto md:w-full md:max-w-2xl bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-gray-200 z-50 max-h-[90vh] overflow-hidden flex flex-col"
             >
               {/* Header del Modal */}
               <div className="flex items-center justify-between p-6 sm:p-8 border-b border-gray-200 flex-shrink-0">

@@ -268,7 +268,7 @@ export default function TestimonialForm({ galleryId, galleryTitle, clientEmail: 
           <button
             type="submit"
             disabled={isSubmitting || !formData.clientName.trim() || !formData.clientEmail.trim() || !formData.message.trim()}
-            className={`w-full ${compact ? 'py-2.5' : 'py-3'} bg-gradient-to-r from-[#79502A] to-[#8B5A2F] hover:from-[#8B5A2F] hover:to-[#9A6B3C] disabled:from-gray-300 disabled:to-gray-300 text-white rounded-lg font-fira font-semibold flex items-center justify-center gap-2 transition-all disabled:cursor-not-allowed shadow-lg hover:shadow-xl`}
+            className={`w-full ${compact ? 'py-2.5' : 'py-3'} bg-gradient-to-r from-[#79502A] to-[#8B5A2F] hover:from-[#8B5A2F] hover:to-[#9A6B3C] disabled:from-gray-300 disabled:to-gray-300 !text-white rounded-lg font-fira font-semibold flex items-center justify-center gap-2 transition-all disabled:cursor-not-allowed shadow-lg hover:shadow-xl`}
           >
             {isSubmitting ? (
               <>

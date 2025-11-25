@@ -30,9 +30,9 @@ export default function LoginPage() {
   // Estado para partículas decorativas
   const [particles, setParticles] = useState([]);
 
-  // Generar partículas flotantes
+  // Generar partículas flotantes (reducido para mejor performance)
   useEffect(() => {
-    const newParticles = Array.from({ length: 20 }, (_, i) => ({
+    const newParticles = Array.from({ length: 8 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
@@ -59,10 +59,8 @@ export default function LoginPage() {
       setErrorMsg(result.error || 'Credenciales incorrectas');
     } else {
       setSuccess(true);
-      setTimeout(() => {
-        router.push('/dashboard');
-        router.refresh();
-      }, 1000);
+      // Redirigir inmediatamente sin delay para mayor velocidad
+      router.replace('/dashboard');
     }
   }
 

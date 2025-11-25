@@ -22,6 +22,12 @@ const heroImages = [
 export default function Hero() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
+  const [imagesLoaded, setImagesLoaded] = useState({});
+
+  // Marcar imagen como cargada
+  const handleImageLoad = (index) => {
+    setImagesLoaded(prev => ({ ...prev, [index]: true }));
+  };
 
   const nextImage = () => {
     setDirection(1);
@@ -81,13 +87,20 @@ export default function Hero() {
           }}
           className="absolute inset-0"
         >
+          {/* Placeholder/skeleton mientras carga la imagen */}
+          {!imagesLoaded[currentIndex] && (
+            <div className="absolute inset-0 bg-gradient-to-br from-[#2D2D2D] to-[#1a1a1a] animate-pulse">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" />
+            </div>
+          )}
           <Image
             src={heroImages[currentIndex]}
             alt={`Alma Fotografía - Imagen ${currentIndex + 1}`}
             fill
             priority={currentIndex === 0}
-            className="object-cover"
+            className={`object-cover transition-opacity duration-500 ${imagesLoaded[currentIndex] ? 'opacity-100' : 'opacity-0'}`}
             quality={90}
+            onLoad={() => handleImageLoad(currentIndex)}
           />
           {/* Overlay oscuro para mejorar legibilidad y resaltar detalles */}
           <div className="absolute inset-0 bg-black/60" />

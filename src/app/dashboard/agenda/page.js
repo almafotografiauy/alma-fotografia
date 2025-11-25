@@ -555,6 +555,7 @@ export default function AgendaPage() {
         <EditPrivateBookingModal
           booking={editingBooking}
           serviceTypes={serviceTypes}
+          blockedDates={blockedDates}
           onClose={() => {
             setShowEditModal(false);
             setEditingBooking(null);
@@ -1297,9 +1298,10 @@ function CreatePrivateBookingModal({ serviceTypes, onClose, onSuccess }) {
 }
 
 // Modal para editar evento (privado o público)
-function EditPrivateBookingModal({ booking, serviceTypes, onClose, onSuccess }) {
+function EditPrivateBookingModal({ booking, serviceTypes, blockedDates = [], onClose, onSuccess }) {
   const [submitting, setSubmitting] = useState(false);
   const [availabilityMessage, setAvailabilityMessage] = useState('');
+  const [isDateBlocked, setIsDateBlocked] = useState(false);
   const { showToast } = useToast();
 
   // Detectar si es una reserva pública (tiene booking_type) o privada (tiene service_type)
@@ -1317,16 +1319,31 @@ function EditPrivateBookingModal({ booking, serviceTypes, onClose, onSuccess }) 
     internalNotes: booking.internal_notes || '',
   });
 
-  // Verificar disponibilidad cuando cambia la fecha (solo para eventos privados)
+  // Verificar disponibilidad cuando cambia la fecha
   useEffect(() => {
-    if (!isPublicBooking) {
-      if (formData.bookingDate && formData.bookingDate !== booking.booking_date) {
-        checkAvailability();
-      } else if (formData.bookingDate === booking.booking_date) {
-        setAvailabilityMessage('✅ Misma fecha actual');
+    if (formData.bookingDate) {
+      // Verificar si el día está bloqueado
+      const blocked = blockedDates.some((bd) => bd.blocked_date === formData.bookingDate);
+      setIsDateBlocked(blocked);
+
+      if (blocked) {
+        setAvailabilityMessage('❌ Este día está bloqueado - no se pueden agendar eventos');
+      } else if (!isPublicBooking) {
+        if (formData.bookingDate !== booking.booking_date) {
+          checkAvailability();
+        } else {
+          setAvailabilityMessage('✅ Misma fecha actual');
+        }
+      } else {
+        // Para reservas públicas, solo verificar si está bloqueado
+        if (formData.bookingDate === booking.booking_date) {
+          setAvailabilityMessage('✅ Misma fecha actual');
+        } else {
+          setAvailabilityMessage('✅ Fecha disponible');
+        }
       }
     }
-  }, [formData.bookingDate, isPublicBooking]);
+  }, [formData.bookingDate, isPublicBooking, blockedDates]);
 
   const checkAvailability = async () => {
     const result = await checkDateAvailability(formData.bookingDate);
@@ -1455,12 +1472,12 @@ function EditPrivateBookingModal({ booking, serviceTypes, onClose, onSuccess }) 
               value={formData.bookingDate}
               onChange={(e) => handleInputChange('bookingDate', e.target.value)}
               min={format(new Date(), 'yyyy-MM-dd')}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg font-fira text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C]"
+              className={`w-full px-3 py-2.5 border rounded-lg font-fira text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] ${isDateBlocked ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
             />
-            {!isPublicBooking && availabilityMessage && (
+            {availabilityMessage && (
               <p
                 className={`mt-2 font-fira text-xs ${
-                  availabilityMessage.startsWith('✅') ? 'text-green-600' : 'text-amber-700'
+                  availabilityMessage.startsWith('✅') ? 'text-green-600' : availabilityMessage.startsWith('❌') ? 'text-red-600 font-semibold' : 'text-amber-700'
                 }`}
               >
                 {availabilityMessage}
@@ -1580,13 +1597,18 @@ function EditPrivateBookingModal({ booking, serviceTypes, onClose, onSuccess }) 
             </button>
             <button
               type="submit"
-              disabled={submitting}
-              className="flex-1 px-4 py-2.5 bg-[#8B5E3C] hover:bg-[#6d4a2f] !text-white rounded-lg font-fira text-sm font-semibold transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
+              disabled={submitting || isDateBlocked}
+              className="flex-1 px-4 py-2.5 bg-[#8B5E3C] hover:bg-[#6d4a2f] !text-white rounded-lg font-fira text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {submitting ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
                   Actualizando...
+                </>
+              ) : isDateBlocked ? (
+                <>
+                  <Ban size={16} />
+                  Día Bloqueado
                 </>
               ) : (
                 <>

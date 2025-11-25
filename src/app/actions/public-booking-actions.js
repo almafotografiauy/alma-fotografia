@@ -62,6 +62,40 @@ export async function getWorkingHours() {
 }
 
 /**
+ * Obtener fechas bloqueadas y días no laborables
+ * Para mostrar en el calendario público de reservas
+ */
+export async function getBlockedDates() {
+  try {
+    const supabase = await createClient();
+
+    // Obtener fechas bloqueadas explícitamente
+    const { data: blockedDates, error: blockedError } = await supabase
+      .from('blocked_dates')
+      .select('blocked_date')
+      .gte('blocked_date', new Date().toISOString().split('T')[0]);
+
+    if (blockedError) throw blockedError;
+
+    // Obtener días de la semana no laborables
+    const { data: workingHours, error: whError } = await supabase
+      .from('working_hours')
+      .select('day_of_week, is_working_day')
+      .eq('is_working_day', false);
+
+    if (whError) throw whError;
+
+    return {
+      success: true,
+      blockedDates: (blockedDates || []).map(d => d.blocked_date),
+      nonWorkingDays: (workingHours || []).map(d => d.day_of_week),
+    };
+  } catch (error) {
+    return { success: false, error: error.message, blockedDates: [], nonWorkingDays: [] };
+  }
+}
+
+/**
  * Obtener slots disponibles para un tipo de reserva en una fecha específica
  * IMPORTANTE: Los slots son INDEPENDIENTES por tipo de reserva
  */

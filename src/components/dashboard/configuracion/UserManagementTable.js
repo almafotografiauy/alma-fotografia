@@ -176,7 +176,7 @@ export default function UserManagementTable({ initialUsers }) {
         <div className="mb-6 flex justify-end">
           <button
             onClick={() => router.push('/auth/register')}
-            className="px-4 py-2.5 bg-[#8B5E3C] text-white rounded-lg font-fira text-sm font-semibold hover:bg-[#6d4a2f] transition-all duration-200 flex items-center gap-2"
+            className="w-full sm:w-auto px-4 py-2.5 bg-[#8B5E3C] text-white rounded-lg font-fira text-sm font-semibold hover:bg-[#6d4a2f] transition-all duration-200 flex items-center justify-center gap-2"
           >
             <User size={18} />
             <span>Crear nuevo usuario</span>
@@ -211,25 +211,25 @@ export default function UserManagementTable({ initialUsers }) {
         </motion.div>
       )}
 
-      {/* Tabla de usuarios */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* Vista de Tabla (Desktop y Tablet) */}
+      <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-4 text-left font-fira text-sm font-semibold text-gray-700">
+                <th className="px-4 lg:px-6 py-4 text-left font-fira text-sm font-semibold text-gray-700">
                   Usuario
                 </th>
-                <th className="px-6 py-4 text-left font-fira text-sm font-semibold text-gray-700">
+                <th className="hidden lg:table-cell px-6 py-4 text-left font-fira text-sm font-semibold text-gray-700">
                   Email
                 </th>
-                <th className="px-6 py-4 text-center font-fira text-sm font-semibold text-gray-700">
+                <th className="px-4 lg:px-6 py-4 text-center font-fira text-sm font-semibold text-gray-700">
                   Estado
                 </th>
-                <th className="px-6 py-4 text-left font-fira text-sm font-semibold text-gray-700">
+                <th className="hidden xl:table-cell px-6 py-4 text-left font-fira text-sm font-semibold text-gray-700">
                   Creado
                 </th>
-                <th className="px-6 py-4 text-right font-fira text-sm font-semibold text-gray-700">
+                <th className="px-4 lg:px-6 py-4 text-right font-fira text-sm font-semibold text-gray-700">
                   Acciones
                 </th>
               </tr>
@@ -243,17 +243,20 @@ export default function UserManagementTable({ initialUsers }) {
                   transition={{ delay: index * 0.05 }}
                   className="hover:bg-gray-50 transition-colors"
                 >
-                  <td className="px-6 py-4">
+                  <td className="px-4 lg:px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#8B5E3C]/10 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-[#8B5E3C]/10 flex items-center justify-center flex-shrink-0">
                         <User size={18} className="text-[#8B5E3C]" />
                       </div>
-                      <div>
-                        <p className="font-fira text-sm font-semibold text-gray-900">
+                      <div className="min-w-0">
+                        <p className="font-fira text-sm font-semibold text-gray-900 truncate">
                           {user.full_name || 'Sin nombre'}
                         </p>
+                        <p className="lg:hidden font-fira text-xs text-gray-500 truncate">
+                          {user.email}
+                        </p>
                         {user.permissions?.manage_users && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded text-xs font-medium font-fira">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded text-xs font-medium font-fira mt-1">
                             <Shield size={10} />
                             Admin
                           </span>
@@ -261,33 +264,33 @@ export default function UserManagementTable({ initialUsers }) {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="hidden lg:table-cell px-6 py-4">
                     <div className="flex items-center gap-2">
                       <Mail size={14} className="text-gray-400" />
-                      <p className="font-fira text-sm text-gray-600">{user.email}</p>
+                      <p className="font-fira text-sm text-gray-600 truncate">{user.email}</p>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-center">
+                  <td className="px-4 lg:px-6 py-4 text-center">
                     {user.is_active ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium font-fira">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium font-fira whitespace-nowrap">
                         <CheckCircle size={12} />
-                        Activo
+                        <span className="hidden lg:inline">Activo</span>
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 text-red-700 rounded-full text-xs font-medium font-fira">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 text-red-700 rounded-full text-xs font-medium font-fira whitespace-nowrap">
                         <XCircle size={12} />
-                        Inactivo
+                        <span className="hidden lg:inline">Inactivo</span>
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4">
-                    <p className="font-fira text-sm text-gray-600">
+                  <td className="hidden xl:table-cell px-6 py-4">
+                    <p className="font-fira text-sm text-gray-600 whitespace-nowrap">
                       {format(new Date(user.created_at), "d 'de' MMM, yyyy", { locale: es })}
                     </p>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 lg:px-6 py-4">
                     {currentUser?.permissions?.manage_users ? (
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1.5 lg:gap-2">
                         <button
                           onClick={() => handleEditPermissions(user)}
                           disabled={loading}
@@ -343,18 +346,127 @@ export default function UserManagementTable({ initialUsers }) {
         </div>
       </div>
 
+      {/* Vista de Cards (Móvil) */}
+      <div className="md:hidden space-y-4">
+        {users.map((user, index) => (
+          <motion.div
+            key={user.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+            className="bg-white rounded-xl shadow-sm border border-gray-100 p-4"
+          >
+            {/* Header de la card */}
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-[#8B5E3C]/10 flex items-center justify-center flex-shrink-0">
+                <User size={20} className="text-[#8B5E3C]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-fira text-base font-semibold text-gray-900 truncate">
+                      {user.full_name || 'Sin nombre'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Mail size={12} className="text-gray-400 flex-shrink-0" />
+                      <p className="font-fira text-xs text-gray-600 truncate">{user.email}</p>
+                    </div>
+                  </div>
+                  {/* Estado */}
+                  {user.is_active ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium font-fira whitespace-nowrap flex-shrink-0">
+                      <CheckCircle size={12} />
+                      Activo
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 rounded-full text-xs font-medium font-fira whitespace-nowrap flex-shrink-0">
+                      <XCircle size={12} />
+                      Inactivo
+                    </span>
+                  )}
+                </div>
+                {user.permissions?.manage_users && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded text-xs font-medium font-fira mt-2">
+                    <Shield size={10} />
+                    Admin
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Fecha de creación */}
+            <div className="mb-4 pb-4 border-b border-gray-100">
+              <p className="font-fira text-xs text-gray-500">
+                Creado el {format(new Date(user.created_at), "d 'de' MMM, yyyy", { locale: es })}
+              </p>
+            </div>
+
+            {/* Botones de acción */}
+            {currentUser?.permissions?.manage_users ? (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => handleEditPermissions(user)}
+                  disabled={loading}
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors font-fira text-sm font-medium"
+                >
+                  <Edit size={16} />
+                  <span>Editar</span>
+                </button>
+
+                <button
+                  onClick={() => setChangingPassword(user)}
+                  disabled={loading}
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-fira text-sm font-medium"
+                >
+                  <Key size={16} />
+                  <span>Contraseña</span>
+                </button>
+
+                <button
+                  onClick={() => handleToggleStatus(user.id, user.is_active)}
+                  disabled={loading}
+                  className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg transition-colors font-fira text-sm font-medium ${
+                    user.is_active
+                      ? 'text-amber-700 bg-amber-50 hover:bg-amber-100'
+                      : 'text-green-700 bg-green-50 hover:bg-green-100'
+                  }`}
+                >
+                  {user.is_active ? <ShieldOff size={16} /> : <Shield size={16} />}
+                  <span>{user.is_active ? 'Deshabilitar' : 'Habilitar'}</span>
+                </button>
+
+                <button
+                  onClick={() => setDeletingUser(user)}
+                  disabled={loading}
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors font-fira text-sm font-medium"
+                >
+                  <Trash2 size={16} />
+                  <span>Eliminar</span>
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-2">
+                <span className="font-fira text-sm text-gray-400">
+                  Sin permisos de administración
+                </span>
+              </div>
+            )}
+          </motion.div>
+        ))}
+      </div>
+
       {/* Modal de edición de permisos */}
       {editingUser && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
           onClick={() => setEditingUser(null)}
         >
           <motion.div
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+            className="bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
@@ -434,7 +546,7 @@ export default function UserManagementTable({ initialUsers }) {
               ))}
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={handleSaveUser}
                 disabled={loading}
@@ -466,14 +578,14 @@ export default function UserManagementTable({ initialUsers }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
             onClick={() => setChangingPassword(null)}
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+              className="bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-w-md w-full p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
@@ -493,7 +605,7 @@ export default function UserManagementTable({ initialUsers }) {
                 <p className="font-fira text-base font-semibold text-gray-900">
                   {changingPassword.full_name}
                 </p>
-                <p className="font-fira text-sm text-gray-500">{changingPassword.email}</p>
+                <p className="font-fira text-sm text-gray-500 truncate">{changingPassword.email}</p>
               </div>
 
               <form onSubmit={handleChangePassword} className="space-y-5">
@@ -505,7 +617,7 @@ export default function UserManagementTable({ initialUsers }) {
                     type="password"
                     name="newPassword"
                     className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-[#8B5E3C] focus:ring-2 focus:ring-[#8B5E3C]/10 font-fira text-sm text-gray-900 transition-all"
-                    placeholder="Mínimo 8 caracteres, mayúsculas, minúsculas y números"
+                    placeholder="Mínimo 8 caracteres"
                     required
                     minLength={8}
                   />
@@ -514,7 +626,7 @@ export default function UserManagementTable({ initialUsers }) {
                   </p>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     type="submit"
                     disabled={loading}
@@ -554,14 +666,14 @@ export default function UserManagementTable({ initialUsers }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
             onClick={() => setDeletingUser(null)}
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+              className="bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-w-md w-full p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="text-center mb-6">
@@ -578,11 +690,11 @@ export default function UserManagementTable({ initialUsers }) {
                   <p className="font-fira text-sm font-semibold text-gray-900">
                     {deletingUser.full_name}
                   </p>
-                  <p className="font-fira text-xs text-gray-600">{deletingUser.email}</p>
+                  <p className="font-fira text-xs text-gray-600 truncate">{deletingUser.email}</p>
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={async () => {
                     await handleDeleteUser(deletingUser.id);

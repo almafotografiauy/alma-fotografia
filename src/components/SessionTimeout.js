@@ -24,7 +24,7 @@ export default function SessionTimeout() {
   const logout = useCallback(async () => {
     try {
       await supabase.auth.signOut();
-      router.push('/auth/login?error=sesion_expirada');
+      router.push('/');
     } catch (error) {
       // Error al cerrar sesión
     }

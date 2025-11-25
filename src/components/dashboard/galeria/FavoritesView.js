@@ -67,6 +67,7 @@ function ClientFavoritesSection({
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState({ show: false, current: 0, total: 0 });
   const { showToast } = useToast();
 
   const { email, name, submitted, submittedAt, photos, history } = clientData;
@@ -159,6 +160,8 @@ function ClientFavoritesSection({
       const zip = new JSZip();
       let photoIndex = 1;
 
+      setDownloadProgress({ show: true, current: 0, total: photos.length });
+
       for (const photo of photos) {
         try {
           const photoUrl = photo.cloudinary_url || photo.file_path;
@@ -182,9 +185,12 @@ function ClientFavoritesSection({
           const fileName = `foto_favorita_${gallerySlug}_${photoIndex}.${extension}`;
 
           zip.file(fileName, blob);
+          setDownloadProgress(prev => ({ ...prev, current: photoIndex }));
           photoIndex++;
         } catch (error) {
           console.error('Error adding photo to zip:', error);
+          setDownloadProgress(prev => ({ ...prev, current: photoIndex }));
+          photoIndex++;
         }
       }
 
@@ -202,7 +208,10 @@ function ClientFavoritesSection({
         window.URL.revokeObjectURL(zipUrl);
       }, 150);
 
+      setDownloadProgress({ show: false, current: 0, total: 0 });
+
     } catch (error) {
+      setDownloadProgress({ show: false, current: 0, total: 0 });
       showToast({ message: 'Error al crear el archivo ZIP. Por favor intenta de nuevo.', type: 'error' });
     }
   };
@@ -372,15 +381,6 @@ function ClientFavoritesSection({
       <div className="bg-gradient-to-br from-[#2D2D2D] to-[#1a1a1a] text-white rounded-2xl shadow-sm border border-gray-200">
         <div className="px-5 sm:px-6 lg:px-8 py-4 sm:py-6">
 
-          {/* Botón volver */}
-          <button
-            onClick={onRefresh}
-            className="flex items-center gap-2 text-[#C6A97D] hover:text-[#FFF8E2] transition-colors duration-200 font-fira text-sm mb-4"
-          >
-            <ArrowLeft size={16} />
-            <span>Volver</span>
-          </button>
-
           <div className="flex flex-col gap-4 mb-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="flex-1 min-w-0">
@@ -481,12 +481,23 @@ function ClientFavoritesSection({
                 {photos.length > 0 && (
                   <motion.button
                     onClick={handleDownloadAll}
+                    disabled={downloadProgress.show}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="!text-white flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-[#79502A] to-[#8B5A2F] hover:from-[#8B5A2F] hover:to-[#79502A] rounded-lg transition-colors font-fira text-xs sm:text-sm font-semibold flex items-center justify-center gap-2"
+                    className="!text-white flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-[#79502A] to-[#8B5A2F] hover:from-[#8B5A2F] hover:to-[#79502A] disabled:opacity-70 rounded-lg transition-colors font-fira text-xs sm:text-sm font-semibold flex items-center justify-center gap-2"
                   >
-                    <Package size={16} />
-                    <span className="hidden md:inline">ZIP</span>
+                    {downloadProgress.show ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span className="hidden md:inline">{downloadProgress.current}/{downloadProgress.total}</span>
+                        <span className="md:hidden">{Math.round((downloadProgress.current / downloadProgress.total) * 100)}%</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download size={16} />
+                        <span className="hidden md:inline">Todas</span>
+                      </>
+                    )}
                   </motion.button>
                 )}
 
@@ -547,6 +558,35 @@ function ClientFavoritesSection({
               </div>
             </div>
           </div>
+
+          {/* Barra de progreso de descarga */}
+          <AnimatePresence>
+            {downloadProgress.show && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-4 p-3 bg-[#79502A]/20 border border-[#C6A97D]/30 rounded-lg"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-fira text-sm text-white/80">
+                    Descargando fotos...
+                  </span>
+                  <span className="font-fira text-sm font-semibold text-[#C6A97D]">
+                    {downloadProgress.current} de {downloadProgress.total}
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-black/30 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(downloadProgress.current / downloadProgress.total) * 100}%` }}
+                    className="h-full bg-gradient-to-r from-[#79502A] to-[#C6A97D] rounded-full"
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Historial de actividad expandible */}
           <AnimatePresence>
@@ -658,7 +698,7 @@ function ClientFavoritesSection({
       </div>
 
       {/* Photos Grid - Masonry Layout directamente en el fondo */}
-      <div className="bg-white py-4 sm:py-6">
+      <div className="bg-white py-3 sm:py-4">
         {photos.length === 0 ? (
           <div className="text-center py-16 px-6">
             <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
@@ -669,8 +709,8 @@ function ClientFavoritesSection({
             </p>
           </div>
         ) : (
-          <div className="px-0 sm:px-2 lg:px-4">
-          <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-2 space-y-2">
+          <div className="px-0">
+          <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 xl:columns-6 gap-1 sm:gap-2 space-y-1 sm:space-y-2">
             {paginatedPhotos.map((photo) => {
               const photoUrl = photo.cloudinary_url || photo.file_path;
               const isSelected = selectedPhotos.has(photo.id);
@@ -1321,7 +1361,7 @@ export default function FavoritesView({ gallery, favoritesByClient }) {
   return (
     <div className="w-full">
       {/* Header mejorado */}
-      <div className="mb-6 px-4 sm:px-6">
+      <div className="mb-4 px-2 sm:px-4">
         <button
           onClick={() => router.push(`/dashboard/galerias/${gallery.id}`)}
           className="flex items-center gap-2 text-[#8B5E3C] hover:text-[#6d4a2f] transition-colors font-fira text-sm font-semibold group"
@@ -1332,7 +1372,7 @@ export default function FavoritesView({ gallery, favoritesByClient }) {
       </div>
 
       {/* Lista de clientes */}
-      <div className="space-y-6 px-4 sm:px-6">
+      <div className="space-y-4 px-2 sm:px-4">
         {filteredAndSortedClients.length === 0 && favoritesByClient.length === 0 ? (
           <div className="bg-gradient-to-br from-neutral-900/50 to-neutral-900/30 border border-neutral-800 rounded-2xl p-12 sm:p-16 text-center shadow-2xl">
             <div className="max-w-md mx-auto">

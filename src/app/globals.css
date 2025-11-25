@@ -33,12 +33,16 @@
 /* 🌐 Estilos base del documento */
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-fira, Arial, Helvetica, sans-serif);
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
 }
 
 /* 🔠 Titulares con Voga */
@@ -84,4 +88,18 @@ a img, button img {
 /* Deshabilitar selección de texto en toda la página (opcional, solo imágenes) */
 body {
   -webkit-touch-callout: none;
+}
+
+/* ✨ Animación shimmer para placeholders de carga */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
 }
