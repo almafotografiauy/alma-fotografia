@@ -1299,7 +1299,7 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
                   <Download size={16} strokeWidth={1.5} className={`${isDownloading ? 'text-green-600' : 'text-black/70'} sm:w-[18px] sm:h-[18px]`} />
                   {downloadEnabled && (
                     <span className={`font-fira text-[10px] sm:text-xs font-semibold ${isDownloading ? 'text-green-600' : 'text-black/70'}`}>
-                      {isDownloading ? 'Descargando...' : 'Descargar Todas'}
+                      {isDownloading ? `${downloadProgress}%` : 'Descargar Todas'}
                     </span>
                   )}
                 </button>

@@ -66,10 +66,10 @@ export default function PublicDownloadAllButton({
                     cleanPath = pathParts.slice(1).join('/');
                 }
 
-                // Construir URL de descarga con máxima calidad
+                // Construir URL de descarga con máxima calidad y formato JPG
                 // fl_attachment fuerza descarga en lugar de mostrar en navegador
-                // q_100 asegura calidad máxima (aunque hayamos guardado con auto:best)
-                return `${base}/upload/fl_attachment,q_100/${cleanPath}`;
+                // q_100 asegura calidad máxima, f_jpg fuerza formato JPG
+                return `${base}/upload/fl_attachment,q_100,f_jpg/${cleanPath}`;
             }
 
             return url;
@@ -172,9 +172,8 @@ export default function PublicDownloadAllButton({
                             .join(' ')
                             .replace(/ Foto /, ' - Foto ');
 
-                        // Determinar extensión (JPG por defecto, PNG si corresponde)
-                        const extension = blob.type === 'image/png' ? '.png' : '.jpg';
-                        filename += extension;
+                        // Siempre usar JPG
+                        filename += '.jpg';
 
                         // Agregar al ZIP
                         zip.file(filename, blob);

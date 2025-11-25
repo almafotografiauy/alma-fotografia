@@ -120,10 +120,18 @@ function ClientFavoritesSection({
 
   const handleDownloadPhoto = async (photo, galleryTitle) => {
     try {
-      const photoUrl = photo.cloudinary_url || photo.file_path;
+      let photoUrl = photo.cloudinary_url || photo.file_path;
       const gallerySlug = galleryTitle.toLowerCase().replace(/\s+/g, '-');
-      const extension = photo.file_name?.split('.').pop() || 'jpg';
-      const fileName = `foto_favorita_${gallerySlug}.${extension}`;
+
+      // Forzar formato JPG en Cloudinary
+      if (photoUrl.includes('res.cloudinary.com')) {
+        const urlParts = photoUrl.split('/upload/');
+        if (urlParts.length === 2) {
+          photoUrl = `${urlParts[0]}/upload/q_100,f_jpg/${urlParts[1]}`;
+        }
+      }
+
+      const fileName = `foto_favorita_${gallerySlug}.jpg`;
 
       const response = await fetch(photoUrl, {
         mode: 'cors',
@@ -167,13 +175,11 @@ function ClientFavoritesSection({
           const photoUrl = photo.cloudinary_url || photo.file_path;
           let fetchUrl = photoUrl;
 
+          // Forzar formato JPG en Cloudinary para todas las fotos
           if (fetchUrl.includes('res.cloudinary.com')) {
             const urlParts = fetchUrl.split('/upload/');
             if (urlParts.length === 2) {
-              const isPNG = urlParts[1].toLowerCase().includes('.png') ||
-                photo.file_name?.toLowerCase().endsWith('.png');
-              const format = isPNG ? 'png' : 'jpg';
-              fetchUrl = `${urlParts[0]}/upload/q_100,f_${format}/${urlParts[1]}`;
+              fetchUrl = `${urlParts[0]}/upload/q_100,f_jpg/${urlParts[1]}`;
             }
           }
 
@@ -181,8 +187,7 @@ function ClientFavoritesSection({
           if (!response.ok) throw new Error('Error al obtener la imagen');
 
           const blob = await response.blob();
-          const extension = photo.file_name?.split('.').pop() || 'jpg';
-          const fileName = `foto_favorita_${gallerySlug}_${photoIndex}.${extension}`;
+          const fileName = `foto_favorita_${gallerySlug}_${photoIndex}.jpg`;
 
           zip.file(fileName, blob);
           setDownloadProgress(prev => ({ ...prev, current: photoIndex }));
