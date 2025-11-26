@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { loginUser } from '@/app/actions/auth-actions';
+import { supabase } from '@/lib/supabaseClient';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, Home } from 'lucide-react';
 
 /**
@@ -49,22 +49,44 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg('');
 
-    const result = await loginUser({
-      usernameOrEmail: email,
-      password: password,
-    });
+    try {
+      // Primero buscar el email del usuario por username
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id, email, is_active')
+        .ilike('username', email)
+        .single();
 
-    if (!result.success) {
-      setLoading(false);
-      setErrorMsg(result.error || 'Credenciales incorrectas');
-    } else {
+      if (profileError || !profile) {
+        setLoading(false);
+        setErrorMsg('Usuario o contraseña incorrectos');
+        return;
+      }
+
+      if (!profile.is_active) {
+        setLoading(false);
+        setErrorMsg('Tu cuenta ha sido deshabilitada. Contactá al administrador.');
+        return;
+      }
+
+      // Hacer login con el cliente del navegador (esto maneja las cookies correctamente)
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: profile.email,
+        password: password,
+      });
+
+      if (error) {
+        setLoading(false);
+        setErrorMsg('Usuario o contraseña incorrectos');
+        return;
+      }
+
       setSuccess(true);
-      // Refrescar para que el middleware reconozca la nueva sesión
-      router.refresh();
-      // Pequeño delay para asegurar que las cookies se establezcan
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 100);
+      // Redirigir usando window.location para forzar una recarga completa
+      window.location.href = '/dashboard';
+    } catch (error) {
+      setLoading(false);
+      setErrorMsg(error.message || 'Error al iniciar sesión');
     }
   }
 
