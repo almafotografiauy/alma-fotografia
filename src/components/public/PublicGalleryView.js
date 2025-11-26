@@ -39,6 +39,164 @@ SectionHeader.displayName = 'SectionHeader';
 /**
  * PhotoGrid - Grid masonry responsivo tipo Pixieset
  */
+/**
+ * PhotoItem - Componente individual de foto con lazy loading optimizado
+ */
+const PhotoItem = memo(({
+  photo,
+  index,
+  galleryTitle,
+  gallerySlug,
+  onPhotoClick,
+  onToggleFavorite,
+  isFavorite,
+  maxFavorites,
+  downloadEnabled,
+  onDownloadPhoto,
+  isSelectingFavorites,
+  isSelected,
+  onToggleTemp,
+  isPreview,
+  isPriority,
+}) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  // Usar cloudinary_url primero, luego file_path
+  const imageUrl = photo.cloudinary_url || photo.file_path;
+
+  // Optimizar URL de Cloudinary para thumbnails (más rápido)
+  const getOptimizedUrl = (url, isThumb = true) => {
+    if (!url || !url.includes('cloudinary.com')) return url;
+    const parts = url.split('/upload/');
+    if (parts.length !== 2) return url;
+    // Para thumbnails en grid: calidad 80, ancho máximo 600px, formato auto
+    const transforms = isThumb ? 'q_80,w_600,f_auto' : 'q_90,f_auto';
+    return `${parts[0]}/upload/${transforms}/${parts[1]}`;
+  };
+
+  const optimizedUrl = getOptimizedUrl(imageUrl);
+
+  return (
+    <div className="group relative break-inside-avoid mb-2">
+      <div
+        className={`relative w-full overflow-hidden cursor-pointer ${
+          isSelectingFavorites && isSelected ? 'ring-4 ring-rose-500 rounded-lg' : ''
+        }`}
+        onClick={() => {
+          if (isSelectingFavorites) {
+            onToggleTemp(photo.id);
+          } else {
+            onPhotoClick(photo, index);
+          }
+        }}
+      >
+        {/* Skeleton placeholder con aspect ratio estimado */}
+        <div
+          className={`relative w-full bg-gray-100 ${!isLoaded ? 'animate-pulse' : ''}`}
+          style={{
+            aspectRatio: photo.width && photo.height
+              ? `${photo.width}/${photo.height}`
+              : '4/3' // Aspect ratio por defecto
+          }}
+        >
+          {!hasError && (
+            <Image
+              src={optimizedUrl}
+              alt={`${galleryTitle} - ${photo.file_name || `Foto ${index + 1}`}`}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className={`object-cover transition-all duration-500 group-hover:scale-105 ${
+                isLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+              loading={isPriority ? 'eager' : 'lazy'}
+              priority={isPriority}
+              quality={80}
+              onLoad={() => setIsLoaded(true)}
+              onError={() => {
+                setHasError(true);
+                setIsLoaded(true);
+              }}
+            />
+          )}
+
+          {/* Error placeholder */}
+          {hasError && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+              <span className="text-gray-400 text-xs">Error</span>
+            </div>
+          )}
+
+          {/* Skeleton loader mientras carga */}
+          {!isLoaded && !hasError && (
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse" />
+          )}
+        </div>
+
+        {/* Overlay en modo selección */}
+        {isSelectingFavorites && (
+          <>
+            {!isSelected && (
+              <div className="absolute inset-0 bg-white/60 transition-all duration-300" />
+            )}
+            {isSelected && (
+              <div className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-lg">
+                <Heart size={20} className="fill-rose-500 text-rose-500" strokeWidth={1.5} />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Overlay en hover */}
+        {!isSelectingFavorites && (
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
+        )}
+
+        {/* Botones de favorito y descarga */}
+        {!isSelectingFavorites && !isPreview && (
+          <>
+            {maxFavorites > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite(photo.id);
+                }}
+                className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-300 ${
+                  isFavorite
+                    ? 'bg-white shadow-md opacity-100'
+                    : 'bg-white/80 backdrop-blur-sm opacity-0 group-hover:opacity-100'
+                }`}
+                title={isFavorite ? 'Quitar de favoritas' : 'Agregar a favoritas'}
+              >
+                <Heart
+                  size={18}
+                  className={isFavorite ? 'fill-rose-500 text-rose-500' : 'text-gray-700'}
+                  strokeWidth={1.5}
+                />
+              </button>
+            )}
+
+            {downloadEnabled && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDownloadPhoto(photo, index, gallerySlug);
+                }}
+                className="absolute bottom-3 right-3 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-md opacity-0 group-hover:opacity-100 hover:bg-white transition-all duration-300"
+                title="Descargar foto"
+              >
+                <Download size={18} className="text-gray-700" strokeWidth={1.5} />
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+});
+
+PhotoItem.displayName = 'PhotoItem';
+
 const PhotoGrid = memo(({
   photos,
   galleryTitle,
@@ -54,114 +212,31 @@ const PhotoGrid = memo(({
   onToggleTemp,
   isPreview = false,
 }) => {
+  // Primeras 8 fotos cargan con prioridad (above the fold)
+  const PRIORITY_COUNT = 8;
+
   return (
-    <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-2 space-y-2">
-      {photos.map((photo, index) => {
-        const isFavorite = favoritePhotoIds.includes(photo.id);
-        const isSelected = isSelectingFavorites ? tempFavoriteIds.includes(photo.id) : false;
-
-        return (
-          <div
-            key={photo.id}
-            className="group relative break-inside-avoid"
-          >
-            <div
-              className={`relative w-full bg-gray-100 overflow-hidden cursor-pointer ${
-                isSelectingFavorites && isSelected ? 'ring-4 ring-rose-500 rounded-lg' : ''
-              }`}
-              onClick={() => {
-                if (isSelectingFavorites) {
-                  onToggleTemp(photo.id);
-                } else {
-                  onPhotoClick(photo, index);
-                }
-              }}
-            >
-              <Image
-                src={photo.file_path}
-                alt={`${galleryTitle} - ${photo.file_name || `Foto ${index + 1}`}`}
-                width={0}
-                height={0}
-                sizes="100vw"
-                className="w-full h-auto transition-all duration-700 group-hover:scale-105"
-                loading="lazy"
-                quality={90}
-                unoptimized
-                placeholder="blur"
-                blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2YzZjRmNiIvPjwvc3ZnPg=="
-                style={{ width: '100%', height: 'auto' }}
-              />
-
-              {/* Overlay en modo selección */}
-              {isSelectingFavorites && (
-                <>
-                  {/* Overlay blanco para NO seleccionadas */}
-                  {!isSelected && (
-                    <div className="absolute inset-0 bg-white/60 transition-all duration-300" />
-                  )}
-
-                  {/* Corazón para seleccionadas */}
-                  {isSelected && (
-                    <div className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-lg">
-                      <Heart size={20} className="fill-rose-500 text-rose-500" strokeWidth={1.5} />
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* Overlay en hover (solo cuando NO está en modo selección) */}
-              {!isSelectingFavorites && (
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
-              )}
-
-              {/* Botones de favorito y descarga (ocultos en modo selección y en preview) */}
-              {!isSelectingFavorites && !isPreview && (
-                <>
-                  {/* Botón de favorito - solo si maxFavorites > 0 */}
-                  {maxFavorites > 0 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleFavorite(photo.id);
-                      }}
-                      className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-300 ${
-                        isFavorite
-                          ? 'bg-white shadow-md opacity-100'
-                          : 'bg-white/80 backdrop-blur-sm opacity-0 group-hover:opacity-100'
-                      }`}
-                      title={isFavorite ? 'Quitar de favoritas' : 'Agregar a favoritas'}
-                    >
-                      <Heart
-                        size={18}
-                        className={isFavorite ? 'fill-rose-500 text-rose-500' : 'text-gray-700'}
-                        strokeWidth={1.5}
-                      />
-                    </button>
-                  )}
-
-                  {/* Botón de descarga - solo si downloadEnabled */}
-                  {downloadEnabled && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDownloadPhoto(photo, index, gallerySlug);
-                      }}
-                      className="absolute bottom-3 right-3 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-md opacity-0 group-hover:opacity-100 hover:bg-white transition-all duration-300"
-                      title="Descargar foto"
-                    >
-                      <Download
-                        size={18}
-                        className="text-gray-700"
-                        strokeWidth={1.5}
-                      />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        );
-      })}
+    <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-2">
+      {photos.map((photo, index) => (
+        <PhotoItem
+          key={photo.id}
+          photo={photo}
+          index={index}
+          galleryTitle={galleryTitle}
+          gallerySlug={gallerySlug}
+          onPhotoClick={onPhotoClick}
+          onToggleFavorite={onToggleFavorite}
+          isFavorite={favoritePhotoIds.includes(photo.id)}
+          maxFavorites={maxFavorites}
+          downloadEnabled={downloadEnabled}
+          onDownloadPhoto={onDownloadPhoto}
+          isSelectingFavorites={isSelectingFavorites}
+          isSelected={isSelectingFavorites ? tempFavoriteIds.includes(photo.id) : false}
+          onToggleTemp={onToggleTemp}
+          isPreview={isPreview}
+          isPriority={index < PRIORITY_COUNT}
+        />
+      ))}
     </div>
   );
 });

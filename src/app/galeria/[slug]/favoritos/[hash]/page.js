@@ -19,10 +19,17 @@ export const revalidate = 300;
 
 /**
  * Decodifica el hash para obtener el email del cliente
+ * Soporta tanto atob (browser) como Buffer (Node)
  */
 function decodeHash(hash) {
   try {
-    return Buffer.from(hash, 'base64').toString('utf-8');
+    // Primero intentar con Buffer (Node.js)
+    const decoded = Buffer.from(hash, 'base64').toString('utf-8');
+    // Validar que es un email válido
+    if (decoded && decoded.includes('@')) {
+      return decoded.toLowerCase().trim();
+    }
+    return null;
   } catch {
     return null;
   }
@@ -45,7 +52,8 @@ async function FavoritesGalleryContent({ slug, hash, token }) {
   const clientEmail = decodeHash(hash);
 
   if (!clientEmail) {
-    notFound();
+    console.error('[FavoritesPage] Could not decode hash:', hash);
+    return <ErrorPage message="El enlace de favoritos no es válido." />;
   }
 
   // Obtener share activo
@@ -57,51 +65,55 @@ async function FavoritesGalleryContent({ slug, hash, token }) {
 
   // Verificar error real de share
   if (shareError && (shareError.message || shareError.code)) {
+    console.error('[FavoritesPage] Share error:', shareError);
     notFound();
   }
 
   if (!shareData || !shareData.is_active) {
+    console.error('[FavoritesPage] Share not active or not found');
     notFound();
   }
 
   // Verificar expiración
   if (shareData.expires_at && new Date(shareData.expires_at) < new Date()) {
+    console.error('[FavoritesPage] Share expired');
     notFound();
   }
 
-  // Obtener galería Y favoritos en paralelo (optimización)
-  const [galleryResult, favoritesResult] = await Promise.all([
-    supabase
-      .from('galleries')
-      .select('*')
-      .eq('id', shareData.gallery_id)
-      .eq('slug', slug)
-      .single(),
-    supabase
-      .from('favorites')
-      .select('photo_id')
-      .eq('gallery_id', shareData.gallery_id)
-      .eq('client_email', clientEmail.toLowerCase().trim())
-  ]);
+  // Obtener galería primero - usar solo gallery_id del share (slug ya fue validado en el share)
+  const { data: gallery, error: galleryError } = await supabase
+    .from('galleries')
+    .select('*')
+    .eq('id', shareData.gallery_id)
+    .single();
 
-  const { data: gallery, error: galleryError } = galleryResult;
-  const { data: favorites, error: favError } = favoritesResult;
-
-  // Verificar errores reales
-  if (galleryError && (galleryError.message || galleryError.code)) {
+  if (galleryError || !gallery) {
+    console.error('[FavoritesPage] Gallery error:', galleryError);
     notFound();
   }
 
-  if (!gallery) {
+  // Verificar que el slug coincide (case-insensitive)
+  if (gallery.slug && gallery.slug.toLowerCase() !== slug.toLowerCase()) {
+    console.error('[FavoritesPage] Slug mismatch:', { expected: gallery.slug, received: slug });
     notFound();
   }
 
-  if (favError && (favError.message || favError.code)) {
-    notFound();
+  // Buscar favoritos - usar ILIKE para case-insensitive
+  const normalizedEmail = clientEmail.toLowerCase().trim();
+
+  const { data: favorites, error: favError } = await supabase
+    .from('favorites')
+    .select('photo_id')
+    .eq('gallery_id', gallery.id)
+    .ilike('client_email', normalizedEmail);
+
+  if (favError && favError.code !== 'PGRST116') {
+    console.error('[FavoritesPage] Favorites error:', favError);
   }
 
-  // Si no hay favoritos, mostrar error
+  // Si no hay favoritos, mostrar error con info adicional
   if (!favorites || favorites.length === 0) {
+    console.log('[FavoritesPage] No favorites found for:', normalizedEmail, 'in gallery:', gallery.id);
     return <ErrorPage message="Este cliente aún no ha seleccionado fotos favoritas." />;
   }
 

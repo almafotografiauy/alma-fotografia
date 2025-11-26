@@ -219,9 +219,10 @@ export default function PublicDownloadAllButton({
                 }
 
                 completedCount += batch.length;
-                const progressPercent = Math.round((completedCount / total) * 100);
+                // Progreso de 0-90% durante descarga, 90-100% durante compresión
+                const progressPercent = Math.round((completedCount / total) * 90);
                 setProgress(progressPercent);
-                setStatus(`Descargadas ${completedCount} de ${total}...`);
+                setStatus(`Descargando ${completedCount} de ${total}...`);
 
                 // Pequeña pausa entre lotes para no saturar
                 if (i + BATCH_SIZE < photosToDownload.length) {
@@ -236,15 +237,22 @@ export default function PublicDownloadAllButton({
                 throw new Error('No se pudo descargar ninguna foto. Verifica tu conexión.');
             }
 
-            // Generar el ZIP
-            setStatus('Generando archivo ZIP...');
-            setProgress(95);
+            // Generar el ZIP con callback de progreso
+            setStatus('Comprimiendo archivos...');
 
-            const zipBlob = await zip.generateAsync({
-                type: 'blob',
-                compression: 'DEFLATE',
-                compressionOptions: { level: 6 }
-            });
+            const zipBlob = await zip.generateAsync(
+                {
+                    type: 'blob',
+                    compression: 'DEFLATE',
+                    compressionOptions: { level: 3 } // Nivel más bajo = más rápido
+                },
+                (metadata) => {
+                    // Actualizar progreso durante la compresión (90-99%)
+                    const zipProgress = Math.round(90 + (metadata.percent * 0.09));
+                    setProgress(zipProgress);
+                    setStatus(`Comprimiendo... ${Math.round(metadata.percent)}%`);
+                }
+            );
 
             // Crear nombre del archivo ZIP
             const safeName = galleryTitle
@@ -257,9 +265,15 @@ export default function PublicDownloadAllButton({
             const zipName = `${safeName}${suffix}.zip`;
 
             // Descargar el ZIP
-            setStatus('Iniciando descarga...');
+            setStatus('Descargando archivo...');
             setProgress(100);
             saveAs(zipBlob, zipName);
+
+            // Mensaje de éxito
+            showToast({
+                message: `¡Listo! ${successCount} fotos descargadas`,
+                type: 'success'
+            });
 
             // Mostrar resumen
             if (errorCount > 0) {
