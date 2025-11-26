@@ -23,43 +23,18 @@ export async function middleware(request) {
     supabaseKey,
     {
       cookies: {
-        get(name) {
-          return request.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll();
         },
-        set(name, value, options) {
-          // Actualizar tanto la request como la response
-          request.cookies.set({
-            name,
-            value,
-            ...options,
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value);
           });
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request,
           });
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-        },
-        remove(name, options) {
-          // Actualizar tanto la request como la response
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
           });
         },
       },
@@ -69,7 +44,9 @@ export async function middleware(request) {
   // IMPORTANTE: Llamar a getUser() para refrescar la sesión
   const { data, error } = await supabase.auth.getUser();
 
-  if (error) console.error('Supabase error:', error.message);
+  if (error && error.message !== 'Auth session missing!') {
+    console.error('Supabase error:', error.message);
+  }
 
   // Proteger rutas del dashboard - Si no está logueado, redirigir al login
   if (!data?.user && request.nextUrl.pathname.startsWith('/dashboard')) {
