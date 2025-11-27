@@ -162,12 +162,11 @@ export default function TestimoniosPage() {
               <div>
                 <p className="font-fira text-sm text-gray-600">Promedio</p>
                 <p className="font-voga text-2xl text-gray-900">
-                  {testimonials.length > 0
-                    ? (
-                        testimonials.reduce((sum, t) => sum + (t.rating || 0), 0) /
-                        testimonials.length
-                      ).toFixed(1)
-                    : '0.0'}
+                  {(() => {
+                    const withRating = testimonials.filter(t => t.rating && t.rating > 0);
+                    if (withRating.length === 0) return '0.0';
+                    return (withRating.reduce((sum, t) => sum + t.rating, 0) / withRating.length).toFixed(1);
+                  })()}
                 </p>
               </div>
             </div>

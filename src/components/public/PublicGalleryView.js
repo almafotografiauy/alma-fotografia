@@ -62,6 +62,7 @@ const PhotoItem = memo(({
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [naturalHeight, setNaturalHeight] = useState(null);
 
   // Usar cloudinary_url primero, luego file_path
   const imageUrl = photo.cloudinary_url || photo.file_path;
@@ -77,12 +78,17 @@ const PhotoItem = memo(({
 
   const optimizedUrl = getOptimizedUrl(imageUrl);
 
+  // Altura estimada basada en el índice (variación para simular masonry antes de cargar)
+  // Esto evita que todas tengan la misma altura y se vea artificial
+  const estimatedHeight = 200 + ((index % 4) * 50); // 200, 250, 300, 350px
+
   return (
-    <div className="group relative break-inside-avoid">
+    <div className="group relative break-inside-avoid mb-2">
       <div
         className={`relative w-full bg-gray-100 overflow-hidden cursor-pointer ${
           isSelectingFavorites && isSelected ? 'ring-4 ring-rose-500 rounded-lg' : ''
         }`}
+        style={{ minHeight: !isLoaded && !hasError ? `${estimatedHeight}px` : 'auto' }}
         onClick={() => {
           if (isSelectingFavorites) {
             onToggleTemp(photo.id);
@@ -99,7 +105,7 @@ const PhotoItem = memo(({
             width={0}
             height={0}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className={`w-full h-auto transition-all duration-500 group-hover:scale-105 ${
+            className={`w-full h-auto transition-opacity duration-300 group-hover:scale-105 ${
               isLoaded ? 'opacity-100' : 'opacity-0'
             }`}
             style={{ width: '100%', height: 'auto' }}
@@ -107,7 +113,10 @@ const PhotoItem = memo(({
             priority={isPriority}
             quality={80}
             unoptimized
-            onLoad={() => setIsLoaded(true)}
+            onLoad={(e) => {
+              setNaturalHeight(e.target.naturalHeight);
+              setIsLoaded(true);
+            }}
             onError={() => {
               setHasError(true);
               setIsLoaded(true);
@@ -115,9 +124,11 @@ const PhotoItem = memo(({
           />
         )}
 
-        {/* Skeleton loader mientras carga - altura mínima para evitar colapso */}
+        {/* Skeleton loader mientras carga - altura estimada para evitar reflow */}
         {!isLoaded && !hasError && (
-          <div className="w-full min-h-[200px] bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse" />
+          <div
+            className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse"
+          />
         )}
 
         {/* Error placeholder */}

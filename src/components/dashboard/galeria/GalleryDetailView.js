@@ -387,7 +387,8 @@ export default function GalleryDetailView({ gallery }) {
   } = gallery;
 
   // Usar localPhotos para permitir reordenar antes de guardar
-  let workingPhotos = [...localPhotos];
+  // Siempre ordenar por display_order para mantener consistencia
+  let workingPhotos = [...localPhotos].sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
 
   // Filtrar por sección seleccionada (siempre debe haber una sección seleccionada)
   if (selectedSection) {

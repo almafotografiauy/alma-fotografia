@@ -56,6 +56,13 @@ h1, h2, h3 {
   font-family: var(--font-cormorant, serif);
 }
 
+/* 📱 Fix zoom en iOS - inputs deben tener al menos 16px */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* ✨ Enlaces y botones con acento dorado */
 a, button {
   transition: all 0.2s ease;
