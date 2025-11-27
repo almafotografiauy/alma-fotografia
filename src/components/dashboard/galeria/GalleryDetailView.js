@@ -315,7 +315,6 @@ export default function GalleryDetailView({ gallery }) {
   const { showToast } = useToast();
   const [showShareModal, setShowShareModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [photosPage, setPhotosPage] = useState(0);
   const [selectionMode, setSelectionMode] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState(new Set());
@@ -357,8 +356,6 @@ export default function GalleryDetailView({ gallery }) {
       },
     })
   );
-
-  const PHOTOS_PER_PAGE = 30;
 
   const {
     id,
@@ -672,9 +669,15 @@ export default function GalleryDetailView({ gallery }) {
     // Usar arrayMove para reordenar
     const reorderedPhotos = arrayMove(workingPhotos, oldIndex, newIndex);
 
-    // Reconstruir localPhotos: mantener fotos de otras secciones + fotos reordenadas
+    // Actualizar display_order en las fotos reordenadas para mantener el orden
+    const reorderedWithOrder = reorderedPhotos.map((photo, index) => ({
+      ...photo,
+      display_order: index + 1
+    }));
+
+    // Reconstruir localPhotos: mantener fotos de otras secciones + fotos reordenadas con nuevo orden
     const photosFromOtherSections = localPhotos.filter(p => p.section_id !== selectedSection);
-    const updatedLocalPhotos = [...photosFromOtherSections, ...reorderedPhotos];
+    const updatedLocalPhotos = [...photosFromOtherSections, ...reorderedWithOrder];
 
     setLocalPhotos(updatedLocalPhotos);
   };
@@ -716,7 +719,6 @@ export default function GalleryDetailView({ gallery }) {
       showToast({ message: 'Orden guardado correctamente', type: 'success' });
 
       setReorderMode(false);
-      setPhotosPage(0); // Volver a la primera página
 
     } catch (error) {
       showToast({ message: 'Error al guardar el orden', type: 'error' });
@@ -1095,10 +1097,8 @@ export default function GalleryDetailView({ gallery }) {
     });
   };
 
-  const totalPages = Math.ceil(workingPhotos.length / PHOTOS_PER_PAGE);
-  const startIdx = photosPage * PHOTOS_PER_PAGE;
-  const endIdx = startIdx + PHOTOS_PER_PAGE;
-  const photosToShow = workingPhotos.slice(startIdx, endIdx);
+  // Sin paginado - mostrar todas las fotos con scroll (lazy loading se encarga del rendimiento)
+  const photosToShow = workingPhotos;
 
   // Si está eliminando, mostrar solo el overlay para evitar flash de 404
   if (deletingGallery) {
@@ -1665,27 +1665,6 @@ export default function GalleryDetailView({ gallery }) {
                     </>
                   )}
 
-                  {workingPhotos.length > PHOTOS_PER_PAGE && !reorderMode && (
-                    <div className="flex items-center gap-2 ml-auto flex-shrink-0">
-                      <button
-                        onClick={() => setPhotosPage(p => Math.max(0, p - 1))}
-                        disabled={photosPage === 0}
-                        className="p-2 hover:bg-gray-100 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronLeft size={18} />
-                      </button>
-                      <span className="font-fira text-xs sm:text-sm text-gray-600 px-1 whitespace-nowrap">
-                        {photosPage + 1}/{totalPages}
-                      </span>
-                      <button
-                        onClick={() => setPhotosPage(p => Math.min(totalPages - 1, p + 1))}
-                        disabled={photosPage === totalPages - 1}
-                        className="p-2 hover:bg-gray-100 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronRight size={18} />
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -1756,7 +1735,6 @@ export default function GalleryDetailView({ gallery }) {
               <div className="px-2 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 lg:py-8 max-w-full overflow-hidden">
                 <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-1.5 sm:gap-2 space-y-1.5 sm:space-y-2">
                   {photosToShow.map((photo, index) => {
-                    const photoIndex = startIdx + index;
                     const isSelected = selectedPhotos.has(photo.id);
                     const isCover = cover_image === photo.file_path;
 
@@ -1771,7 +1749,7 @@ export default function GalleryDetailView({ gallery }) {
                         <div className="relative w-full max-w-full bg-gray-200 overflow-hidden">
                           <Image
                             src={photo.file_path}
-                            alt={photo.file_name || `Foto ${photoIndex + 1}`}
+                            alt={photo.file_name || `Foto ${index + 1}`}
                             width={0}
                             height={0}
                             sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
@@ -1808,14 +1786,14 @@ export default function GalleryDetailView({ gallery }) {
                 </div>
               </div>
             ) : (
-              /* Modo normal: solo visualización con paginación */
+              /* Modo normal: visualización sin paginación (scroll infinito con lazy loading) */
               <div className="px-2 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 lg:py-8 max-w-full overflow-hidden">
                 <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-1.5 sm:gap-2 space-y-1.5 sm:space-y-2">
                   {photosToShow.map((photo, index) => (
                     <SortablePhoto
                       key={photo.id}
                       photo={photo}
-                      photoIndex={startIdx + index}
+                      photoIndex={index}
                       isCover={cover_image === photo.file_path}
                       isReorderMode={false}
                       handleSetAsCover={handleSetAsCover}
