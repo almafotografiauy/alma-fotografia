@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TestimonialForm from '@/components/public/TestimonialForm';
-import { toggleFavorite, getClientFavorites, submitFavoritesSelection, checkExistingFavoritesClient } from '@/app/actions/favorites-actions';
+import { toggleFavorite, getClientFavorites, submitFavoritesSelection, checkExistingFavoritesClient, getShareClient, registerShareClient } from '@/app/actions/favorites-actions';
 import { getGallerySections, getPhotosGroupedBySections } from '@/app/actions/photo-sections-actions';
 import { useToast } from '@/components/ui/Toast';
 
@@ -366,10 +366,28 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
     }
   }, [galleryId]);
 
-  // Cargar email y nombre del cliente desde localStorage
-  // También verificar si ya hay un cliente con favoritos en la BD
+  // Cargar cliente desde el share (BD) - prioridad sobre localStorage
+  // Esto asegura que el email sea el mismo en cualquier dispositivo/navegador
   useEffect(() => {
     const initializeClient = async () => {
+      // 1. Primero verificar si hay un cliente registrado en el share (BD)
+      if (token) {
+        const shareResult = await getShareClient(token);
+        if (shareResult.success && shareResult.client) {
+          // Cliente ya registrado en el share - usar ese email
+          setClientEmail(shareResult.client.email);
+          setClientName(shareResult.client.name);
+          // Sincronizar con localStorage
+          localStorage.setItem(`gallery_${galleryId}_email`, shareResult.client.email);
+          if (shareResult.client.name) {
+            localStorage.setItem(`gallery_${galleryId}_name`, shareResult.client.name);
+          }
+          loadFavorites(shareResult.client.email);
+          return;
+        }
+      }
+
+      // 2. Si no hay cliente en el share, verificar localStorage (fallback)
       const savedEmail = localStorage.getItem(`gallery_${galleryId}_email`);
       const savedName = localStorage.getItem(`gallery_${galleryId}_name`);
 
@@ -380,7 +398,7 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
         }
         loadFavorites(savedEmail);
       } else {
-        // No hay email guardado - verificar si ya existe un cliente en la BD
+        // 3. No hay email - verificar si ya existe un cliente con favoritos
         const result = await checkExistingFavoritesClient(galleryId);
         if (result.success && result.existingClient) {
           setExistingClient(result.existingClient);
@@ -395,7 +413,7 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
     };
 
     initializeClient();
-  }, [galleryId, loadFavorites]);
+  }, [galleryId, token, loadFavorites]);
 
   // Marcar mensaje como visto
   const handleOpenMessage = () => {
@@ -408,9 +426,30 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
   };
 
   // Guardar email, nombre y cargar favoritos
-  const handleEmailSubmit = (email, name) => {
+  // También registra el cliente en el share (BD) para persistir entre dispositivos
+  const handleEmailSubmit = async (email, name) => {
     const trimmedEmail = email.toLowerCase().trim();
     const trimmedName = name.trim();
+
+    // Registrar en el share (BD) si hay token
+    if (token) {
+      const result = await registerShareClient(token, trimmedEmail, trimmedName);
+      if (!result.success && result.error?.includes('Ya hay un cliente')) {
+        // Ya hay otro cliente registrado - cargar ese en lugar
+        const shareResult = await getShareClient(token);
+        if (shareResult.success && shareResult.client) {
+          setClientEmail(shareResult.client.email);
+          setClientName(shareResult.client.name);
+          localStorage.setItem(`gallery_${galleryId}_email`, shareResult.client.email);
+          localStorage.setItem(`gallery_${galleryId}_name`, shareResult.client.name);
+          setShowEmailPrompt(false);
+          setShowEmailTooltip(false);
+          loadFavorites(shareResult.client.email);
+          return;
+        }
+      }
+    }
+
     setClientEmail(trimmedEmail);
     setClientName(trimmedName);
     localStorage.setItem(`gallery_${galleryId}_email`, trimmedEmail);
@@ -873,6 +912,7 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
   }, []);
 
   // Sistema de descarga con PIN
+  // También registra el cliente en el share si es la primera vez
   const handleDownloadSubmit = async (e) => {
     e.preventDefault();
     setDownloadError('');
@@ -886,6 +926,19 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
     if (galleryDownloadPin && downloadPin !== galleryDownloadPin) {
       setDownloadError('PIN incorrecto. Contacta al fotógrafo si no lo tienes.');
       return;
+    }
+
+    // Si no hay clientEmail aún, usar el email de descarga y registrar
+    if (!clientEmail && downloadEmail) {
+      const trimmedEmail = downloadEmail.toLowerCase().trim();
+
+      // Registrar en el share (BD) si hay token
+      if (token) {
+        await registerShareClient(token, trimmedEmail, '');
+      }
+
+      setClientEmail(trimmedEmail);
+      localStorage.setItem(`gallery_${galleryId}_email`, trimmedEmail);
     }
 
     // PIN correcto - habilitar descargas
@@ -2046,12 +2099,18 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
                       <input
                         type="email"
                         value={downloadEmail}
-                        onChange={(e) => setDownloadEmail(e.target.value)}
+                        onChange={(e) => !clientEmail && setDownloadEmail(e.target.value)}
                         placeholder="tu@email.com"
                         required
-                        className="w-full pl-10 pr-4 py-3 border border-black/10 rounded-sm text-sm text-gray-700 placeholder:text-gray-500 focus:outline-none focus:border-black/30 transition-colors"
+                        disabled={!!clientEmail}
+                        className={`w-full pl-10 pr-4 py-3 border border-black/10 rounded-sm text-sm text-gray-700 placeholder:text-gray-500 focus:outline-none focus:border-black/30 transition-colors ${clientEmail ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                       />
                     </div>
+                    {clientEmail && (
+                      <p className="text-[10px] text-black/40 mt-1 font-light">
+                        Email vinculado a esta galería
+                      </p>
+                    )}
                   </div>
 
                   <div>

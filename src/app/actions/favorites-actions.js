@@ -352,3 +352,93 @@ export async function clearClientFavorites(galleryId, clientEmail) {
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * Obtener el cliente registrado en un share
+ *
+ * @param {string} shareToken - Token del share
+ * @returns {Promise<{success: boolean, client?: {email: string, name: string}, error?: string}>}
+ */
+export async function getShareClient(shareToken) {
+  try {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from('gallery_shares')
+      .select('client_email, client_name')
+      .eq('share_token', shareToken)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (data && data.client_email) {
+      return {
+        success: true,
+        client: {
+          email: data.client_email,
+          name: data.client_name || '',
+        },
+      };
+    }
+
+    return { success: true, client: null };
+  } catch (error) {
+    console.error('[getShareClient] Error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Registrar el cliente en un share (una sola vez)
+ * Si ya existe un cliente registrado, no se puede cambiar
+ *
+ * @param {string} shareToken - Token del share
+ * @param {string} email - Email del cliente
+ * @param {string} name - Nombre del cliente
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+export async function registerShareClient(shareToken, email, name) {
+  try {
+    const supabase = await createClient();
+    const normalizedEmail = email.toLowerCase().trim();
+    const trimmedName = name.trim();
+
+    // Primero verificar si ya hay un cliente registrado
+    const { data: existing, error: checkError } = await supabase
+      .from('gallery_shares')
+      .select('client_email')
+      .eq('share_token', shareToken)
+      .maybeSingle();
+
+    if (checkError) throw checkError;
+
+    // Si ya hay un cliente registrado, no permitir cambiar
+    if (existing?.client_email) {
+      // Si es el mismo email, OK
+      if (existing.client_email === normalizedEmail) {
+        return { success: true };
+      }
+      // Si es diferente, error
+      return {
+        success: false,
+        error: 'Ya hay un cliente registrado para esta galería',
+      };
+    }
+
+    // Registrar el cliente
+    const { error } = await supabase
+      .from('gallery_shares')
+      .update({
+        client_email: normalizedEmail,
+        client_name: trimmedName,
+      })
+      .eq('share_token', shareToken);
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error('[registerShareClient] Error:', error);
+    return { success: false, error: error.message };
+  }
+}
