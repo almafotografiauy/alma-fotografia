@@ -283,6 +283,51 @@ export async function submitFavoritesSelection(galleryId, clientEmail, clientNam
 }
 
 /**
+ * Verificar si ya existe un cliente con favoritos en esta galería
+ * Útil para evitar que se creen múltiples clientes por galería
+ *
+ * @param {string} galleryId - ID de la galería
+ * @returns {Promise<{success: boolean, existingClient?: {email: string, name: string, count: number}, error?: string}>}
+ */
+export async function checkExistingFavoritesClient(galleryId) {
+  try {
+    const supabase = await createClient();
+
+    // Buscar si hay favoritos en esta galería (de cualquier cliente)
+    const { data, error } = await supabase
+      .from('favorites')
+      .select('client_email, client_name')
+      .eq('gallery_id', galleryId)
+      .limit(1);
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      // Contar cuántos favoritos tiene ese cliente
+      const { count } = await supabase
+        .from('favorites')
+        .select('id', { count: 'exact', head: true })
+        .eq('gallery_id', galleryId)
+        .eq('client_email', data[0].client_email);
+
+      return {
+        success: true,
+        existingClient: {
+          email: data[0].client_email,
+          name: data[0].client_name || '',
+          count: count || 0,
+        },
+      };
+    }
+
+    return { success: true, existingClient: null };
+  } catch (error) {
+    console.error('[checkExistingFavoritesClient] Error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Limpiar favoritos de un cliente (reiniciar selección)
  *
  * @param {string} galleryId - ID de la galería

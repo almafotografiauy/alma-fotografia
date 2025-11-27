@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TestimonialForm from '@/components/public/TestimonialForm';
-import { toggleFavorite, getClientFavorites, submitFavoritesSelection } from '@/app/actions/favorites-actions';
+import { toggleFavorite, getClientFavorites, submitFavoritesSelection, checkExistingFavoritesClient } from '@/app/actions/favorites-actions';
 import { getGallerySections, getPhotosGroupedBySections } from '@/app/actions/photo-sections-actions';
 import { useToast } from '@/components/ui/Toast';
 
@@ -271,6 +271,7 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
   const [hasSeenMessage, setHasSeenMessage] = useState(false);
   const [showTestimonialModal, setShowTestimonialModal] = useState(false);
   const [isSelectingFavorites, setIsSelectingFavorites] = useState(false);
+  const [existingClient, setExistingClient] = useState(null); // Cliente existente con favoritos
   const [tempFavoriteIds, setTempFavoriteIds] = useState([]);
   const [sections, setSections] = useState([]);
   const [selectedSection, setSelectedSection] = useState(null); // Auto-selección de primera sección
@@ -366,23 +367,34 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
   }, [galleryId]);
 
   // Cargar email y nombre del cliente desde localStorage
+  // También verificar si ya hay un cliente con favoritos en la BD
   useEffect(() => {
-    const savedEmail = localStorage.getItem(`gallery_${galleryId}_email`);
-    const savedName = localStorage.getItem(`gallery_${galleryId}_name`);
-    if (savedEmail) {
-      setClientEmail(savedEmail);
-      if (savedName) {
-        setClientName(savedName);
-      }
-      loadFavorites(savedEmail);
-    } else {
-      setIsLoadingFavorites(false);
-    }
+    const initializeClient = async () => {
+      const savedEmail = localStorage.getItem(`gallery_${galleryId}_email`);
+      const savedName = localStorage.getItem(`gallery_${galleryId}_name`);
 
-    // Verificar si ya vio el mensaje personalizado
-    const messageSeenKey = `gallery_${galleryId}_message_seen`;
-    const messageSeen = localStorage.getItem(messageSeenKey);
-    setHasSeenMessage(messageSeen === 'true');
+      if (savedEmail) {
+        setClientEmail(savedEmail);
+        if (savedName) {
+          setClientName(savedName);
+        }
+        loadFavorites(savedEmail);
+      } else {
+        // No hay email guardado - verificar si ya existe un cliente en la BD
+        const result = await checkExistingFavoritesClient(galleryId);
+        if (result.success && result.existingClient) {
+          setExistingClient(result.existingClient);
+        }
+        setIsLoadingFavorites(false);
+      }
+
+      // Verificar si ya vio el mensaje personalizado
+      const messageSeenKey = `gallery_${galleryId}_message_seen`;
+      const messageSeen = localStorage.getItem(messageSeenKey);
+      setHasSeenMessage(messageSeen === 'true');
+    };
+
+    initializeClient();
   }, [galleryId, loadFavorites]);
 
   // Marcar mensaje como visto
@@ -1728,80 +1740,122 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
                 </h2>
               </div>
 
-              <p className="text-sm text-black/60 mb-6 font-light leading-relaxed">
-                Guarda tus fotos favoritas y vuelve a visitarlas en cualquier momento usando tu dirección de correo electrónico. Puedes compartir esta lista con tu fotógrafo, familiares y amigos.
-              </p>
-
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const name = e.target.name.value.trim();
-                  const email = e.target.email.value.trim();
-                  if (name && email) handleEmailSubmit(email, name);
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <label className="block text-xs text-black/60 mb-2 font-light">
-                    Tu nombre
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    placeholder="Tu nombre completo"
-                    required
-                    className="w-full px-4 py-3 border border-black/10 rounded-sm text-sm text-black placeholder:text-black/50 focus:outline-none focus:border-black/30 transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-black/60 mb-2 font-light">
-                    Tu correo electrónico
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="tu@email.com"
-                    required
-                    className="w-full px-4 py-3 border border-black/10 rounded-sm text-sm text-black placeholder:text-black/50 focus:outline-none focus:border-black/30 transition-colors"
-                  />
-
-                  {/* Tooltip explicativo */}
-                  <div className="mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowEmailTooltip(!showEmailTooltip)}
-                      className="text-xs text-black/40 hover:text-black/60 transition-colors underline decoration-dotted"
-                    >
-                      ¿Por qué necesitas mi correo electrónico?
-                    </button>
-
-                    <AnimatePresence>
-                      {showEmailTooltip && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="mt-2 p-3 bg-black/5 rounded-sm overflow-hidden"
-                        >
-                          <p className="text-xs text-black/60 font-light leading-relaxed">
-                            Usamos tu correo electrónico para guardar tu selección de fotos favoritas de forma segura.
-                            Esto te permite volver a verlas en cualquier momento desde cualquier dispositivo, y compartir tu selección
-                            con el fotógrafo para facilitar la edición y entrega final.
-                          </p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+              {/* Si ya hay un cliente con favoritos, mostrar opción de continuar */}
+              {existingClient ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-sm">
+                    <p className="text-sm text-amber-800 font-medium mb-1">
+                      Ya hay una selección en progreso
+                    </p>
+                    <p className="text-xs text-amber-700">
+                      {existingClient.name || existingClient.email.split('@')[0]} ya tiene {existingClient.count} foto{existingClient.count !== 1 ? 's' : ''} seleccionada{existingClient.count !== 1 ? 's' : ''}.
+                    </p>
                   </div>
-                </div>
 
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-[#79502A] hover:bg-[#8B5A2F] !text-white rounded-sm font-light text-sm tracking-wide transition-colors"
-                >
-                  Guardar y continuar
-                </button>
-              </form>
+                  <button
+                    onClick={() => {
+                      handleEmailSubmit(existingClient.email, existingClient.name || existingClient.email.split('@')[0]);
+                      setExistingClient(null);
+                    }}
+                    className="w-full py-3 bg-[#79502A] hover:bg-[#8B5A2F] text-white rounded-sm font-light text-sm tracking-wide transition-colors"
+                  >
+                    Continuar como {existingClient.name || existingClient.email.split('@')[0]}
+                  </button>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-black/10"></div>
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="px-2 bg-white text-black/40">o usar otro email</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setExistingClient(null)}
+                    className="w-full py-2 border border-black/10 hover:border-black/20 text-black/60 rounded-sm font-light text-xs tracking-wide transition-colors"
+                  >
+                    Usar un email diferente
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-black/60 mb-6 font-light leading-relaxed">
+                    Guarda tus fotos favoritas y vuelve a visitarlas en cualquier momento usando tu dirección de correo electrónico. Puedes compartir esta lista con tu fotógrafo, familiares y amigos.
+                  </p>
+
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const name = e.target.name.value.trim();
+                      const email = e.target.email.value.trim();
+                      if (name && email) handleEmailSubmit(email, name);
+                    }}
+                    className="space-y-4"
+                  >
+                    <div>
+                      <label className="block text-xs text-black/60 mb-2 font-light">
+                        Tu nombre
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        placeholder="Tu nombre completo"
+                        required
+                        className="w-full px-4 py-3 border border-black/10 rounded-sm text-sm text-black placeholder:text-black/50 focus:outline-none focus:border-black/30 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-black/60 mb-2 font-light">
+                        Tu correo electrónico
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        placeholder="tu@email.com"
+                        required
+                        className="w-full px-4 py-3 border border-black/10 rounded-sm text-sm text-black placeholder:text-black/50 focus:outline-none focus:border-black/30 transition-colors"
+                      />
+
+                      {/* Tooltip explicativo */}
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowEmailTooltip(!showEmailTooltip)}
+                          className="text-xs text-black/40 hover:text-black/60 transition-colors underline decoration-dotted"
+                        >
+                          ¿Por qué necesitas mi correo electrónico?
+                        </button>
+
+                        <AnimatePresence>
+                          {showEmailTooltip && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="mt-2 p-3 bg-black/5 rounded-sm overflow-hidden"
+                            >
+                              <p className="text-xs text-black/60 font-light leading-relaxed">
+                                Usamos tu correo electrónico para guardar tu selección de fotos favoritas de forma segura.
+                                Esto te permite volver a verlas en cualquier momento desde cualquier dispositivo, y compartir tu selección
+                                con el fotógrafo para facilitar la edición y entrega final.
+                              </p>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-3 bg-[#79502A] hover:bg-[#8B5A2F] !text-white rounded-sm font-light text-sm tracking-wide transition-colors"
+                    >
+                      Guardar y continuar
+                    </button>
+                  </form>
+                </>
+              )}
             </motion.div>
           </>
         )}
