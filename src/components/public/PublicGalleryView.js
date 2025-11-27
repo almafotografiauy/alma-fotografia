@@ -75,9 +75,9 @@ const PhotoItem = memo(({
   const optimizedUrl = getOptimizedUrl(imageUrl);
 
   return (
-    <div className="group relative">
+    <div className="group relative mb-2 break-inside-avoid">
       <div
-        className={`relative w-full bg-gray-100 overflow-hidden cursor-pointer rounded-lg ${
+        className={`relative w-full bg-gray-100 overflow-hidden cursor-pointer ${
           isSelectingFavorites && isSelected ? 'ring-4 ring-rose-500' : ''
         }`}
         onClick={() => {
@@ -209,7 +209,7 @@ const PhotoGrid = memo(({
   const PRIORITY_COUNT = 8;
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-2">
+    <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-2">
       {photos.map((photo, index) => (
         <PhotoItem
           key={photo.id}

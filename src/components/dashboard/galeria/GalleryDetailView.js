@@ -234,9 +234,9 @@ function SortablePhoto({ photo, photoIndex, isCover, isReorderMode, handleSetAsC
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative ${isDragging ? 'opacity-40 scale-105 z-50' : 'opacity-100'}`}
+      className={`group relative mb-2 break-inside-avoid ${isDragging ? 'opacity-40 scale-105 z-50' : 'opacity-100'}`}
     >
-      <div className="relative w-full bg-gray-200 overflow-hidden rounded-lg">
+      <div className="relative w-full bg-gray-200 overflow-hidden">
         <Image
           src={getThumbnailUrl(photo.file_path)}
           alt={photo.file_name || `Foto ${photoIndex + 1}`}
@@ -1739,9 +1739,9 @@ export default function GalleryDetailView({ gallery }) {
                 </DndContext>
               </div>
             ) : selectionMode ? (
-              /* Modo selección: grid 4 columnas (mismo layout que reordenar y vista pública) */
+              /* Modo selección: masonry con checkboxes */
               <div className="px-2 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 lg:py-8 max-w-full overflow-hidden">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-2">
+                <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-2">
                   {photosToShow.map((photo, index) => {
                     const isSelected = selectedPhotos.has(photo.id);
                     const isCover = cover_image === photo.file_path;
@@ -1750,11 +1750,11 @@ export default function GalleryDetailView({ gallery }) {
                       <div
                         key={photo.id}
                         onClick={() => togglePhotoSelection(photo.id)}
-                        className={`group relative max-w-full cursor-pointer transition-all hover:opacity-80 ${
+                        className={`group relative mb-2 break-inside-avoid max-w-full cursor-pointer transition-all hover:opacity-80 ${
                           isSelected ? 'ring-2 sm:ring-4 ring-[#79502A]' : ''
                         }`}
                       >
-                        <div className="relative w-full max-w-full bg-gray-200 overflow-hidden rounded-lg">
+                        <div className="relative w-full max-w-full bg-gray-200 overflow-hidden">
                           <Image
                             src={getThumbnailUrl(photo.file_path)}
                             alt={photo.file_name || `Foto ${index + 1}`}
@@ -1793,9 +1793,9 @@ export default function GalleryDetailView({ gallery }) {
                 </div>
               </div>
             ) : (
-              /* Modo normal: grid 4 columnas (mismo layout que reordenar y vista pública) */
+              /* Modo normal: masonry layout */
               <div className="px-2 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 lg:py-8 max-w-full overflow-hidden">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-2">
+                <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-2">
                   {photosToShow.map((photo, index) => (
                     <SortablePhoto
                       key={photo.id}
