@@ -255,6 +255,78 @@ export async function deleteGalleries(galleryIds) {
     }
 
     // ==========================================
+    // PASO 6.1: Eliminar favoritos y relacionados
+    // ==========================================
+    const { error: deleteFavoritesError } = await supabase
+      .from('favorites')
+      .delete()
+      .in('gallery_id', galleryIds);
+
+    if (deleteFavoritesError) {
+      console.error('Error al eliminar favoritos:', deleteFavoritesError);
+      // No crítico, continuar
+    }
+
+    const { error: deleteFavSubmissionsError } = await supabase
+      .from('favorites_submissions')
+      .delete()
+      .in('gallery_id', galleryIds);
+
+    if (deleteFavSubmissionsError) {
+      console.error('Error al eliminar submissions de favoritos:', deleteFavSubmissionsError);
+      // No crítico, continuar
+    }
+
+    const { error: deleteFavHistoryError } = await supabase
+      .from('favorites_history')
+      .delete()
+      .in('gallery_id', galleryIds);
+
+    if (deleteFavHistoryError) {
+      console.error('Error al eliminar historial de favoritos:', deleteFavHistoryError);
+      // No crítico, continuar
+    }
+
+    // ==========================================
+    // PASO 6.2: Eliminar testimonios
+    // ==========================================
+    const { error: deleteTestimonialsError } = await supabase
+      .from('testimonials')
+      .delete()
+      .in('gallery_id', galleryIds);
+
+    if (deleteTestimonialsError) {
+      console.error('Error al eliminar testimonios:', deleteTestimonialsError);
+      // No crítico, continuar
+    }
+
+    // ==========================================
+    // PASO 6.3: Eliminar secciones de fotos
+    // ==========================================
+    const { error: deleteSectionsError } = await supabase
+      .from('photo_sections')
+      .delete()
+      .in('gallery_id', galleryIds);
+
+    if (deleteSectionsError) {
+      console.error('Error al eliminar secciones:', deleteSectionsError);
+      // No crítico, continuar
+    }
+
+    // ==========================================
+    // PASO 6.4: Eliminar notificaciones relacionadas
+    // ==========================================
+    const { error: deleteNotificationsError } = await supabase
+      .from('notifications')
+      .delete()
+      .in('gallery_id', galleryIds);
+
+    if (deleteNotificationsError) {
+      console.error('Error al eliminar notificaciones:', deleteNotificationsError);
+      // No crítico, continuar
+    }
+
+    // ==========================================
     // PASO 7: Eliminar galerías de Supabase
     // ==========================================
 

@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/server';
+import { revalidatePath } from 'next/cache';
 import { notifyTestimonialReceived } from '@/lib/notifications/notification-helpers';
 
 /**
@@ -334,12 +335,35 @@ export async function deleteTestimonial(testimonialId) {
   try {
     const supabase = await createClient();
 
+    // Verificar que el testimonio existe antes de eliminar
+    const { data: existing, error: checkError } = await supabase
+      .from('testimonials')
+      .select('id')
+      .eq('id', testimonialId)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('[deleteTestimonial] Check error:', checkError);
+      throw checkError;
+    }
+
+    if (!existing) {
+      return { success: false, error: 'Testimonio no encontrado' };
+    }
+
     const { error } = await supabase
       .from('testimonials')
       .delete()
       .eq('id', testimonialId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('[deleteTestimonial] Delete error:', error);
+      throw error;
+    }
+
+    // Revalidar caché
+    revalidatePath('/dashboard/testimonios');
+    revalidatePath('/');
 
     return { success: true };
   } catch (error) {
