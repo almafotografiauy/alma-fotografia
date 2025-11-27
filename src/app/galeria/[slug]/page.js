@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import ProtectedGalleryWrapper from '@/components/public/ProtectedGalleryWrapper';
 import PublicGallerySkeleton from '@/components/public/PublicGallerySkeleton';
-import { getGalleryWithToken } from '@/lib/validations/validate-share-token';
+import { getGalleryWithToken, getPublicGallery } from '@/lib/validations/validate-share-token';
 import { createClient } from '@/lib/server';
 
 /**
@@ -29,9 +29,16 @@ export const revalidate = 300;
 /**
  * GalleryContent - Componente que carga los datos
  */
-async function GalleryContent({ slug, token, isPreview }) {
-  // ✅ Validar token y obtener galería (TODO en getGalleryWithToken)
-  const result = await getGalleryWithToken(slug, token);
+async function GalleryContent({ slug, token, isPreview, isPublicAccess }) {
+  let result;
+
+  if (isPublicAccess) {
+    // Acceso a galería pública sin token
+    result = await getPublicGallery(slug);
+  } else {
+    // Acceso con token (normal)
+    result = await getGalleryWithToken(slug, token);
+  }
 
   if (!result.success) {
     notFound();
@@ -84,15 +91,33 @@ export default async function PublicGalleryPage({ params, searchParams }) {
   const resolvedSearchParams = await searchParams;
   const token = resolvedSearchParams.token;
   const isPreview = resolvedSearchParams.preview === 'true';
+  const isPublicAccess = resolvedSearchParams.public === 'true';
 
-  // Validación básica
-  if (!token) {
+  // Si no hay token y no es acceso público, verificar si la galería es pública
+  if (!token && !isPublicAccess) {
+    // Intentar cargar como galería pública
+    const supabase = await createClient();
+    const { data: gallery } = await supabase
+      .from('galleries')
+      .select('is_public')
+      .eq('slug', slug)
+      .maybeSingle();
+
+    if (gallery?.is_public) {
+      // Redirigir a versión pública
+      return (
+        <Suspense fallback={<PublicGallerySkeleton />}>
+          <GalleryContent slug={slug} token={null} isPreview={true} isPublicAccess={true} />
+        </Suspense>
+      );
+    }
+
     return <ErrorPage message="Esta galería requiere un enlace válido para acceder." />;
   }
 
   return (
     <Suspense fallback={<PublicGallerySkeleton />}>
-      <GalleryContent slug={slug} token={token} isPreview={isPreview} />
+      <GalleryContent slug={slug} token={token} isPreview={isPreview} isPublicAccess={isPublicAccess} />
     </Suspense>
   );
 }

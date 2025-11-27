@@ -271,3 +271,72 @@ export async function deactivateExpiredLinks() {
     };
   }
 }
+
+/**
+ * Obtener galería pública por slug (sin token)
+ * Solo funciona para galerías con is_public = true
+ *
+ * @param {string} slug - Slug de la galería
+ * @returns {Promise<{success: boolean, gallery?: object, photos?: array, sections?: array, error?: string}>}
+ */
+export async function getPublicGallery(slug) {
+  try {
+    const supabase = await createClient();
+
+    // 1. Obtener galería pública
+    const { data: gallery, error: galleryError } = await supabase
+      .from('galleries')
+      .select('*')
+      .eq('slug', slug)
+      .eq('is_public', true)
+      .maybeSingle();
+
+    if (galleryError) {
+      console.error('[getPublicGallery] Gallery error:', galleryError);
+      return { success: false, error: 'Error al cargar la galería' };
+    }
+
+    if (!gallery) {
+      return { success: false, error: 'Galería no encontrada o no es pública' };
+    }
+
+    // 2. Obtener fotos
+    const { data: photos, error: photosError } = await supabase
+      .from('photos')
+      .select(`
+        *,
+        section:photo_sections(*)
+      `)
+      .eq('gallery_id', gallery.id)
+      .order('display_order', { ascending: true });
+
+    if (photosError) {
+      console.error('[getPublicGallery] Photos error:', photosError);
+    }
+
+    // 3. Obtener secciones
+    const { data: sections, error: sectionsError } = await supabase
+      .from('photo_sections')
+      .select('*')
+      .eq('gallery_id', gallery.id)
+      .order('display_order', { ascending: true });
+
+    if (sectionsError) {
+      console.error('[getPublicGallery] Sections error:', sectionsError);
+    }
+
+    return {
+      success: true,
+      gallery,
+      photos: photos || [],
+      sections: sections || []
+    };
+
+  } catch (error) {
+    console.error('[getPublicGallery] Error:', error);
+    return {
+      success: false,
+      error: error.message || 'Error al cargar la galería'
+    };
+  }
+}

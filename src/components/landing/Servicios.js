@@ -16,19 +16,9 @@ export default function Servicios({ services }) {
     if (!gallery?.id || !gallery?.slug) return;
 
     setIsLoadingGallery(true);
-    try {
-      const result = await getOrCreateLandingGalleryLink(gallery.id, gallery.slug);
-
-      if (result.success) {
-        window.open(result.url, '_blank');
-      } else {
-        window.open(`/galeria/${gallery.slug}`, '_blank');
-      }
-    } catch (error) {
-      window.open(`/galeria/${gallery.slug}`, '_blank');
-    } finally {
-      setIsLoadingGallery(false);
-    }
+    // Para galerías públicas, acceder directamente sin token
+    window.open(`/galeria/${gallery.slug}`, '_blank');
+    setIsLoadingGallery(false);
   };
 
   if (!services || services.length === 0) {

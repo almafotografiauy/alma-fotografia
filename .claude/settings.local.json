@@ -59,7 +59,8 @@
       "Bash(then echo \"MISSING: $dir/loading.js\")",
       "Bash(fi)",
       "Bash(pnpm run build)",
-      "Bash(git remote add:*)"
+      "Bash(git remote add:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []
