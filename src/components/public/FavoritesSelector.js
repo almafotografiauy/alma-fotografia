@@ -8,10 +8,17 @@ import { useToast } from '@/components/ui/Toast';
 
 /**
  * Codifica el email a hash para compartir
+ * Usa TextEncoder para compatibilidad UTF-8 con el servidor
  */
 function encodeEmailToHash(email) {
   if (typeof window === 'undefined') return '';
-  return btoa(email.toLowerCase().trim());
+  // Usar el mismo método que el servidor: convertir a UTF-8 bytes y luego a base64
+  const encoder = new TextEncoder();
+  const data = encoder.encode(email.toLowerCase().trim());
+  // Convertir Uint8Array a string binario y luego a base64
+  let binary = '';
+  data.forEach(byte => binary += String.fromCharCode(byte));
+  return btoa(binary);
 }
 
 /**
