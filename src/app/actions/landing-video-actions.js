@@ -70,6 +70,9 @@ export async function saveLandingVideo({ videoUrl, publicId, title = '', descrip
       return { success: false, error: 'No autorizado' };
     }
 
+    // Usar admin client para bypasear RLS
+    const adminSupabase = createAdminClient();
+
     // Generar URL de thumbnail
     const thumbnailUrl = cloudinary.url(publicId, {
       resource_type: 'video',
@@ -78,7 +81,7 @@ export async function saveLandingVideo({ videoUrl, publicId, title = '', descrip
     });
 
     // Obtener el orden para el nuevo video
-    const { data: lastVideo } = await supabase
+    const { data: lastVideo } = await adminSupabase
       .from('landing_videos')
       .select('display_order')
       .order('display_order', { ascending: false })
@@ -87,8 +90,8 @@ export async function saveLandingVideo({ videoUrl, publicId, title = '', descrip
 
     const newOrder = (lastVideo?.display_order || 0) + 1;
 
-    // Guardar en base de datos
-    const { data, error } = await supabase
+    // Guardar en base de datos con admin client
+    const { data, error } = await adminSupabase
       .from('landing_videos')
       .insert({
         title: title.trim() || null,
