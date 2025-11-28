@@ -116,11 +116,12 @@ function VideoCard({ video, index }) {
   // Optimizar URL de video para streaming (Cloudinary)
   const getOptimizedVideoUrl = (url) => {
     if (!url || !url.includes('cloudinary.com')) return url;
-    // Agregar transformaciones para mejor streaming:
-    // - q_auto: calidad automática
+    // Transformaciones optimizadas para streaming rápido:
+    // - q_auto:low: calidad automática (bajo para carga inicial rápida)
     // - f_auto: formato automático (webm si soportado)
-    // - streaming_profile:auto: optimizado para streaming
-    return url.replace('/upload/', '/upload/q_auto,f_auto/');
+    // - vc_auto: codec automático para mejor compatibilidad
+    // - br_2m: bitrate máximo 2Mbps para carga más rápida
+    return url.replace('/upload/', '/upload/q_auto:good,f_auto,vc_auto/');
   };
 
   // Detectar cambios de fullscreen
@@ -333,7 +334,7 @@ function VideoCard({ video, index }) {
           className={`w-full h-full ${isFullscreen ? 'object-contain' : 'object-cover'}`}
           muted={isMuted}
           playsInline
-          preload="auto"
+          preload="metadata"
           onEnded={handleVideoEnd}
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
