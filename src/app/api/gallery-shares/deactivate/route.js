@@ -93,8 +93,11 @@ export async function POST(request) {
       }
     }
 
-    // 2. Enviar notificación ANTES de eliminar (mientras todavía existe el registro)
-    const notificationResult = await notifyLinkDeactivated(shareId, user.id);
+    // 2. Enviar notificación con los datos que ya tenemos
+    const galleryId = shareData.gallery_id;
+    const galleryTitle = shareData.galleries?.title || 'Galería';
+
+    const notificationResult = await notifyLinkDeactivated(galleryId, galleryTitle, user.id);
 
     if (!notificationResult.success) {
       console.error('[deactivate] Error sending notification:', notificationResult.error);

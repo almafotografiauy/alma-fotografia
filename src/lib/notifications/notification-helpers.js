@@ -109,40 +109,28 @@ export async function notifyLinkExpired(shareId) {
 /**
  * Notificar enlace desactivado manualmente
  *
- * @param {string} shareId - ID del share desactivado
- * @param {string} userId - ID del usuario que desactivó
+ * @param {string} galleryId - ID de la galería
+ * @param {string} galleryTitle - Título de la galería
+ * @param {string} userId - ID del usuario que desactivó (no se usa, notifica al admin principal)
  */
-export async function notifyLinkDeactivated(shareId, userId) {
+export async function notifyLinkDeactivated(galleryId, galleryTitle, userId) {
   try {
     const supabase = await createClient();
-    // Usar admin client para bypasear RLS al obtener share
-    const supabaseAdmin = createAdminClient();
 
-    const { data: share, error } = await supabaseAdmin
-      .from('gallery_shares')
-      .select(`
-        id,
-        gallery_id,
-        galleries (
-          id,
-          title
-        )
-      `)
-      .eq('id', shareId)
-      .single();
-
-    if (error || !share) {
-      console.log('[notifyLinkDeactivated] Share not found:', shareId, error);
-      return { success: false, error: 'Share not found' };
+    // Obtener el admin principal para notificar
+    const admin = await getFirstAdminUser();
+    if (!admin) {
+      console.log('[notifyLinkDeactivated] No admin user found');
+      return { success: false, error: 'No admin user found' };
     }
 
-    const gallery = share.galleries;
+    const gallery = { id: galleryId, title: galleryTitle };
 
-    // Verificar preferencias
+    // Verificar preferencias del admin
     const { data: prefs } = await supabase
       .from('notification_preferences')
       .select('inapp_on_link_deactivated, email_on_link_deactivated, notification_email')
-      .eq('user_id', userId)
+      .eq('user_id', admin.id)
       .maybeSingle();
 
     let notificationResult = null;
@@ -152,11 +140,10 @@ export async function notifyLinkDeactivated(shareId, userId) {
 
     if (shouldSendInApp) {
       notificationResult = await createNotification({
-        userId,
+        userId: admin.id,
         type: 'link_deactivated',
-        message: `Desactivaste el enlace de "${gallery.title}". Los clientes ya no podrán acceder.`,
+        message: `Se desactivó el enlace de "${gallery.title}". Los clientes ya no podrán acceder.`,
         galleryId: gallery.id,
-        shareId: share.id,
         actionUrl: `/dashboard/galerias/${gallery.id}`,
       });
     }
