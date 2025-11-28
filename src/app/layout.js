@@ -39,7 +39,7 @@ export const metadata = {
     siteName: 'Alma Fotografía',
     images: [
       {
-        url: 'https://res.cloudinary.com/dav2dvukf/image/upload/b_rgb:2D2D2D,c_pad,g_center,h_630,w_1200/alma-fotografia/logo-og.png',
+        url: 'https://res.cloudinary.com/dav2dvukf/image/upload/c_scale,w_400/b_rgb:2D2D2D,c_pad,g_center,h_630,w_1200/alma-fotografia/logo-og.png',
         width: 1200,
         height: 630,
         alt: 'Alma Fotografía - Fotografía Profesional',
@@ -50,7 +50,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'Alma Fotografía | Fotografía Profesional de Eventos',
     description: 'Capturamos los momentos más especiales de tu vida. Fotografía profesional de bodas, eventos y retratos.',
-    images: ['https://res.cloudinary.com/dav2dvukf/image/upload/b_rgb:2D2D2D,c_pad,g_center,h_630,w_1200/alma-fotografia/logo-og.png'],
+    images: ['https://res.cloudinary.com/dav2dvukf/image/upload/c_scale,w_400/b_rgb:2D2D2D,c_pad,g_center,h_630,w_1200/alma-fotografia/logo-og.png'],
   },
   robots: {
     index: true,
@@ -91,7 +91,7 @@ export default function RootLayout({ children }) {
               '@context': 'https://schema.org',
               '@type': 'ProfessionalService',
               name: 'Alma Fotografía',
-              image: 'https://res.cloudinary.com/dav2dvukf/image/upload/b_rgb:2D2D2D,c_pad,g_center,h_630,w_1200/alma-fotografia/logo-og.png',
+              image: 'https://res.cloudinary.com/dav2dvukf/image/upload/c_scale,w_400/b_rgb:2D2D2D,c_pad,g_center,h_630,w_1200/alma-fotografia/logo-og.png',
               '@id': 'https://almafotografiauy.com',
               url: 'https://almafotografiauy.com',
               telephone: '+598 92021392',
