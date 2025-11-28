@@ -1,0 +1,36 @@
+# Robots.txt para Alma Fotografía
+# https://almafotografiauy.com
+
+User-agent: *
+Allow: /
+Allow: /galeria/
+
+# Bloquear rutas privadas y de administración
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /*.json$
+
+# Bloquear archivos de descarga
+Disallow: /*.zip$
+Disallow: /*.csv$
+
+# Sitemap
+Sitemap: https://almafotografiauy.com/sitemap.xml
+
+# Reglas específicas para Googlebot
+User-agent: Googlebot
+Allow: /
+Allow: /galeria/
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /api/
+
+# Reglas para Bingbot
+User-agent: Bingbot
+Allow: /
+Allow: /galeria/
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /api/

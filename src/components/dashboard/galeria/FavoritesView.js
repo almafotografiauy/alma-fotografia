@@ -675,7 +675,7 @@ function ClientFavoritesSection({
                       height={800}
                       className="w-full h-auto group-hover:opacity-95 transition-opacity"
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                      unoptimized
+                      quality={80}
                     />
 
                     {/* Overlay con botones */}
@@ -863,7 +863,7 @@ function ClientFavoritesSection({
                 width={1920}
                 height={1080}
                 className="w-full h-auto max-h-[90vh] object-contain rounded-xl"
-                unoptimized
+                quality={90}
               />
 
               <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 flex gap-1.5 sm:gap-2">

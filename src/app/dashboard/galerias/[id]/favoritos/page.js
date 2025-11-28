@@ -10,7 +10,7 @@ import FavoritesView from '@/components/dashboard/galeria/FavoritesView';
  * con la posibilidad de descargarlas individualmente o todas juntas
  */
 
-export const revalidate = 10; // Revalidar cada 10 segundos para mostrar favoritas nuevas rápidamente
+export const revalidate = 300; // Revalidar cada 5 minutos (optimización de performance)
 
 /**
  * FavoritesContent - Componente que carga los datos

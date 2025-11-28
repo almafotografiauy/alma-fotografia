@@ -103,7 +103,6 @@ const PhotoItem = memo(({
             loading={isPriority ? 'eager' : 'lazy'}
             priority={isPriority}
             quality={80}
-            unoptimized
             onLoad={() => {
               setIsLoaded(true);
             }}
@@ -1086,8 +1085,7 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
             fill
             className="object-cover"
             priority
-            quality={95}
-            unoptimized
+            quality={90}
           />
         )}
 
@@ -1603,8 +1601,7 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
                               className="w-full h-auto object-cover transition-all duration-700 group-hover:scale-105"
                               sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
                               loading="lazy"
-                              quality={90}
-                              unoptimized
+                              quality={85}
                             />
 
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
@@ -2308,8 +2305,7 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
                 className="object-contain pointer-events-none"
                 sizes="90vw"
                 priority
-                quality={95}
-                unoptimized
+                quality={90}
               />
             </motion.div>
           </motion.div>

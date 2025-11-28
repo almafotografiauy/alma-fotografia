@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -379,16 +379,17 @@ export default function GalleryDetailView({ gallery }) {
   } = gallery;
 
   // Usar localPhotos para permitir reordenar antes de guardar
-  // Siempre ordenar por display_order para mantener consistencia
-  let workingPhotos = [...localPhotos].sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+  // Memoizar para evitar re-renders innecesarios
+  const workingPhotos = useMemo(() => {
+    const sorted = [...localPhotos].sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+    if (selectedSection) {
+      return sorted.filter(photo => photo.section_id === selectedSection);
+    }
+    return [];
+  }, [localPhotos, selectedSection]);
 
-  // Filtrar por sección seleccionada (siempre debe haber una sección seleccionada)
-  if (selectedSection) {
-    workingPhotos = workingPhotos.filter(photo => photo.section_id === selectedSection);
-  } else {
-    // Si no hay sección seleccionada aún, mostrar vacío hasta que cargue
-    workingPhotos = [];
-  }
+  // Memoizar IDs para SortableContext (evita re-inicialización de drag-drop)
+  const sortableIds = useMemo(() => workingPhotos.map(p => p.id), [workingPhotos]);
 
   // Tamaño total de TODAS las fotos (no solo la sección seleccionada)
   const photosSize = localPhotos?.reduce((sum, photo) => sum + (photo.file_size || 0), 0) || 0;
@@ -1694,7 +1695,7 @@ export default function GalleryDetailView({ gallery }) {
                   onDragCancel={handleDragCancel}
                 >
                   <SortableContext
-                    items={workingPhotos.map(p => p.id)}
+                    items={sortableIds}
                     strategy={rectSortingStrategy}
                   >
                     {/* Masonry layout igual que vista normal */}
@@ -1728,7 +1729,7 @@ export default function GalleryDetailView({ gallery }) {
                           width={150}
                           height={150}
                           className="w-24 h-24 sm:w-28 sm:h-28 object-cover"
-                          unoptimized={true}
+                          quality={75}
                         />
                       </div>
                     ) : null}
