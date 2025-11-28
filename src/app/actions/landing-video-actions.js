@@ -11,6 +11,107 @@ cloudinary.config({
 });
 
 /**
+ * Generar firma para upload directo desde el cliente
+ */
+export async function getCloudinarySignature() {
+  try {
+    const supabase = await createClient();
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return { success: false, error: 'No autorizado' };
+    }
+
+    // Verificar cantidad de videos (máximo 2)
+    const { data: existingVideos } = await supabase
+      .from('landing_videos')
+      .select('id')
+      .limit(3);
+
+    if (existingVideos && existingVideos.length >= 2) {
+      return { success: false, error: 'Ya tienes 2 videos. Elimina uno para subir otro.' };
+    }
+
+    const timestamp = Math.round(new Date().getTime() / 1000);
+    const folder = 'alma-fotografia/landing-videos';
+
+    // Generar firma para upload seguro
+    const signature = cloudinary.utils.api_sign_request(
+      {
+        timestamp,
+        folder,
+      },
+      process.env.CLOUDINARY_API_SECRET
+    );
+
+    return {
+      success: true,
+      signature,
+      timestamp,
+      folder,
+      cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY,
+    };
+  } catch (error) {
+    console.error('[getCloudinarySignature] Error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Guardar video en BD después de subirlo a Cloudinary desde el cliente
+ */
+export async function saveLandingVideo({ videoUrl, publicId, title = '', description = '' }) {
+  try {
+    const supabase = await createClient();
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return { success: false, error: 'No autorizado' };
+    }
+
+    // Generar URL de thumbnail
+    const thumbnailUrl = cloudinary.url(publicId, {
+      resource_type: 'video',
+      format: 'jpg',
+      transformation: [{ width: 640, crop: 'scale' }]
+    });
+
+    // Obtener el orden para el nuevo video
+    const { data: lastVideo } = await supabase
+      .from('landing_videos')
+      .select('display_order')
+      .order('display_order', { ascending: false })
+      .limit(1)
+      .single();
+
+    const newOrder = (lastVideo?.display_order || 0) + 1;
+
+    // Guardar en base de datos
+    const { data, error } = await supabase
+      .from('landing_videos')
+      .insert({
+        title: title.trim() || null,
+        description: description.trim() || null,
+        video_url: videoUrl,
+        thumbnail_url: thumbnailUrl,
+        cloudinary_public_id: publicId,
+        display_order: newOrder,
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { success: true, video: data };
+  } catch (error) {
+    console.error('[saveLandingVideo] Error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Obtener todos los videos de la landing (para admin)
  */
 export async function getLandingVideos() {

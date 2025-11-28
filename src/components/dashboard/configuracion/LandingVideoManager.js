@@ -17,7 +17,8 @@ import {
   Check
 } from 'lucide-react';
 import {
-  uploadLandingVideo,
+  getCloudinarySignature,
+  saveLandingVideo,
   updateLandingVideo,
   deleteLandingVideo
 } from '@/app/actions/landing-video-actions';
@@ -69,31 +70,73 @@ export default function LandingVideoManager({ initialVideos = [] }) {
     }
 
     setUploading(true);
-    setUploadProgress(10);
+    setUploadProgress(5);
 
     try {
+      // Obtener firma para upload directo
+      const signatureResult = await getCloudinarySignature();
+      if (!signatureResult.success) {
+        showMessage('error', signatureResult.error || 'Error al preparar subida');
+        return;
+      }
+
+      setUploadProgress(10);
+
+      const { signature, timestamp, folder, cloudName, apiKey } = signatureResult;
+
+      // Subir directamente a Cloudinary desde el cliente
       const formData = new FormData();
-      formData.append('video', file);
-      formData.append('title', '');
-      formData.append('description', '');
+      formData.append('file', file);
+      formData.append('api_key', apiKey);
+      formData.append('timestamp', timestamp);
+      formData.append('signature', signature);
+      formData.append('folder', folder);
 
-      // Simular progreso mientras sube
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90));
-      }, 500);
+      const xhr = new XMLHttpRequest();
 
-      const result = await uploadLandingVideo(formData);
+      // Monitorear progreso real de subida
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 80) + 10;
+          setUploadProgress(percent);
+        }
+      });
 
-      clearInterval(progressInterval);
+      const uploadPromise = new Promise((resolve, reject) => {
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            resolve(JSON.parse(xhr.responseText));
+          } else {
+            reject(new Error(`Upload failed: ${xhr.status}`));
+          }
+        };
+        xhr.onerror = () => reject(new Error('Network error'));
+      });
+
+      xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`);
+      xhr.send(formData);
+
+      const cloudinaryResult = await uploadPromise;
+      setUploadProgress(95);
+
+      // Guardar en base de datos
+      const saveResult = await saveLandingVideo({
+        videoUrl: cloudinaryResult.secure_url,
+        publicId: cloudinaryResult.public_id,
+        title: '',
+        description: ''
+      });
+
       setUploadProgress(100);
 
-      if (result.success) {
-        setVideos(prev => [...prev, result.video]);
+      if (saveResult.success) {
+        setVideos(prev => [...prev, saveResult.video]);
         showMessage('success', 'Video subido correctamente');
       } else {
-        showMessage('error', result.error || 'Error al subir el video');
+        showMessage('error', saveResult.error || 'Error al guardar el video');
       }
     } catch (error) {
+      console.error('Upload error:', error);
       showMessage('error', 'Error al subir el video');
     } finally {
       setUploading(false);
