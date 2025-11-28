@@ -34,9 +34,8 @@ export async function POST(request) {
     // 1. Obtener datos del enlace antes de eliminarlo (para la notificación)
     const { data: shareData, error: fetchError } = await supabase
       .from('gallery_shares')
-      .select('*')
+      .select('*, galleries!inner(user_id)')
       .eq('id', shareId)
-      .eq('created_by', user.id) // Seguridad: solo el dueño puede eliminar
       .single();
 
     if (fetchError || !shareData) {
@@ -44,6 +43,17 @@ export async function POST(request) {
       return NextResponse.json(
         { success: false, error: 'Enlace no encontrado' },
         { status: 404 }
+      );
+    }
+
+    // Verificar que el usuario sea el dueño del share O el dueño de la galería
+    const isShareOwner = shareData.created_by === user.id;
+    const isGalleryOwner = shareData.galleries?.user_id === user.id;
+
+    if (!isShareOwner && !isGalleryOwner) {
+      return NextResponse.json(
+        { success: false, error: 'No tenés permiso para eliminar este enlace' },
+        { status: 403 }
       );
     }
 
@@ -56,11 +66,11 @@ export async function POST(request) {
     }
 
     // 3. ELIMINAR el enlace de la base de datos
+    // Ya verificamos permisos arriba, podemos eliminar directamente
     const { error: deleteError } = await supabase
       .from('gallery_shares')
       .delete()
-      .eq('id', shareId)
-      .eq('created_by', user.id); // Seguridad: solo el dueño puede eliminar
+      .eq('id', shareId);
 
     if (deleteError) {
       console.error('[deactivate] Error deleting share:', deleteError);

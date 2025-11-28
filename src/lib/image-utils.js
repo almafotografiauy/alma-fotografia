@@ -43,13 +43,13 @@ export function getOptimizedImageUrl(url, options = {}) {
 }
 
 /**
- * Obtiene URL optimizada para thumbnail de galería (muy pequeño, carga rápida)
- * Reduce una imagen de 5MB a ~20-50KB
+ * Obtiene URL optimizada para thumbnail de galería
+ * Buena calidad visual, tamaño reducido para carga rápida
  */
 export function getThumbnailUrl(url) {
   return getOptimizedImageUrl(url, {
-    width: 400,
-    quality: 'auto:low',
+    width: 600,
+    quality: 'auto:good',
     format: 'auto'
   });
 }
