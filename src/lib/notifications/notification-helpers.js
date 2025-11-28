@@ -11,22 +11,25 @@ import { getEmailTemplate } from '@/lib/email/email-templates';
  */
 
 /**
- * Helper: Obtener todos los usuarios admin activos
- * Para enviar notificaciones a todos los admins
+ * Helper: Obtener el primer usuario admin activo
+ * Para enviar notificaciones a UN solo admin (evitar duplicados)
  */
-async function getAllAdminUsers() {
+async function getFirstAdminUser() {
   const supabase = await createClient();
 
-  const { data: profiles, error } = await supabase
+  const { data: profile, error } = await supabase
     .from('user_profiles')
     .select('id, email, username')
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .single();
 
-  if (error || !profiles) {
-    return [];
+  if (error || !profile) {
+    return null;
   }
 
-  return profiles;
+  return profile;
 }
 
 /**
@@ -414,7 +417,7 @@ export async function cleanupOldNotifications() {
 
 /**
  * Notificar cuando un cliente ve una galería
- * ENVÍA A TODOS LOS USUARIOS ADMIN ACTIVOS
+ * ENVÍA A UN SOLO USUARIO ADMIN (el primero creado)
  *
  * @param {string} galleryId - ID de la galería vista
  * @param {string} clientInfo - Info del cliente (IP, navegador, etc.) - opcional
@@ -434,10 +437,10 @@ export async function notifyGalleryView(galleryId, clientInfo = null, isFavorite
       return { success: false, error: 'Gallery not found' };
     }
 
-    // Obtener TODOS los usuarios admin activos
-    const adminUsers = await getAllAdminUsers();
-    if (adminUsers.length === 0) {
-      return { success: false, error: 'No admin users found' };
+    // Obtener UN solo usuario admin
+    const admin = await getFirstAdminUser();
+    if (!admin) {
+      return { success: false, error: 'No admin user found' };
     }
 
     const clientName = gallery.client_email ? gallery.client_email.split('@')[0] : 'Un cliente';
@@ -450,50 +453,50 @@ export async function notifyGalleryView(galleryId, clientInfo = null, isFavorite
     // Tipo de notificación diferente
     const notificationType = isFavoritesView ? 'favorites_gallery_view' : 'gallery_view';
 
-    let notifiedCount = 0;
+    // Verificar preferencias del admin
+    const { data: prefs } = await supabase
+      .from('notification_preferences')
+      .select('inapp_on_gallery_view, email_on_gallery_view, notification_email')
+      .eq('user_id', admin.id)
+      .maybeSingle();
 
-    // Notificar a CADA admin
-    for (const admin of adminUsers) {
-      // Verificar preferencias de este admin
-      const { data: prefs } = await supabase
-        .from('notification_preferences')
-        .select('inapp_on_gallery_view, email_on_gallery_view, notification_email')
-        .eq('user_id', admin.id)
-        .maybeSingle();
+    let notificationResult = null;
 
-      // Crear notificación in-app solo si está habilitada
-      if (prefs && prefs.inapp_on_gallery_view) {
-        await createNotification({
-          userId: admin.id,
-          type: notificationType,
-          message,
-          galleryId: gallery.id,
-          actionUrl: isFavoritesView
-            ? `/dashboard/galerias/${gallery.id}/favoritos`
-            : `/dashboard/galerias/${gallery.id}`,
+    // Crear notificación in-app (default: habilitado)
+    const shouldSendInApp = !prefs || prefs.inapp_on_gallery_view !== false;
+
+    if (shouldSendInApp) {
+      notificationResult = await createNotification({
+        userId: admin.id,
+        type: notificationType,
+        message,
+        galleryId: gallery.id,
+        actionUrl: isFavoritesView
+          ? `/dashboard/galerias/${gallery.id}/favoritos`
+          : `/dashboard/galerias/${gallery.id}`,
+      });
+    }
+
+    // Enviar email si está configurado
+    const shouldSendEmail = prefs && prefs.notification_email && prefs.email_on_gallery_view !== false;
+
+    if (shouldSendEmail) {
+      const emailTemplate = getEmailTemplate('gallery_view', {
+        galleryTitle: gallery.title,
+        galleryUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard/galerias/${gallery.id}`,
+        clientName,
+      });
+
+      if (emailTemplate) {
+        await sendEmail({
+          to: prefs.notification_email,
+          subject: emailTemplate.subject,
+          html: emailTemplate.html,
         });
-        notifiedCount++;
-      }
-
-      // Enviar email si está configurado
-      if (prefs && prefs.email_on_gallery_view && prefs.notification_email) {
-        const emailTemplate = getEmailTemplate('gallery_view', {
-          galleryTitle: gallery.title,
-          galleryUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard/galerias/${gallery.id}`,
-          clientName,
-        });
-
-        if (emailTemplate) {
-          await sendEmail({
-            to: prefs.notification_email,
-            subject: emailTemplate.subject,
-            html: emailTemplate.html,
-          });
-        }
       }
     }
 
-    return { success: true, notifiedCount };
+    return notificationResult || { success: true };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -588,7 +591,7 @@ export async function notifyFavoritesSelected(galleryId, favoritesCount, clientE
 /**
  * Notificar cuando un cliente envía su selección de favoritas
  * Detecta automáticamente si es primera vez o edición
- * ENVÍA A TODOS LOS USUARIOS ADMIN ACTIVOS
+ * ENVÍA A UN SOLO USUARIO ADMIN (el primero creado)
  *
  * @param {string} galleryId - ID de la galería
  * @param {string} clientEmail - Email del cliente
@@ -624,10 +627,10 @@ export async function notifyFavoritesSubmitted(
       return { success: true, skipped: 'Gallery notifications disabled' };
     }
 
-    // Obtener TODOS los usuarios admin activos
-    const adminUsers = await getAllAdminUsers();
-    if (adminUsers.length === 0) {
-      return { success: false, error: 'No admin users found' };
+    // Obtener UN solo usuario admin
+    const admin = await getFirstAdminUser();
+    if (!admin) {
+      return { success: false, error: 'No admin user found' };
     }
 
     const displayName = clientName || (clientEmail ? clientEmail.split('@')[0] : 'Un cliente');
@@ -657,52 +660,52 @@ export async function notifyFavoritesSubmitted(
       notifType = 'favorites_edited';
     }
 
-    let notifiedCount = 0;
+    // Verificar preferencias del admin
+    const { data: prefs } = await supabase
+      .from('notification_preferences')
+      .select('inapp_on_favorites, email_on_favorites, notification_email')
+      .eq('user_id', admin.id)
+      .maybeSingle();
 
-    // Notificar a CADA admin
-    for (const admin of adminUsers) {
-      // Verificar preferencias de este admin
-      const { data: prefs } = await supabase
-        .from('notification_preferences')
-        .select('inapp_on_favorites, email_on_favorites, notification_email')
-        .eq('user_id', admin.id)
-        .maybeSingle();
+    let notificationResult = null;
 
-      // Crear notificación in-app solo si está habilitada
-      if (prefs && prefs.inapp_on_favorites) {
-        await createNotification({
-          userId: admin.id,
-          type: notifType,
-          message,
-          galleryId: gallery.id,
-          actionUrl: `/dashboard/galerias/${gallery.id}/favoritos`,
+    // Crear notificación in-app (default: habilitado)
+    const shouldSendInApp = !prefs || prefs.inapp_on_favorites !== false;
+
+    if (shouldSendInApp) {
+      notificationResult = await createNotification({
+        userId: admin.id,
+        type: notifType,
+        message,
+        galleryId: gallery.id,
+        actionUrl: `/dashboard/galerias/${gallery.id}/favoritos`,
+      });
+    }
+
+    // Enviar email si está configurado
+    const shouldSendEmail = prefs && prefs.notification_email && prefs.email_on_favorites !== false;
+
+    if (shouldSendEmail) {
+      const emailTemplate = getEmailTemplate(notifType, {
+        galleryTitle: gallery.title,
+        galleryUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard/galerias/${gallery.id}/favoritos`,
+        clientName: displayName,
+        totalCount,
+        isFirstSubmission,
+        addedCount,
+        removedCount,
+      });
+
+      if (emailTemplate) {
+        await sendEmail({
+          to: prefs.notification_email,
+          subject: emailTemplate.subject,
+          html: emailTemplate.html,
         });
-        notifiedCount++;
-      }
-
-      // Enviar email si está configurado
-      if (prefs && prefs.email_on_favorites && prefs.notification_email) {
-        const emailTemplate = getEmailTemplate(notifType, {
-          galleryTitle: gallery.title,
-          galleryUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard/galerias/${gallery.id}/favoritos`,
-          clientName: displayName,
-          totalCount,
-          isFirstSubmission,
-          addedCount,
-          removedCount,
-        });
-
-        if (emailTemplate) {
-          await sendEmail({
-            to: prefs.notification_email,
-            subject: emailTemplate.subject,
-            html: emailTemplate.html,
-          });
-        }
       }
     }
 
-    return { success: true, notifiedCount };
+    return notificationResult || { success: true };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -956,7 +959,7 @@ export async function notifyGalleryCreated(galleryId) {
 
 /**
  * Notificar cuando un cliente deja un testimonio
- * ENVÍA A TODOS LOS USUARIOS ADMIN ACTIVOS
+ * ENVÍA A UN SOLO USUARIO ADMIN (el primero creado)
  *
  * @param {string} testimonialId - ID del testimonio creado
  */
@@ -989,59 +992,59 @@ export async function notifyTestimonialReceived(testimonialId) {
 
     const gallery = testimonial.galleries;
 
-    // Obtener TODOS los usuarios admin activos
-    const adminUsers = await getAllAdminUsers();
-    if (adminUsers.length === 0) {
-      return { success: false, error: 'No admin users found' };
+    // Obtener UN solo usuario admin
+    const admin = await getFirstAdminUser();
+    if (!admin) {
+      return { success: false, error: 'No admin user found' };
     }
 
     const stars = testimonial.rating ? `⭐ ${testimonial.rating}/5` : '';
     const message = `${testimonial.client_name} dejó un testimonio en "${gallery.title}" ${stars}`;
 
-    let notifiedCount = 0;
+    // Verificar preferencias del admin
+    const { data: prefs } = await supabase
+      .from('notification_preferences')
+      .select('inapp_on_testimonial, email_on_testimonial, notification_email')
+      .eq('user_id', admin.id)
+      .maybeSingle();
 
-    // Notificar a CADA admin
-    for (const admin of adminUsers) {
-      // Verificar preferencias de este admin
-      const { data: prefs } = await supabase
-        .from('notification_preferences')
-        .select('inapp_on_testimonial, email_on_testimonial, notification_email')
-        .eq('user_id', admin.id)
-        .maybeSingle();
+    let notificationResult = null;
 
-      // Crear notificación in-app solo si está habilitada (default true)
-      if (!prefs || prefs.inapp_on_testimonial !== false) {
-        await createNotification({
-          userId: admin.id,
-          type: 'testimonial_received',
-          message,
-          galleryId: gallery.id,
-          actionUrl: `/dashboard/testimonios`,
+    // Crear notificación in-app (default: habilitado)
+    const shouldSendInApp = !prefs || prefs.inapp_on_testimonial !== false;
+
+    if (shouldSendInApp) {
+      notificationResult = await createNotification({
+        userId: admin.id,
+        type: 'testimonial_received',
+        message,
+        galleryId: gallery.id,
+        actionUrl: `/dashboard/testimonios`,
+      });
+    }
+
+    // Enviar email si está configurado
+    const shouldSendEmail = prefs && prefs.notification_email && prefs.email_on_testimonial !== false;
+
+    if (shouldSendEmail) {
+      const emailTemplate = getEmailTemplate('testimonial_received', {
+        galleryTitle: gallery.title,
+        clientName: testimonial.client_name,
+        rating: testimonial.rating,
+        message: testimonial.message,
+        testimonialUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard/testimonios`,
+      });
+
+      if (emailTemplate) {
+        await sendEmail({
+          to: prefs.notification_email,
+          subject: emailTemplate.subject,
+          html: emailTemplate.html,
         });
-        notifiedCount++;
-      }
-
-      // Enviar email si está configurado
-      if (prefs && prefs.email_on_testimonial !== false && prefs.notification_email) {
-        const emailTemplate = getEmailTemplate('testimonial_received', {
-          galleryTitle: gallery.title,
-          clientName: testimonial.client_name,
-          rating: testimonial.rating,
-          message: testimonial.message,
-          testimonialUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard/testimonios`,
-        });
-
-        if (emailTemplate) {
-          await sendEmail({
-            to: prefs.notification_email,
-            subject: emailTemplate.subject,
-            html: emailTemplate.html,
-          });
-        }
       }
     }
 
-    return { success: true, notifiedCount };
+    return notificationResult || { success: true };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -1053,7 +1056,7 @@ export async function notifyTestimonialReceived(testimonialId) {
 
 /**
  * Notificar cuando llega una nueva reserva pública pendiente
- * ENVÍA A TODOS LOS USUARIOS ADMIN ACTIVOS
+ * ENVÍA A UN SOLO USUARIO ADMIN (el primero creado)
  *
  * @param {string} bookingId - ID de la reserva creada
  */
@@ -1080,10 +1083,10 @@ export async function notifyNewPublicBooking(bookingId) {
       return { success: false, error: 'Booking not found' };
     }
 
-    // Obtener TODOS los usuarios admin activos
-    const adminUsers = await getAllAdminUsers();
-    if (adminUsers.length === 0) {
-      return { success: false, error: 'No admin users found' };
+    // Obtener UN solo usuario admin
+    const admin = await getFirstAdminUser();
+    if (!admin) {
+      return { success: false, error: 'No admin user found' };
     }
 
     const bookingTypeName = booking.booking_type?.name || 'Reunión';
@@ -1094,51 +1097,51 @@ export async function notifyNewPublicBooking(bookingId) {
     });
     const message = `Nueva reserva de ${bookingTypeName}: ${booking.client_name} para el ${formattedDate} a las ${booking.start_time.substring(0, 5)}`;
 
-    let notifiedCount = 0;
+    // Verificar preferencias del admin
+    const { data: prefs } = await supabase
+      .from('notification_preferences')
+      .select('inapp_on_booking_pending, email_on_booking_pending, notification_email')
+      .eq('user_id', admin.id)
+      .maybeSingle();
 
-    // Notificar a CADA admin
-    for (const admin of adminUsers) {
-      // Verificar preferencias de este admin
-      const { data: prefs } = await supabase
-        .from('notification_preferences')
-        .select('inapp_on_booking_pending, email_on_booking_pending, notification_email')
-        .eq('user_id', admin.id)
-        .maybeSingle();
+    let notificationResult = null;
 
-      // Crear notificación in-app
-      if (!prefs || prefs.inapp_on_booking_pending !== false) {
-        await createNotification({
-          userId: admin.id,
-          type: 'booking_pending',
-          message,
-          actionUrl: '/dashboard/agenda',
+    // Crear notificación in-app (default: habilitado)
+    const shouldSendInApp = !prefs || prefs.inapp_on_booking_pending !== false;
+
+    if (shouldSendInApp) {
+      notificationResult = await createNotification({
+        userId: admin.id,
+        type: 'booking_pending',
+        message,
+        actionUrl: '/dashboard/agenda',
+      });
+    }
+
+    // Enviar email si está configurado
+    const shouldSendEmail = prefs && prefs.notification_email && prefs.email_on_booking_pending !== false;
+
+    if (shouldSendEmail) {
+      const emailTemplate = getEmailTemplate('booking_pending', {
+        bookingType: bookingTypeName,
+        clientName: booking.client_name,
+        clientEmail: booking.client_email,
+        bookingDate: formattedDate,
+        startTime: booking.start_time.substring(0, 5),
+        endTime: booking.end_time.substring(0, 5),
+        agendaUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard/agenda`,
+      });
+
+      if (emailTemplate) {
+        await sendEmail({
+          to: prefs.notification_email,
+          subject: emailTemplate.subject,
+          html: emailTemplate.html,
         });
-        notifiedCount++;
-      }
-
-      // Enviar email
-      if (prefs && prefs.email_on_booking_pending !== false && prefs.notification_email) {
-        const emailTemplate = getEmailTemplate('booking_pending', {
-          bookingType: bookingTypeName,
-          clientName: booking.client_name,
-          clientEmail: booking.client_email,
-          bookingDate: formattedDate,
-          startTime: booking.start_time.substring(0, 5),
-          endTime: booking.end_time.substring(0, 5),
-          agendaUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard/agenda`,
-        });
-
-        if (emailTemplate) {
-          await sendEmail({
-            to: prefs.notification_email,
-            subject: emailTemplate.subject,
-            html: emailTemplate.html,
-          });
-        }
       }
     }
 
-    return { success: true, notifiedCount };
+    return notificationResult || { success: true };
   } catch (error) {
     return { success: false, error: error.message };
   }
