@@ -241,7 +241,7 @@ export default function EditGalleryModal({ gallery, hasActiveLink, onClose, onSu
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ duration: 0.2, type: "spring", damping: 25, stiffness: 300 }}
-        className="fixed min-h-[90vh] inset-2 sm:inset-4 md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-3xl w-auto bg-white rounded-lg sm:rounded-xl shadow-2xl z-50 flex flex-col max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)] md:max-h-[85vh]">
+        className="fixed inset-x-2 top-2 bottom-20 sm:inset-4 sm:bottom-4 md:left-1/2 md:top-1/2 md:bottom-auto md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-3xl w-auto bg-white rounded-lg sm:rounded-xl shadow-2xl z-50 flex flex-col md:max-h-[85vh]">
         
         {/* Header */}
         <div className="flex items-center justify-between p-3 sm:p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
