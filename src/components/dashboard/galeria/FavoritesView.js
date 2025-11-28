@@ -39,6 +39,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { updateAllowShareFavorites } from '@/app/actions/gallery-actions';
+import { getThumbnailUrl } from '@/lib/image-utils';
 
 /**
  * ClientFavoritesSection - Sección de favoritas de un cliente
@@ -669,13 +670,13 @@ function ClientFavoritesSection({
                     }`}
                   >
                     <Image
-                      src={photoUrl}
+                      src={getThumbnailUrl(photoUrl)}
                       alt={photo.file_name || 'Foto favorita'}
-                      width={800}
-                      height={800}
+                      width={400}
+                      height={400}
                       className="w-full h-auto group-hover:opacity-95 transition-opacity"
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                      quality={80}
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+                      loading="lazy"
                     />
 
                     {/* Overlay con botones */}
