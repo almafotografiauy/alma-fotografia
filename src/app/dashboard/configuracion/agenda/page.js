@@ -854,9 +854,9 @@ function EditBookingTypeModal({ bookingType, onClose, onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (durationMinutes < 15 || durationMinutes > 480) {
+    if (durationMinutes < 5 || durationMinutes > 480) {
       showToast({
-        message: 'La duración debe estar entre 15 y 480 minutos (8 horas)',
+        message: 'La duración debe estar entre 5 y 480 minutos (8 horas)',
         type: 'error',
       });
       return;
@@ -905,15 +905,15 @@ function EditBookingTypeModal({ bookingType, onClose, onSuccess }) {
             <input
               type="number"
               required
-              min="15"
+              min="5"
               max="480"
-              step="15"
+              step="5"
               value={durationMinutes}
               onChange={(e) => setDurationMinutes(e.target.value)}
               className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-lg font-fira text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C]"
             />
             <p className="mt-1 font-fira text-[10px] xs:text-xs text-gray-500 leading-relaxed">
-              Mínimo: 15 min • Máximo: 480 min (8 horas) • Incrementos de 15 min
+              Mínimo: 5 min • Máximo: 480 min (8 horas) • Incrementos de 5 min
             </p>
           </div>
 

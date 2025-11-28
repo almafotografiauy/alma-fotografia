@@ -323,13 +323,17 @@ export async function deleteLandingVideo(videoId) {
     // Eliminar de Cloudinary
     if (video?.cloudinary_public_id) {
       try {
-        await cloudinary.uploader.destroy(video.cloudinary_public_id, {
+        console.log('[deleteLandingVideo] Eliminando de Cloudinary:', video.cloudinary_public_id);
+        const cloudinaryResult = await cloudinary.uploader.destroy(video.cloudinary_public_id, {
           resource_type: 'video'
         });
+        console.log('[deleteLandingVideo] Cloudinary result:', cloudinaryResult);
       } catch (cloudinaryError) {
         console.error('[deleteLandingVideo] Cloudinary error:', cloudinaryError);
         // Continuar con la eliminación de la BD aunque falle Cloudinary
       }
+    } else {
+      console.warn('[deleteLandingVideo] Video sin cloudinary_public_id:', videoId);
     }
 
     // Eliminar de base de datos con admin client
