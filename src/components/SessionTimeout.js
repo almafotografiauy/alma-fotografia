@@ -4,8 +4,8 @@ import { useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
-// Tiempo de inactividad en milisegundos (30 minutos)
-const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
+// Tiempo de inactividad en milisegundos (20 minutos)
+const INACTIVITY_TIMEOUT = 20 * 60 * 1000;
 
 // Eventos que resetean el contador de inactividad
 const ACTIVITY_EVENTS = [

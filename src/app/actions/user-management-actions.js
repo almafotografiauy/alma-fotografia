@@ -214,9 +214,32 @@ export async function updateUser({ userId, full_name, username, permissions }) {
   try {
     const cookieStore = await cookies();
 
+    // Cliente normal para verificar autenticación
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // Handle error if needed
+            }
+          },
+        },
+      }
+    );
+
+    // Cliente admin para operaciones privilegiadas (bypasea RLS)
+    const supabaseAdmin = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
       {
         cookies: {
           getAll() {
@@ -252,19 +275,29 @@ export async function updateUser({ userId, full_name, username, permissions }) {
       return { success: false, error: 'No autorizado' };
     }
 
-    // Actualizar perfil
-    const { error } = await supabase
+    // Asegurar que permissions sea un objeto válido
+    const permissionsToSave = permissions || {};
+
+    console.log('📝 Actualizando usuario:', userId);
+    console.log('📝 Permisos a guardar:', JSON.stringify(permissionsToSave));
+
+    // Actualizar perfil usando cliente ADMIN para bypasear RLS
+    const { data: updatedData, error } = await supabaseAdmin
       .from('user_profiles')
       .update({
         full_name: full_name?.trim() || null,
         username: username?.trim() || null,
-        permissions
+        permissions: permissionsToSave
       })
-      .eq('id', userId);
+      .eq('id', userId)
+      .select();
 
     if (error) {
+      console.error('❌ Error actualizando usuario:', error);
       return { success: false, error: error.message };
     }
+
+    console.log('✅ Usuario actualizado:', JSON.stringify(updatedData));
 
     revalidatePath('/dashboard/configuracion/usuarios');
 
