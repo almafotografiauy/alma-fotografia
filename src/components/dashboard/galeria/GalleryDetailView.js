@@ -61,6 +61,7 @@ import { deleteCloudinaryImage, deleteGalleries, updateAllowShareFavorites } fro
 import { assignPhotosToSection } from '@/app/actions/photo-sections-actions';
 import { useToast } from '@/components/ui/Toast';
 import GalleryStorageSize from './GalleryStorageSize';
+import { formatDateWithoutTimezone } from '@/lib/date-utils';
 
 // Componente SortableSectionHeader para drag & drop de secciones (OLD - sin fotos)
 function SortableSectionHeader({ section }) {
@@ -418,7 +419,7 @@ export default function GalleryDetailView({ gallery }) {
   const totalSizeMB = (totalSize / 1024 / 1024).toFixed(1);
 
   const formattedEventDate = event_date
-    ? new Date(event_date).toLocaleDateString('es-ES', {
+    ? formatDateWithoutTimezone(event_date, {
       day: 'numeric',
       month: 'short',
       year: 'numeric',

@@ -338,7 +338,7 @@ export default function CreateGalleryForm() {
                 title: data.title.trim(),
                 slug: data.slug.trim(),
                 description: data.description?.trim() || null,
-                event_date: data.eventDate || null,
+                event_date: data.eventDate?.trim() || null,
                 cover_image: uploadedCoverUrl,
                 is_public: data.isPublic,
                 created_by: user.id,

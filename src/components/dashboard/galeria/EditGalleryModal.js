@@ -175,7 +175,7 @@ export default function EditGalleryModal({ gallery, hasActiveLink, onClose, onSu
       const updateData = {
         title: formData.title?.trim() || '',
         description: formData.description?.trim() || null,
-        event_date: formData.event_date || null,
+        event_date: formData.event_date?.trim() || null,
         client_email: formData.client_email?.trim() || null,
         service_type: formData.service_type || null,
         is_public: formData.is_public,

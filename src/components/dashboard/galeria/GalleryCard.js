@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import ShareGalleryModal from './ShareGalleryModal';
 import { iconMap } from '@/lib/validations/gallery';
+import { formatDateWithoutTimezone } from '@/lib/date-utils';
 
 /**
  * GalleryCard v3 - Con selección múltiple
@@ -40,7 +41,7 @@ export default function GalleryCard({ gallery, serviceTypes, selectionMode, isSe
   } = gallery;
 
   const formattedDate = event_date
-    ? new Date(event_date).toLocaleDateString('es-ES', {
+    ? formatDateWithoutTimezone(event_date, {
         day: 'numeric',
         month: 'short',
         year: 'numeric',

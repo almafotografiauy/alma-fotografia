@@ -13,6 +13,7 @@ import TestimonialForm from '@/components/public/TestimonialForm';
 import { toggleFavorite, getClientFavorites, submitFavoritesSelection, checkExistingFavoritesClient, getShareClient, registerShareClient } from '@/app/actions/favorites-actions';
 import { getGallerySections, getPhotosGroupedBySections } from '@/app/actions/photo-sections-actions';
 import { useToast } from '@/components/ui/Toast';
+import { formatDateWithoutTimezone } from '@/lib/date-utils';
 
 /**
  * SectionHeader - Componente para mostrar headers de secciones
@@ -321,7 +322,7 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
 
   // Formatear fecha elegante
   const formattedDate = eventDate
-    ? new Date(eventDate).toLocaleDateString('es-ES', {
+    ? formatDateWithoutTimezone(eventDate, {
       day: 'numeric',
       month: 'long',
       year: 'numeric',

@@ -4,6 +4,7 @@ import ProtectedGalleryWrapper from '@/components/public/ProtectedGalleryWrapper
 import PublicGallerySkeleton from '@/components/public/PublicGallerySkeleton';
 import { getGalleryWithToken, getPublicGallery } from '@/lib/validations/validate-share-token';
 import { createClient, createAdminClient } from '@/lib/server';
+import { formatDateWithoutTimezone } from '@/lib/date-utils';
 
 /**
  * Página pública de galería compartida
@@ -184,7 +185,7 @@ export async function generateMetadata({ params, searchParams }) {
     }
 
     const formattedDate = gallery.event_date
-      ? new Date(gallery.event_date).toLocaleDateString('es-ES', {
+      ? formatDateWithoutTimezone(gallery.event_date, {
           year: 'numeric',
           month: 'long',
           day: 'numeric',

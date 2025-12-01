@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import ShareGalleryModal from './ShareGalleryModal';
 import { iconMap } from '@/lib/validations/gallery';
+import { formatDateWithoutTimezone } from '@/lib/date-utils';
 
 /**
  * ============================================
@@ -75,7 +76,7 @@ export default function GalleryCardHorizontal({
   // ==========================================
   
   const formattedDate = event_date
-    ? new Date(event_date).toLocaleDateString('es-ES', {
+    ? formatDateWithoutTimezone(event_date, {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
