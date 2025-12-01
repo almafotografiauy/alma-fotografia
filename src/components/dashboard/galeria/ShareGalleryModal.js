@@ -80,6 +80,8 @@ export default function ShareGalleryModal({ galleryId, gallerySlug, onClose }) {
         .select('*')
         .eq('gallery_id', galleryId)
         .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       // Solo loggear si hay un error con información útil
