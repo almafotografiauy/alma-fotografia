@@ -9,6 +9,8 @@ import {
   ChevronDown, Play, Pause, MessageSquare, Info, Star, MoreVertical
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import TestimonialForm from '@/components/public/TestimonialForm';
 import { toggleFavorite, getClientFavorites, submitFavoritesSelection, checkExistingFavoritesClient, getShareClient, registerShareClient } from '@/app/actions/favorites-actions';
 import { getGallerySections, getPhotosGroupedBySections } from '@/app/actions/photo-sections-actions';
@@ -42,7 +44,7 @@ SectionHeader.displayName = 'SectionHeader';
  * PhotoItem - Componente individual de foto con lazy loading optimizado
  * Mantiene aspect ratio original con CSS Grid
  */
-const PhotoItem = memo(({
+const PhotoItem = ({
   photo,
   index,
   galleryTitle,
@@ -54,8 +56,12 @@ const PhotoItem = memo(({
   downloadEnabled,
   onDownloadPhoto,
   isSelectingFavorites,
+  isSelectingDownloads,
+  isSelectingDownloadsRef,
   isSelected,
+  isSelectedForDownload,
   onToggleTemp,
+  onToggleDownload,
   isPreview,
   isPriority,
 }) => {
@@ -81,11 +87,29 @@ const PhotoItem = memo(({
       <div
         className={`relative w-full bg-gray-100 overflow-hidden cursor-pointer ${
           isSelectingFavorites && isSelected ? 'ring-4 ring-rose-500' : ''
+        } ${
+          isSelectingDownloads && isSelectedForDownload ? 'ring-4 ring-blue-500' : ''
         }`}
         onClick={() => {
+          const isDownloadMode = isSelectingDownloadsRef?.current || false;
+          console.log('PhotoItem onClick', {
+            isSelectingFavorites,
+            isSelectingDownloads,
+            isDownloadMode,
+            photoId: photo.id,
+            hasRef: isSelectingDownloadsRef !== undefined,
+            refValue: isSelectingDownloadsRef?.current,
+            hasOnToggleDownload: typeof onToggleDownload === 'function'
+          });
+
           if (isSelectingFavorites) {
+            console.log('Branch: isSelectingFavorites');
             onToggleTemp(photo.id);
+          } else if (isDownloadMode) {
+            console.log('Branch: isSelectingDownloads - Calling onToggleDownload');
+            onToggleDownload(photo.id);
           } else {
+            console.log('Branch: normal - opening lightbox');
             onPhotoClick(photo, index);
           }
         }}
@@ -127,7 +151,7 @@ const PhotoItem = memo(({
           </div>
         )}
 
-        {/* Overlay en modo selección */}
+        {/* Overlay en modo selección de favoritas */}
         {isSelectingFavorites && (
           <>
             {!isSelected && (
@@ -141,13 +165,27 @@ const PhotoItem = memo(({
           </>
         )}
 
+        {/* Overlay en modo selección de descargas */}
+        {isSelectingDownloads && (
+          <>
+            {!isSelectedForDownload && (
+              <div className="absolute inset-0 bg-white/60 transition-all duration-300" />
+            )}
+            {isSelectedForDownload && (
+              <div className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-lg">
+                <Download size={20} className="fill-blue-500 text-blue-500" strokeWidth={1.5} />
+              </div>
+            )}
+          </>
+        )}
+
         {/* Overlay en hover */}
-        {!isSelectingFavorites && (
+        {!isSelectingFavorites && !isSelectingDownloads && (
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
         )}
 
         {/* Botones de favorito y descarga */}
-        {!isSelectingFavorites && !isPreview && (
+        {!isSelectingFavorites && !isSelectingDownloads && !isPreview && (
           <>
             {maxFavorites > 0 && (
               <button
@@ -176,7 +214,7 @@ const PhotoItem = memo(({
                   e.stopPropagation();
                   onDownloadPhoto(photo, index, gallerySlug);
                 }}
-                className="absolute bottom-3 right-3 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-md opacity-0 group-hover:opacity-100 hover:bg-white transition-all duration-300"
+                className="absolute bottom-3 right-3 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-md opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:bg-white transition-all duration-300"
                 title="Descargar foto"
               >
                 <Download size={18} className="text-gray-700" strokeWidth={1.5} />
@@ -187,11 +225,11 @@ const PhotoItem = memo(({
       </div>
     </div>
   );
-});
+};
 
 PhotoItem.displayName = 'PhotoItem';
 
-const PhotoGrid = memo(({
+const PhotoGrid = ({
   photos,
   galleryTitle,
   gallerySlug,
@@ -202,8 +240,12 @@ const PhotoGrid = memo(({
   downloadEnabled,
   onDownloadPhoto,
   isSelectingFavorites,
+  isSelectingDownloads,
+  isSelectingDownloadsRef,
   tempFavoriteIds,
+  tempDownloadIds,
   onToggleTemp,
+  onToggleDownload,
   isPreview = false,
 }) => {
   // Primeras 8 fotos cargan con prioridad (above the fold)
@@ -238,15 +280,19 @@ const PhotoGrid = memo(({
           downloadEnabled={downloadEnabled}
           onDownloadPhoto={onDownloadPhoto}
           isSelectingFavorites={isSelectingFavorites}
+          isSelectingDownloads={isSelectingDownloads}
+          isSelectingDownloadsRef={isSelectingDownloadsRef}
           isSelected={isSelectingFavorites ? tempFavoriteIds.includes(photo.id) : false}
+          isSelectedForDownload={isSelectingDownloads ? tempDownloadIds.includes(photo.id) : false}
           onToggleTemp={onToggleTemp}
+          onToggleDownload={onToggleDownload}
           isPreview={isPreview}
           isPriority={index < PRIORITY_COUNT}
         />
       ))}
     </Masonry>
   );
-});
+};
 
 PhotoGrid.displayName = 'PhotoGrid';
 
@@ -286,7 +332,17 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
   const [isSelectingFavorites, setIsSelectingFavorites] = useState(false);
   const [existingClient, setExistingClient] = useState(null); // Cliente existente con favoritos
   const [tempFavoriteIds, setTempFavoriteIds] = useState([]);
+  const [isSelectingDownloads, setIsSelectingDownloads] = useState(false);
+  const isSelectingDownloadsRef = useRef(false);
+  const [tempDownloadIds, setTempDownloadIds] = useState([]);
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [sections, setSections] = useState([]);
+
+  // Sincronizar ref con state
+  useEffect(() => {
+    isSelectingDownloadsRef.current = isSelectingDownloads;
+    console.log('🔵 isSelectingDownloads cambió a:', isSelectingDownloads, '(ref también actualizado)');
+  }, [isSelectingDownloads]);
   const [selectedSection, setSelectedSection] = useState(null); // Auto-selección de primera sección
   const favoritesDebounceRef = useRef(null);
   const lastNotificationSentRef = useRef(false);
@@ -640,6 +696,154 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
         return;
       }
       setTempFavoriteIds(prev => [...prev, photoId]);
+    }
+  };
+
+  // Toggle selección de descargas
+  const handleToggleDownload = (photoId) => {
+    console.log('handleToggleDownload called', { photoId, tempDownloadIds });
+    if (tempDownloadIds.includes(photoId)) {
+      setTempDownloadIds(prev => prev.filter(id => id !== photoId));
+    } else {
+      setTempDownloadIds(prev => [...prev, photoId]);
+    }
+  };
+
+  // Función helper para obtener URL de máxima calidad de Cloudinary
+  const getOriginalQualityUrl = (url) => {
+    if (!url || !url.includes('cloudinary.com')) {
+      return url;
+    }
+
+    try {
+      const urlParts = url.split('/upload/');
+      if (urlParts.length === 2) {
+        const [base, rest] = urlParts;
+        const pathParts = rest.split('/');
+        let cleanPath = rest;
+
+        if (pathParts[0] && !pathParts[0].match(/^(v\d+|[a-zA-Z])/)) {
+          cleanPath = pathParts.slice(1).join('/');
+        }
+
+        // Construir URL con máxima calidad HD
+        // q_100 = calidad 100% (sin compresión adicional)
+        // f_jpg = forzar formato JPG para compatibilidad
+        // NO usar transformaciones de tamaño para obtener resolución original completa
+        return `${base}/upload/q_100,f_jpg/${cleanPath}`;
+      }
+      return url;
+    } catch (error) {
+      console.error('Error procesando URL:', error);
+      return url;
+    }
+  };
+
+  // Función para descargar fotos seleccionadas (optimizada)
+  const handleDownloadSelected = async (selectedPhotoIds) => {
+    const photosToDownload = photos.filter(p => selectedPhotoIds.includes(p.id));
+
+    if (!photosToDownload || photosToDownload.length === 0) {
+      showToast({ message: 'No hay fotos para descargar', type: 'error' });
+      return;
+    }
+
+    setIsDownloading(true);
+
+    try {
+      const zip = new JSZip();
+      const total = photosToDownload.length;
+      let successCount = 0;
+      let errorCount = 0;
+
+      // BATCH_SIZE aumentado para máxima velocidad (25 paralelas)
+      const BATCH_SIZE = 25;
+
+      const downloadPhoto = async (photo, index, retries = 3) => {
+        const originalUrl = photo?.cloudinary_url || photo?.file_path;
+        if (!originalUrl) {
+          errorCount++;
+          return null;
+        }
+
+        const photoUrl = getOriginalQualityUrl(originalUrl);
+
+        for (let attempt = 1; attempt <= retries; attempt++) {
+          try {
+            const response = await fetch(photoUrl, {
+              method: 'GET',
+              mode: 'cors',
+              cache: 'force-cache',
+            });
+
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const blob = await response.blob();
+            if (blob.size === 0) throw new Error('Archivo vacío');
+
+            let filename = photo.file_name || `foto_${String(index + 1).padStart(4, '0')}.jpg`;
+            filename = filename.replace(/\.(jpg|jpeg|png|webp|gif)$/i, '');
+            filename = filename
+              .split('-')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ')
+              .replace(/ Foto /, ' - Foto ');
+            filename += '.jpg';
+
+            zip.file(filename, blob);
+            successCount++;
+            return { success: true };
+          } catch (error) {
+            if (attempt === retries) {
+              errorCount++;
+              return { success: false, error: error.message };
+            }
+            await new Promise(resolve => setTimeout(resolve, 300 * attempt));
+          }
+        }
+      };
+
+      // Descargar en batches
+      for (let i = 0; i < photosToDownload.length; i += BATCH_SIZE) {
+        const batch = photosToDownload.slice(i, i + BATCH_SIZE);
+        const promises = batch.map((photo, batchIndex) =>
+          downloadPhoto(photo, i + batchIndex)
+        );
+        await Promise.allSettled(promises);
+      }
+
+      // Generar ZIP sin compresión (STORE)
+      const zipBlob = await zip.generateAsync({
+        type: 'blob',
+        compression: 'STORE',
+        streamFiles: true,
+      });
+
+      // Descargar
+      const safeName = title
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/gi, '_')
+        .toLowerCase();
+      const zipName = `${safeName}_seleccion.zip`;
+
+      saveAs(zipBlob, zipName);
+
+      showToast({
+        message: `¡Listo! ${successCount} fotos descargadas`,
+        type: 'success'
+      });
+
+      if (errorCount > 0) {
+        showToast({
+          message: `${successCount} descargadas, ${errorCount} fallaron`,
+          type: 'warning'
+        });
+      }
+    } catch (error) {
+      showToast({ message: `Error: ${error.message}`, type: 'error' });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -1276,7 +1480,7 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
             {/* Acciones */}
             <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
               {isSelectingFavorites ? (
-                /* Botones de modo selección */
+                /* Botones de modo selección de favoritas */
                 <>
                   <span className="text-xs sm:text-sm text-black/60 font-fira mr-1">
                     {tempFavoriteIds.length}/{maxFavorites}
@@ -1340,9 +1544,45 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
                       setIsSelectingFavorites(false);
                       setTempFavoriteIds([]);
                     }}
-                    className="px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-fira font-semibold bg-rose-500 hover:bg-rose-600 !text-white rounded-lg transition-colors"
+                    disabled={tempFavoriteIds.length === 0}
+                    className="px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-fira font-semibold bg-rose-500 hover:bg-rose-600 !text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Confirmar
+                  </button>
+                </>
+              ) : isSelectingDownloads ? (
+                /* Botones de modo selección de descargas */
+                <>
+                  <span className="text-xs sm:text-sm text-black/60 font-fira mr-1">
+                    {tempDownloadIds.length} seleccionadas
+                  </span>
+                  <button
+                    onClick={() => {
+                      setIsSelectingDownloads(false);
+                      setTempDownloadIds([]);
+                    }}
+                    className="px-3 py-1.5 text-xs sm:text-sm font-fira text-black/70 hover:bg-black/5 rounded-lg transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (tempDownloadIds.length === 0) {
+                        showToast({ message: 'Selecciona al menos una foto', type: 'error' });
+                        return;
+                      }
+
+                      // Iniciar descarga
+                      await handleDownloadSelected(tempDownloadIds);
+
+                      // Salir del modo selección
+                      setIsSelectingDownloads(false);
+                      setTempDownloadIds([]);
+                    }}
+                    disabled={tempDownloadIds.length === 0}
+                    className="px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-fira font-semibold bg-blue-500 hover:bg-blue-600 !text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Descargar ({tempDownloadIds.length})
                   </button>
                 </>
               ) : (
@@ -1413,31 +1653,32 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
 
               {/* Botón de descargas - Desktop (oculto en preview) */}
               {!isPreview && allowDownloads && (
-                <button
-                  onClick={() => {
-                    if (downloadEnabled) {
-                      // Si las descargas ya están habilitadas, descargar todas
-                      handleDownloadAll();
-                    } else if (!galleryDownloadPin) {
-                      // Si no hay PIN configurado, habilitar descargas inmediatamente
-                      setDownloadEnabled(true);
-                      showToast({
-                        message: '¡Descargas habilitadas exitosamente!',
-                        type: 'success'
-                      });
-                    } else {
-                      // Si hay PIN, mostrar modal
-                      setShowDownloadModal(true);
-                    }
-                  }}
-                  disabled={isDownloading}
-                  className={`${
-                    downloadEnabled
-                      ? 'flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-black/5 rounded-full'
-                      : 'hidden sm:flex p-1.5 sm:p-2 rounded-full relative'
-                  } hover:bg-black/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
-                  title={downloadEnabled ? (isDownloading ? "Descargando..." : "Descargar todas las fotos") : "Descargar"}
-                >
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      if (downloadEnabled) {
+                        // Si las descargas ya están habilitadas, mostrar menú
+                        setShowDownloadMenu(!showDownloadMenu);
+                      } else if (!galleryDownloadPin) {
+                        // Si no hay PIN configurado, habilitar descargas inmediatamente
+                        setDownloadEnabled(true);
+                        showToast({
+                          message: '¡Descargas habilitadas exitosamente!',
+                          type: 'success'
+                        });
+                      } else {
+                        // Si hay PIN, mostrar modal
+                        setShowDownloadModal(true);
+                      }
+                    }}
+                    disabled={isDownloading}
+                    className={`${
+                      downloadEnabled
+                        ? 'flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-black/5 rounded-full'
+                        : 'hidden sm:flex p-1.5 sm:p-2 rounded-full relative'
+                    } hover:bg-black/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                    title={downloadEnabled ? (isDownloading ? "Descargando..." : "Opciones de descarga") : "Descargar"}
+                  >
                   {/* Círculo de progreso verde */}
                   {isDownloading && downloadEnabled && (
                     <svg className="absolute -inset-1 sm:-inset-1.5 w-[calc(100%+8px)] h-[calc(100%+8px)] sm:w-[calc(100%+12px)] sm:h-[calc(100%+12px)] -rotate-90">
@@ -1455,11 +1696,52 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
                   )}
                   <Download size={16} strokeWidth={1.5} className={`${isDownloading ? 'text-green-600' : 'text-black/70'} sm:w-[18px] sm:h-[18px]`} />
                   {downloadEnabled && (
-                    <span className={`font-fira text-[10px] sm:text-xs font-semibold ${isDownloading ? 'text-green-600' : 'text-black/70'}`}>
-                      {isDownloading ? `${downloadProgress}%` : 'Descargar Todas'}
-                    </span>
+                    <>
+                      <span className={`font-fira text-[10px] sm:text-xs font-semibold ${isDownloading ? 'text-green-600' : 'text-black/70'}`}>
+                        {isDownloading ? `${downloadProgress}%` : 'Descargar'}
+                      </span>
+                      {!isDownloading && <ChevronDown size={14} className="text-black/70" />}
+                    </>
                   )}
                 </button>
+
+                {/* Menú dropdown de opciones de descarga */}
+                {showDownloadMenu && downloadEnabled && !isDownloading && (
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border-2 border-gray-200 overflow-hidden z-50">
+                    <button
+                      onClick={() => {
+                        setShowDownloadMenu(false);
+                        handleDownloadAll();
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-200"
+                    >
+                      <div className="font-fira text-sm font-semibold text-black">
+                        Descargar todas
+                      </div>
+                      <div className="font-fira text-xs text-gray-500 mt-0.5">
+                        {photos.length} fotos
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        console.log('Activando modo selección de descargas');
+                        setShowDownloadMenu(false);
+                        setTempDownloadIds([]);
+                        setIsSelectingDownloads(true);
+                        console.log('isSelectingDownloads should now be true');
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="font-fira text-sm font-semibold text-blue-600">
+                        Seleccionar fotos
+                      </div>
+                      <div className="font-fira text-xs text-gray-500 mt-0.5">
+                        Elegir qué fotos descargar
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
               )}
 
               {/* Botón de testimonio - Desktop (oculto en preview) */}
@@ -1618,8 +1900,31 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
                       >
                         <div className="group relative">
                           <div
-                            className="relative w-full bg-gray-100 overflow-hidden cursor-pointer"
-                            onClick={() => openLightbox(photo, currentIndex)}
+                            className={`relative w-full bg-gray-100 overflow-hidden cursor-pointer ${
+                              isSelectingFavorites && favoritePhotoIds.includes(photo.id) ? 'ring-4 ring-rose-500' : ''
+                            } ${
+                              isSelectingDownloads && tempDownloadIds.includes(photo.id) ? 'ring-4 ring-blue-500' : ''
+                            }`}
+                            onClick={() => {
+                              const isDownloadMode = isSelectingDownloadsRef?.current || false;
+                              console.log('🔴 INLINE PHOTO onClick', {
+                                isSelectingFavorites,
+                                isSelectingDownloads,
+                                isDownloadMode,
+                                photoId: photo.id
+                              });
+
+                              if (isSelectingFavorites) {
+                                console.log('🔴 Branch: isSelectingFavorites');
+                                handleToggleTemp(photo.id);
+                              } else if (isDownloadMode) {
+                                console.log('🔴 Branch: isSelectingDownloads');
+                                handleToggleDownload(photo.id);
+                              } else {
+                                console.log('🔴 Branch: normal - opening lightbox');
+                                openLightbox(photo, currentIndex);
+                              }
+                            }}
                           >
                             <Image
                               src={photo.file_path}
@@ -1632,9 +1937,40 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
                               quality={85}
                             />
 
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
+                            {/* Overlay en modo selección de favoritas */}
+                            {isSelectingFavorites && (
+                              <>
+                                {!favoritePhotoIds.includes(photo.id) && (
+                                  <div className="absolute inset-0 bg-white/60 transition-all duration-300" />
+                                )}
+                                {favoritePhotoIds.includes(photo.id) && (
+                                  <div className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-lg">
+                                    <Heart size={20} className="fill-rose-500 text-rose-500" strokeWidth={1.5} />
+                                  </div>
+                                )}
+                              </>
+                            )}
 
-                            {maxFavorites > 0 && (
+                            {/* Overlay en modo selección de descargas */}
+                            {isSelectingDownloads && (
+                              <>
+                                {!tempDownloadIds.includes(photo.id) && (
+                                  <div className="absolute inset-0 bg-white/60 transition-all duration-300" />
+                                )}
+                                {tempDownloadIds.includes(photo.id) && (
+                                  <div className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-lg">
+                                    <Download size={20} className="fill-blue-500 text-blue-500" strokeWidth={1.5} />
+                                  </div>
+                                )}
+                              </>
+                            )}
+
+                            {/* Overlay en hover normal */}
+                            {!isSelectingFavorites && !isSelectingDownloads && (
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
+                            )}
+
+                            {!isSelectingFavorites && !isSelectingDownloads && maxFavorites > 0 && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1655,7 +1991,7 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
                               </button>
                             )}
 
-                            {downloadEnabled && (
+                            {!isSelectingFavorites && !isSelectingDownloads && downloadEnabled && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1698,8 +2034,12 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
                           downloadEnabled={downloadEnabled}
                           onDownloadPhoto={handleDownloadPhoto}
                           isSelectingFavorites={isSelectingFavorites}
+                          isSelectingDownloads={isSelectingDownloads}
+                          isSelectingDownloadsRef={isSelectingDownloadsRef}
                           tempFavoriteIds={tempFavoriteIds}
+                          tempDownloadIds={tempDownloadIds}
                           onToggleTemp={handleToggleTemp}
+                          onToggleDownload={handleToggleDownload}
                           isPreview={isPreview}
                         />
                       )}
@@ -1722,8 +2062,12 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
             downloadEnabled={downloadEnabled}
             onDownloadPhoto={handleDownloadPhoto}
             isSelectingFavorites={isSelectingFavorites}
+            isSelectingDownloads={isSelectingDownloads}
+            isSelectingDownloadsRef={isSelectingDownloadsRef}
             tempFavoriteIds={tempFavoriteIds}
+            tempDownloadIds={tempDownloadIds}
             onToggleTemp={handleToggleTemp}
+            onToggleDownload={handleToggleDownload}
             isPreview={isPreview}
           />
         )}

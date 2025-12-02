@@ -66,10 +66,11 @@ export default function PublicDownloadAllButton({
                     cleanPath = pathParts.slice(1).join('/');
                 }
 
-                // Construir URL de descarga con máxima calidad y formato JPG
-                // fl_attachment fuerza descarga en lugar de mostrar en navegador
-                // q_100 asegura calidad máxima, f_jpg fuerza formato JPG
-                return `${base}/upload/fl_attachment,q_100,f_jpg/${cleanPath}`;
+                // Construir URL con máxima calidad HD
+                // q_100 = calidad 100% (sin compresión adicional)
+                // f_jpg = forzar formato JPG para compatibilidad
+                // NO usar transformaciones de tamaño para obtener resolución original completa
+                return `${base}/upload/q_100,f_jpg/${cleanPath}`;
             }
 
             return url;
@@ -123,8 +124,8 @@ export default function PublicDownloadAllButton({
             let successCount = 0;
             let errorCount = 0;
 
-            // Batch más grande para descargas paralelas (las fotos son pequeñas ~300KB)
-            const BATCH_SIZE = 8;
+            // Batch optimizado para descargas paralelas más rápidas (25 simultáneas)
+            const BATCH_SIZE = 25;
 
             /**
              * Descarga una foto usando fetch con CORS
@@ -188,8 +189,8 @@ export default function PublicDownloadAllButton({
                             return { success: false, error: error.message };
                         }
 
-                        // Esperar antes de reintentar (backoff exponencial)
-                        await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+                        // Esperar antes de reintentar (backoff más rápido)
+                        await new Promise(resolve => setTimeout(resolve, 300 * attempt));
                     }
                 }
             };
@@ -224,10 +225,7 @@ export default function PublicDownloadAllButton({
                 setProgress(progressPercent);
                 setStatus(`Descargando ${completedCount} de ${total}...`);
 
-                // Pausa mínima entre lotes (solo para UI)
-                if (i + BATCH_SIZE < photosToDownload.length) {
-                    await new Promise(resolve => setTimeout(resolve, 50));
-                }
+                // Sin pausa entre lotes para máxima velocidad
             }
 
             // Verificar que hay archivos en el ZIP
