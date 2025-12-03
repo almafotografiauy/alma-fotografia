@@ -272,6 +272,10 @@ export async function toggleFeaturedTestimonial(testimonialId, isFeatured) {
 
     if (error) throw error;
 
+    // Revalidar landing page para que se actualice la lista de destacados
+    revalidatePath('/');
+    revalidatePath('/dashboard/testimonios');
+
     return {
       success: true,
       testimonial: data,
