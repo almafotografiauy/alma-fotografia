@@ -89,7 +89,7 @@ export async function getFeaturedTestimonials() {
  */
 export async function getPublicGalleriesPreview() {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Obtener todos los servicios
     const { data: services, error: servicesError } = await supabase
@@ -165,7 +165,7 @@ export async function getPublicGalleriesPreview() {
  */
 export async function getProfileInfo() {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
       .from('user_profiles')
@@ -196,7 +196,7 @@ export async function getProfileInfo() {
  */
 export async function getOrCreateLandingGalleryLink(galleryId, gallerySlug) {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Buscar enlace existente activo para esta galería
     // Buscamos enlaces con expiración mayor a 300 días (considerados "permanentes" para landing)
@@ -264,7 +264,7 @@ export async function createPublicBooking({
   message
 }) {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
       .from('bookings')
