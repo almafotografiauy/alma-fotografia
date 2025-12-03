@@ -113,19 +113,8 @@ export async function createPrivateBooking({
       };
     }
 
-    // Verificar que la fecha no esté bloqueada
-    const { data: blockedDate } = await supabase
-      .from('blocked_dates')
-      .select('id')
-      .eq('blocked_date', bookingDate)
-      .maybeSingle();
-
-    if (blockedDate) {
-      return {
-        success: false,
-        error: 'Esta fecha está bloqueada',
-      };
-    }
+    // NOTA: Las fechas bloqueadas solo afectan reservas públicas desde landing,
+    // NO impiden que el admin cree eventos privados desde el dashboard
 
     // Verificar que no haya más de 2 eventos ese día (MÁXIMO 2 SALONES)
     const { data: existingBookings, error: countError } = await supabase
