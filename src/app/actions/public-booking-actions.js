@@ -412,6 +412,7 @@ export async function confirmPublicBooking(bookingId, internalNotes = null) {
     if (error) throw error;
 
     // Crear evento en Google Calendar
+    console.log('[confirmPublicBooking] Intentando crear evento en Google Calendar...');
     const calendarResult = await createCalendarEvent({
       client_name: data.client_name,
       client_email: data.client_email,
@@ -423,8 +424,11 @@ export async function confirmPublicBooking(bookingId, internalNotes = null) {
       notes: data.notes,
     });
 
+    console.log('[confirmPublicBooking] Resultado de Google Calendar:', calendarResult);
+
     // Guardar el google_event_id si se creó exitosamente
     if (calendarResult.success && calendarResult.eventId) {
+      console.log('[confirmPublicBooking] Guardando google_event_id:', calendarResult.eventId);
       await supabase
         .from('public_bookings')
         .update({ google_event_id: calendarResult.eventId })

@@ -166,6 +166,7 @@ export async function createPrivateBooking({
     if (error) throw error;
 
     // Crear evento de día completo en Google Calendar
+    console.log('[createPrivateBooking] Intentando crear evento en Google Calendar...');
     const calendarResult = await createAllDayEvent({
       client_name: data.client_name,
       client_email: data.client_email,
@@ -175,8 +176,11 @@ export async function createPrivateBooking({
       notes: data.notes,
     });
 
+    console.log('[createPrivateBooking] Resultado de Google Calendar:', calendarResult);
+
     // Guardar el google_event_id si se creó exitosamente
     if (calendarResult.success && calendarResult.eventId) {
+      console.log('[createPrivateBooking] Guardando google_event_id:', calendarResult.eventId);
       await supabase
         .from('private_bookings')
         .update({ google_event_id: calendarResult.eventId })

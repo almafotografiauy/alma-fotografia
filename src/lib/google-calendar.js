@@ -38,7 +38,16 @@ function getCalendarClient() {
  */
 export async function createCalendarEvent(booking) {
   try {
+    console.log('[createCalendarEvent] Iniciando creación de evento...', {
+      hasRefreshToken: !!process.env.GOOGLE_REFRESH_TOKEN,
+      hasClientId: !!process.env.GOOGLE_CLIENT_ID,
+      hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+      bookingDate: booking.booking_date,
+      clientName: booking.client_name
+    });
+
     if (!process.env.GOOGLE_REFRESH_TOKEN) {
+      console.log('[createCalendarEvent] ⚠️ No hay GOOGLE_REFRESH_TOKEN - saltando');
       return { success: true, skipped: true };
     }
 
@@ -68,13 +77,16 @@ export async function createCalendarEvent(booking) {
       colorId: '6',
     };
 
+    console.log('[createCalendarEvent] Insertando evento en Google Calendar...');
     const response = await calendar.events.insert({
       calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
       resource: event,
     });
 
+    console.log('[createCalendarEvent] ✅ Evento creado exitosamente:', response.data.id);
     return { success: true, eventId: response.data.id };
   } catch (error) {
+    console.error('[createCalendarEvent] ❌ Error:', error.message, error);
     return { success: false, error: error.message };
   }
 }
@@ -93,7 +105,14 @@ export async function createCalendarEvent(booking) {
  */
 export async function createAllDayEvent(booking) {
   try {
+    console.log('[createAllDayEvent] Iniciando creación de evento de día completo...', {
+      hasRefreshToken: !!process.env.GOOGLE_REFRESH_TOKEN,
+      bookingDate: booking.booking_date,
+      clientName: booking.client_name
+    });
+
     if (!process.env.GOOGLE_REFRESH_TOKEN) {
+      console.log('[createAllDayEvent] ⚠️ No hay GOOGLE_REFRESH_TOKEN - saltando');
       return { success: true, skipped: true };
     }
 
@@ -119,13 +138,16 @@ export async function createAllDayEvent(booking) {
       colorId: '3',
     };
 
+    console.log('[createAllDayEvent] Insertando evento en Google Calendar...');
     const response = await calendar.events.insert({
       calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
       resource: event,
     });
 
+    console.log('[createAllDayEvent] ✅ Evento creado exitosamente:', response.data.id);
     return { success: true, eventId: response.data.id };
   } catch (error) {
+    console.error('[createAllDayEvent] ❌ Error:', error.message, error);
     return { success: false, error: error.message };
   }
 }
