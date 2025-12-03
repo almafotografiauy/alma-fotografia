@@ -3,21 +3,24 @@ import { notifyLinkExpired } from '@/lib/notifications/notification-helpers';
 
 /**
  * Validar token de galería compartida
- * 
+ *
  * Verifica que:
  * 1. El token existe
  * 2. Está activo (is_active = true)
  * 3. No ha vencido (expires_at > now)
  * 4. Incrementa el contador de vistas
  * 5. Desactiva automáticamente si venció
- * 
+ *
+ * IMPORTANTE: Usa admin client para permitir validación pública sin sesión
+ *
  * @param {string} token - Token de compartir
  * @param {string} galleryId - ID de la galería
  * @returns {Promise<{valid: boolean, share?: object, error?: string}>}
  */
 export async function validateShareToken(token, galleryId) {
   try {
-    const supabase = await createClient();
+    // Usar admin client para permitir validación de usuarios públicos sin sesión
+    const supabase = createAdminClient();
 
     // 1. Buscar el share
     const { data: share, error: shareError } = await supabase

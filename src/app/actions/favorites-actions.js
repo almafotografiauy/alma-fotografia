@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/lib/server';
+import { createAdminClient } from '@/lib/server';
 import { notifyFavoritesSubmitted } from '@/lib/notifications/notification-helpers';
 import { revalidatePath } from 'next/cache';
 
@@ -22,7 +22,7 @@ import { revalidatePath } from 'next/cache';
  */
 export async function getClientFavorites(galleryId, clientEmail) {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
       .from('favorites')
@@ -55,7 +55,7 @@ export async function getClientFavorites(galleryId, clientEmail) {
  */
 export async function toggleFavorite(galleryId, photoId, clientEmail, maxFavorites = 150, clientName = null) {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const normalizedEmail = clientEmail.toLowerCase().trim();
 
     // Verificar si ya existe
@@ -141,7 +141,7 @@ export async function toggleFavorite(galleryId, photoId, clientEmail, maxFavorit
  */
 export async function submitFavoritesSelection(galleryId, clientEmail, clientName = null) {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const normalizedEmail = clientEmail.toLowerCase().trim();
 
     // Obtener favoritos actuales (incluyendo client_name si existe)
@@ -291,7 +291,7 @@ export async function submitFavoritesSelection(galleryId, clientEmail, clientNam
  */
 export async function checkExistingFavoritesClient(galleryId) {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Buscar si hay favoritos en esta galería (de cualquier cliente)
     const { data, error } = await supabase
@@ -336,7 +336,7 @@ export async function checkExistingFavoritesClient(galleryId) {
  */
 export async function clearClientFavorites(galleryId, clientEmail) {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { error } = await supabase
       .from('favorites')
@@ -361,7 +361,7 @@ export async function clearClientFavorites(galleryId, clientEmail) {
  */
 export async function getShareClient(shareToken) {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
       .from('gallery_shares')
@@ -399,7 +399,7 @@ export async function getShareClient(shareToken) {
  */
 export async function registerShareClient(shareToken, email, name) {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const normalizedEmail = email.toLowerCase().trim();
     const trimmedName = name.trim();
 

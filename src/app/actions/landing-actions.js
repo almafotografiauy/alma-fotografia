@@ -1,13 +1,14 @@
 'use server';
 
-import { createClient } from '@/lib/server';
+import { createAdminClient } from '@/lib/server';
 
 /**
  * Obtener testimonios destacados para landing
+ * Usa admin client para acceso público sin sesión
  */
 export async function getFeaturedTestimonials() {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Obtener testimonios destacados (is_featured = true)
     // Nota: Solo con is_featured es suficiente, ya que el admin los marca manualmente

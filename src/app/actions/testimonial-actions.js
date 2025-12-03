@@ -64,7 +64,8 @@ export async function createTestimonial({ galleryId, clientName, clientEmail, me
       };
     }
 
-    const supabase = await createClient();
+    // Usar admin client para permitir testimonios de usuarios públicos sin sesión
+    const supabase = createAdminClient();
 
     // Verificar que la galería existe y permite comentarios
     const { data: gallery, error: galleryError } = await supabase
@@ -146,7 +147,8 @@ export async function checkClientTestimonial(galleryId, clientEmail) {
       return { success: false, hasTestimonial: false, error: 'Missing parameters' };
     }
 
-    const supabase = await createClient();
+    // Usar admin client para permitir check de usuarios públicos sin sesión
+    const supabase = createAdminClient();
     const normalizedEmail = clientEmail.toLowerCase().trim();
 
     const { data, error } = await supabase
