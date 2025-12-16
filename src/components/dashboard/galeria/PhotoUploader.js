@@ -665,6 +665,7 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
                     fill
                     className="object-cover"
                     sizes="(max-width: 640px) 33vw, 10vw"
+                    unoptimized
                   />
 
                   {progress && (
@@ -780,6 +781,7 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
               fill
               className="object-contain"
               sizes="100vw"
+              unoptimized
             />
           </div>
 

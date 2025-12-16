@@ -692,6 +692,7 @@ export default function CreateGalleryForm() {
                                     alt="Preview"
                                     fill
                                     className="object-cover"
+                                    unoptimized
                                 />
                                 <motion.button
                                     whileHover={{ scale: 1.1 }}
