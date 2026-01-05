@@ -30,7 +30,10 @@ import {
   GripVertical,
   MessageSquare,
   Heart,
-  Folder
+  Folder,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import {
   DndContext,
@@ -57,7 +60,7 @@ import Modal from '@/components/ui/Modal';
 import { useModal } from '@/hooks/useModal';
 import { createClient } from '@/lib/supabaseClient';
 import { iconMap } from '@/lib/validations/gallery';
-import { deleteCloudinaryImage, deleteGalleries, updateAllowShareFavorites } from '@/app/actions/gallery-actions';
+import { deleteCloudinaryImage, deleteGalleries, updateAllowShareFavorites, updateGallerySortOrder } from '@/app/actions/gallery-actions';
 import { assignPhotosToSection } from '@/app/actions/photo-sections-actions';
 import { useToast } from '@/components/ui/Toast';
 import GalleryStorageSize from './GalleryStorageSize';
@@ -334,17 +337,50 @@ export default function GalleryDetailView({ gallery }) {
   const [coverImageSize, setCoverImageSize] = useState(0);
   const [allowShareFavorites, setAllowShareFavorites] = useState(gallery.allow_share_favorites || false);
   const [isUpdatingShareSetting, setIsUpdatingShareSetting] = useState(false);
+  const [favoritesCount, setFavoritesCount] = useState(null);
+  const [sections, setSections] = useState([]);
+  const [showSectionsModal, setShowSectionsModal] = useState(false);
+  const [selectedSection, setSelectedSection] = useState(null); // Se auto-seleccionará primera sección
+  const [sortOrder, setSortOrder] = useState(gallery.sort_order || 'name'); // 'name' o 'date'
+  const [sortDirection, setSortDirection] = useState(gallery.sort_direction || 'desc'); // 'asc' o 'desc' - solo para date
+  const [activeId, setActiveId] = useState(null); // Para DragOverlay
 
 
   // Actualizar localPhotos cuando cambien las fotos desde el servidor
   useEffect(() => {
     setLocalPhotos(gallery.photos);
   }, [gallery.photos]);
-  const [favoritesCount, setFavoritesCount] = useState(null);
-  const [sections, setSections] = useState([]);
-  const [showSectionsModal, setShowSectionsModal] = useState(false);
-  const [selectedSection, setSelectedSection] = useState(null); // Se auto-seleccionará primera sección
-  const [activeId, setActiveId] = useState(null); // Para DragOverlay
+
+  // Actualizar orden en BD cuando cambia sortOrder o sortDirection
+  useEffect(() => {
+    // Evitar ejecutar en primer render (solo cuando el usuario hace cambios)
+    const initialSortOrder = gallery.sort_order || 'name';
+    const initialSortDirection = gallery.sort_direction || 'desc';
+
+    if (sortOrder !== initialSortOrder || sortDirection !== initialSortDirection) {
+      console.log(`\n╔═══════════════════════════════════════════════════╗`);
+      console.log(`║  🔄 GUARDANDO CAMBIO DE ORDEN EN BD              ║`);
+      console.log(`╠═══════════════════════════════════════════════════╣`);
+      console.log(`║  Orden: ${sortOrder === 'name' ? 'Por nombre' : 'Por fecha'}`.padEnd(52) + '║');
+      if (sortOrder === 'date') {
+        console.log(`║  Dirección: ${sortDirection === 'desc' ? 'Más reciente primero ⬇️' : 'Más antigua primero ⬆️'}`.padEnd(52) + '║');
+      }
+      console.log(`╚═══════════════════════════════════════════════════╝\n`);
+
+      const updateSort = async () => {
+        const result = await updateGallerySortOrder(gallery.id, sortOrder, sortDirection);
+
+        if (result.success) {
+          console.log(`✅ Orden guardado exitosamente en BD\n`);
+        } else {
+          console.log(`❌ Error al guardar orden\n`);
+          showToast({ message: result.error || 'Error al actualizar orden', type: 'error' });
+        }
+      };
+
+      updateSort();
+    }
+  }, [sortOrder, sortDirection]); // Solo ejecutar cuando cambian estos valores
   const { modalState, showModal, closeModal } = useModal();
 
   // Sensores para drag & drop (desktop + mobile) - CONFIGURACIÓN PROFESIONAL
@@ -406,9 +442,52 @@ export default function GalleryDetailView({ gallery }) {
       photos = [];
     }
 
-    // Siempre ordenar por display_order (orden guardado en BD)
-    return photos.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-  }, [localPhotos, selectedSection]);
+    // Ordenar según la opción seleccionada
+    if (sortOrder === 'date') {
+      const fotosConFecha = photos.filter(p => p.capture_date).length;
+
+      console.log(`\n╔═══════════════════════════════════════════════════╗`);
+      console.log(`║  📸 ORDENANDO FOTOS POR FECHA                    ║`);
+      console.log(`╠═══════════════════════════════════════════════════╣`);
+      console.log(`║  Total fotos: ${photos.length.toString().padEnd(37)}║`);
+      console.log(`║  Con fecha: ${fotosConFecha.toString().padEnd(39)}║`);
+      console.log(`║  Sin fecha: ${(photos.length - fotosConFecha).toString().padEnd(39)}║`);
+      console.log(`║  Dirección: ${sortDirection === 'desc' ? 'Más reciente primero ⬇️' : 'Más antigua primero ⬆️'}`.padEnd(52) + '║');
+      console.log(`╚═══════════════════════════════════════════════════╝`);
+
+      // Ordenar por fecha de captura (crear nueva copia para que React detecte el cambio)
+      const sorted = [...photos].sort((a, b) => {
+        if (!a.capture_date && !b.capture_date) return 0;
+        if (!a.capture_date) return 1; // Sin fecha va al final
+        if (!b.capture_date) return -1;
+
+        const dateA = new Date(a.capture_date);
+        const dateB = new Date(b.capture_date);
+
+        // Aplicar dirección: desc = más reciente primero, asc = más antigua primero
+        const result = sortDirection === 'desc' ? dateB - dateA : dateA - dateB;
+        return result;
+      });
+
+      if (sorted.length > 0) {
+        console.log(`\n📌 PRIMERA FOTO: ${sorted[0]?.file_name}`);
+        console.log(`   Fecha: ${sorted[0]?.capture_date ? new Date(sorted[0].capture_date).toLocaleString('es-UY') : 'Sin fecha'}`);
+        console.log(`\n📌 ÚLTIMA FOTO: ${sorted[sorted.length - 1]?.file_name}`);
+        console.log(`   Fecha: ${sorted[sorted.length - 1]?.capture_date ? new Date(sorted[sorted.length - 1].capture_date).toLocaleString('es-UY') : 'Sin fecha'}\n`);
+      }
+
+      return sorted;
+    } else {
+      console.log(`\n╔═══════════════════════════════════════════════════╗`);
+      console.log(`║  📸 ORDENANDO FOTOS POR NOMBRE (display_order)   ║`);
+      console.log(`╠═══════════════════════════════════════════════════╣`);
+      console.log(`║  Total fotos: ${photos.length.toString().padEnd(37)}║`);
+      console.log(`╚═══════════════════════════════════════════════════╝\n`);
+
+      // Orden por nombre (display_order - orden guardado en BD)
+      return [...photos].sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+    }
+  }, [localPhotos, selectedSection, sortOrder, sortDirection]);
 
   // Memoizar IDs para SortableContext (evita re-inicialización de drag-drop)
   const sortableIds = useMemo(() => workingPhotos.map(p => p.id), [workingPhotos]);
@@ -1524,6 +1603,9 @@ export default function GalleryDetailView({ gallery }) {
                 gallerySlug={slug}
                 galleryTitle={title}
                 sections={sections}
+                sortOrder={sortOrder}
+                sortDirection={sortDirection}
+                existingPhotos={localPhotos}
                 onUploadComplete={handleUploadComplete}
               />
             </div>
@@ -1578,7 +1660,7 @@ export default function GalleryDetailView({ gallery }) {
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 max-w-full">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                   {!selectionMode && !reorderMode && (
                     <>
                       <button
@@ -1599,6 +1681,46 @@ export default function GalleryDetailView({ gallery }) {
                           <GripVertical size={12} className="sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                           <span>Reordenar</span>
                         </button>
+                      )}
+
+                      {workingPhotos.length > 1 && (
+                        <>
+                          <select
+                            value={sortOrder}
+                            onChange={(e) => setSortOrder(e.target.value)}
+                            className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-all duration-200 font-fira !text-[10px] sm:!text-xs md:!text-sm font-medium flex items-center gap-1 sm:gap-1.5 md:gap-2 whitespace-nowrap flex-shrink-0 shadow-sm text-gray-900"
+                            style={{ paddingRight: '1.5rem', fontSize: 'inherit' }}
+                          >
+                            <option value="name">Por nombre</option>
+                            <option value="date">Por fecha</option>
+                          </select>
+
+                          {sortOrder === 'date' && (
+                            <button
+                              onClick={() => {
+                                console.log(`\n╔═══════════════════════════════════════════════════╗`);
+                                console.log(`║  🔄 CAMBIANDO DIRECCIÓN DE ORDENAMIENTO         ║`);
+                                console.log(`╠═══════════════════════════════════════════════════╣`);
+                                console.log(`║  Anterior: ${sortDirection === 'desc' ? 'Más reciente primero ⬇️' : 'Más antigua primero ⬆️'}`.padEnd(52) + '║');
+
+                                setSortDirection(prev => {
+                                  const newDirection = prev === 'desc' ? 'asc' : 'desc';
+                                  console.log(`║  Nueva: ${newDirection === 'desc' ? 'Más reciente primero ⬇️' : 'Más antigua primero ⬆️'}`.padEnd(52) + '║');
+                                  console.log(`╚═══════════════════════════════════════════════════╝\n`);
+                                  return newDirection;
+                                });
+                              }}
+                              className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-all duration-200 flex items-center justify-center whitespace-nowrap flex-shrink-0 shadow-sm text-gray-900"
+                              title={sortDirection === 'desc' ? 'Más reciente primero' : 'Más antigua primero'}
+                            >
+                              {sortDirection === 'desc' ? (
+                                <ArrowDown size={12} className="sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
+                              ) : (
+                                <ArrowUp size={12} className="sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
+                              )}
+                            </button>
+                          )}
+                        </>
                       )}
 
                       <button

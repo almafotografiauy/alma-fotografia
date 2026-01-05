@@ -658,3 +658,122 @@ export async function updateShowAllSections(galleryId, showAll) {
     };
   }
 }
+
+// ============================================
+// ACTUALIZAR ORDEN DE FOTOS
+// ============================================
+
+/**
+ * Actualizar criterio de ordenamiento de galería y reordenar fotos
+ *
+ * Esta función:
+ * 1. Actualiza sort_order y sort_direction en la galería
+ * 2. Obtiene todas las fotos de la galería
+ * 3. Las reordena según el criterio seleccionado
+ * 4. Actualiza display_order de cada foto en batch
+ *
+ * @param {string} galleryId - ID de la galería
+ * @param {string} sortOrder - 'name' o 'date'
+ * @param {string} sortDirection - 'asc' o 'desc' (solo aplica para date)
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+export async function updateGallerySortOrder(galleryId, sortOrder, sortDirection = 'desc') {
+  try {
+    const supabase = await createClient();
+
+    // Obtener el usuario actual
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    // ==========================================
+    // PASO 1: Actualizar configuración de galería
+    // ==========================================
+    const { error: updateGalleryError } = await supabase
+      .from('galleries')
+      .update({
+        sort_order: sortOrder,
+        sort_direction: sortDirection
+      })
+      .eq('id', galleryId)
+      .eq('created_by', user.id);
+
+    if (updateGalleryError) {
+      throw updateGalleryError;
+    }
+
+    // ==========================================
+    // PASO 2: Obtener todas las fotos de la galería
+    // ==========================================
+    const { data: photos, error: photosError } = await supabase
+      .from('photos')
+      .select('id, file_name, capture_date, display_order')
+      .eq('gallery_id', galleryId);
+
+    if (photosError) {
+      throw photosError;
+    }
+
+    if (!photos || photos.length === 0) {
+      // Si no hay fotos, solo actualizar la config es suficiente
+      revalidatePath(`/dashboard/galerias/${galleryId}`);
+      return { success: true };
+    }
+
+    // ==========================================
+    // PASO 3: Reordenar fotos según criterio
+    // ==========================================
+    let sortedPhotos;
+
+    if (sortOrder === 'date') {
+      // Ordenar por fecha de captura
+      sortedPhotos = [...photos].sort((a, b) => {
+        if (!a.capture_date && !b.capture_date) return 0;
+        if (!a.capture_date) return 1; // Sin fecha al final
+        if (!b.capture_date) return -1;
+
+        const dateA = new Date(a.capture_date);
+        const dateB = new Date(b.capture_date);
+
+        return sortDirection === 'desc' ? dateB - dateA : dateA - dateB;
+      });
+    } else {
+      // Ordenar por nombre (alfabético)
+      sortedPhotos = [...photos].sort((a, b) => {
+        return a.file_name.localeCompare(b.file_name, 'es', { numeric: true, sensitivity: 'base' });
+      });
+    }
+
+    // ==========================================
+    // PASO 4: Actualizar display_order en batch
+    // ==========================================
+    const updatePromises = sortedPhotos.map((photo, index) =>
+      supabase
+        .from('photos')
+        .update({ display_order: index })
+        .eq('id', photo.id)
+    );
+
+    const results = await Promise.all(updatePromises);
+
+    // Verificar si alguna actualización falló
+    const failedUpdates = results.filter(r => r.error);
+    if (failedUpdates.length > 0) {
+      console.error('Algunas fotos no se pudieron reordenar:', failedUpdates);
+      throw new Error(`No se pudieron reordenar ${failedUpdates.length} fotos`);
+    }
+
+    // Revalidar caché
+    revalidatePath(`/dashboard/galerias/${galleryId}`);
+
+    return { success: true };
+
+  } catch (error) {
+    console.error('Error en updateGallerySortOrder:', error);
+    return {
+      success: false,
+      error: `No se pudo actualizar el orden: ${error.message}`
+    };
+  }
+}

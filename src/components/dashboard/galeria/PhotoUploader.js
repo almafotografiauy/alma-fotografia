@@ -5,8 +5,10 @@ import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { Upload, X, Loader2, AlertCircle, ChevronLeft, ChevronRight, CheckSquare, Trash2, Eye, Plus, Folder } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import exifr from 'exifr';
+import { updateGallerySortOrder } from '@/app/actions/gallery-actions';
 
-export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, onUploadComplete, sections = [] }) {
+export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, onUploadComplete, sections = [], sortOrder = 'name', sortDirection = 'desc', existingPhotos = [] }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
@@ -278,6 +280,10 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
     const { file, id, name } = fileData;
     let uploadedCloudinaryUrl = null; // Rastrear URL para rollback
 
+    console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`🚀 INICIANDO SUBIDA: ${name} (${index + 1})`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+
     try {
       setUploadProgress(prev => ({
         ...prev,
@@ -309,6 +315,44 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
       if (process.env.NODE_ENV === 'development') {
         const reduction = ((1 - optimizedBlob.size / file.size) * 100).toFixed(1);
         console.log(`📸 ${name} → ${fileName}: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(optimizedBlob.size / 1024).toFixed(0)}KB (-${reduction}%)`);
+      }
+
+      // ==========================================
+      // EXTRAER FECHA DE CAPTURA DE METADATOS EXIF
+      // ==========================================
+      let captureDate = null;
+      let dateSource = null;
+
+      try {
+        // Extraer del archivo original (no del optimizado) para preservar metadatos
+        const exifData = await exifr.parse(file, { pick: ['DateTimeOriginal', 'CreateDate', 'DateTime'] });
+
+        if (exifData) {
+          // Prioridad: DateTimeOriginal > CreateDate > DateTime
+          const dateValue = exifData.DateTimeOriginal || exifData.CreateDate || exifData.DateTime;
+
+          if (dateValue) {
+            // exifr ya devuelve un objeto Date, convertir a ISO string
+            captureDate = dateValue instanceof Date ? dateValue.toISOString() : null;
+            dateSource = 'EXIF';
+
+            if (process.env.NODE_ENV === 'development' && captureDate) {
+              console.log(`📅 Fecha EXIF: ${new Date(captureDate).toLocaleString('es-UY')}`);
+            }
+          }
+        }
+      } catch (exifError) {
+        console.warn(`⚠️ No se pudo extraer EXIF de ${name}:`, exifError.message);
+      }
+
+      // FALLBACK: Si no hay EXIF, usar fecha de modificación del archivo
+      if (!captureDate) {
+        captureDate = new Date(file.lastModified).toISOString();
+        dateSource = 'archivo';
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`📅 Usando fecha del archivo: ${new Date(captureDate).toLocaleString('es-UY')} (no tiene EXIF)`);
+        }
       }
 
       // ==========================================
@@ -384,6 +428,7 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
           file_size: optimizedBlob.size,
           display_order: index,
           section_id: selectedSection || null, // Incluir sección seleccionada
+          capture_date: captureDate, // Fecha de captura extraída de EXIF
         });
 
       if (dbError) {
@@ -417,10 +462,15 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
 
       URL.revokeObjectURL(fileData.preview);
 
+      console.log(`\n✅ SUBIDA COMPLETADA: ${fileName}`);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+
       return { success: true, id };
 
     } catch (error) {
-      console.error(`❌ Error uploading ${name}:`, error);
+      console.log(`\n❌ ERROR EN SUBIDA: ${name}`);
+      console.error(`Error:`, error.message);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
 
       setUploadErrors(prev => ({
         ...prev,
@@ -438,6 +488,11 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
 
   const handleUploadAll = async () => {
     if (selectedFiles.length === 0) return;
+
+    console.log(`\n\n╔════════════════════════════════════════════╗`);
+    console.log(`║  🎬 INICIANDO PROCESO DE SUBIDA           ║`);
+    console.log(`║  Total de fotos: ${selectedFiles.length.toString().padEnd(25)}║`);
+    console.log(`╚════════════════════════════════════════════╝\n`);
 
     setUploading(true);
 
@@ -477,6 +532,29 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
     setUploadErrors({});
     setPreviewPage(0);
     setUploading(false);
+
+    console.log(`\n╔════════════════════════════════════════════╗`);
+    console.log(`║  🎯 REORDENANDO FOTOS...                  ║`);
+    console.log(`╚════════════════════════════════════════════╝\n`);
+
+    // ==========================================
+    // Reordenar fotos según criterio de la galería
+    // ==========================================
+    try {
+      await updateGallerySortOrder(galleryId, sortOrder, sortDirection);
+
+      console.log(`\n╔════════════════════════════════════════════╗`);
+      console.log(`║  ✅ PROCESO COMPLETADO EXITOSAMENTE       ║`);
+      console.log(`║  Total subido: ${selectedFiles.length.toString().padEnd(28)}║`);
+      console.log(`╚════════════════════════════════════════════╝\n\n`);
+    } catch (error) {
+      console.error('❌ Error al reordenar fotos después de subir:', error);
+      console.log(`\n╔════════════════════════════════════════════╗`);
+      console.log(`║  ⚠️  COMPLETADO CON ADVERTENCIAS          ║`);
+      console.log(`║  Las fotos se subieron pero hubo error    ║`);
+      console.log(`║  al reordenarlas                          ║`);
+      console.log(`╚════════════════════════════════════════════╝\n\n`);
+    }
 
     if (onUploadComplete) {
       onUploadComplete();

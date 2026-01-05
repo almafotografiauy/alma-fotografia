@@ -56,6 +56,8 @@ async function GalleryContent({ galleryId }) {
         max_favorites,
         download_pin,
         show_all_sections,
+        sort_order,
+        sort_direction,
         created_at
       `)
       .eq('id', galleryId)
@@ -77,6 +79,7 @@ async function GalleryContent({ galleryId }) {
         file_size,
         display_order,
         section_id,
+        capture_date,
         created_at
       `)
       .eq('gallery_id', galleryId)
