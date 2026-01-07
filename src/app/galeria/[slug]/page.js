@@ -132,7 +132,10 @@ export async function generateMetadata({ params, searchParams }) {
   const token = resolvedSearchParams.token;
   const isPublicAccess = resolvedSearchParams.public === 'true';
 
-  // Imagen OG por defecto (siempre disponible)
+  // URLs base consistentes (sin www, igual que layout.js)
+  const SITE_URL = 'https://almafotografiauy.com';
+
+  // Imagen OG por defecto (siempre disponible, HTTPS, Cloudinary)
   const defaultOgImage = 'https://res.cloudinary.com/dav2dvukf/image/upload/v1764363487/alma-fotografia/og-image-final.png';
 
   try {
@@ -176,6 +179,7 @@ export async function generateMetadata({ params, searchParams }) {
       return {
         title: 'Galería | Alma Fotografía',
         description: 'Galería de fotos profesionales',
+        metadataBase: new URL(SITE_URL),
         icons: {
           icon: '/favicon.ico',
           apple: '/apple-touch-icon.png',
@@ -183,17 +187,19 @@ export async function generateMetadata({ params, searchParams }) {
         openGraph: {
           title: 'Galería | Alma Fotografía',
           description: 'Galería de fotos profesionales',
-          url: `https://www.almafotografiauy.com/galeria/${slug}`,
+          url: `${SITE_URL}/galeria/${slug}`,
+          siteName: 'Alma Fotografía',
           images: [
             {
               url: defaultOgImage,
+              secureUrl: defaultOgImage,
               width: 1200,
               height: 630,
               alt: 'Alma Fotografía',
+              type: 'image/png',
             }
           ],
           type: 'website',
-          siteName: 'Alma Fotografía',
           locale: 'es_UY',
         },
         twitter: {
@@ -214,39 +220,56 @@ export async function generateMetadata({ params, searchParams }) {
         })
       : '';
 
-    // Usar cover_image si existe y es válida, sino usar imagen por defecto
+    // Usar cover_image si existe y es válida (HTTPS y Cloudinary), sino usar imagen por defecto
     let ogImage = defaultOgImage;
-    if (gallery.cover_image && gallery.cover_image.startsWith('http')) {
-      ogImage = gallery.cover_image;
+    let imageType = 'image/png';
+
+    if (gallery.cover_image && gallery.cover_image.startsWith('https://')) {
+      // Verificar que sea de Cloudinary (pública, sin autenticación)
+      if (gallery.cover_image.includes('cloudinary.com')) {
+        ogImage = gallery.cover_image;
+        // Detectar tipo de imagen
+        if (gallery.cover_image.includes('.jpg') || gallery.cover_image.includes('.jpeg')) {
+          imageType = 'image/jpeg';
+        } else if (gallery.cover_image.includes('.webp')) {
+          imageType = 'image/webp';
+        }
+      }
     }
+
+    const pageUrl = `${SITE_URL}/galeria/${slug}${token ? `?token=${token}` : ''}`;
+    const descriptionText = gallery.description || `Galería de fotos${formattedDate ? ` - ${formattedDate}` : ''}. Ve y descarga tus fotos profesionales.`;
 
     return {
       title: `${gallery.title} | Alma Fotografía`,
-      description: gallery.description || `Galería de fotos${formattedDate ? ` - ${formattedDate}` : ''}. Ve y descarga tus fotos profesionales.`,
+      description: descriptionText,
+      metadataBase: new URL(SITE_URL),
       icons: {
         icon: '/favicon.ico',
         apple: '/apple-touch-icon.png',
       },
       openGraph: {
         title: gallery.title,
-        description: gallery.description || 'Galería de fotos profesionales',
-        url: `https://www.almafotografiauy.com/galeria/${slug}${token ? `?token=${token}` : ''}`,
+        description: descriptionText,
+        url: pageUrl,
+        siteName: 'Alma Fotografía',
         images: [
           {
             url: ogImage,
+            secureUrl: ogImage, // Importante para WhatsApp/Facebook
             width: 1200,
             height: 630,
             alt: `${gallery.title} - Portada`,
+            type: imageType,
           }
         ],
         type: 'website',
-        siteName: 'Alma Fotografía',
         locale: 'es_UY',
       },
       twitter: {
         card: 'summary_large_image',
         title: gallery.title,
-        description: gallery.description || 'Galería de fotos profesionales',
+        description: descriptionText,
         images: [ogImage],
       },
       robots: 'noindex, nofollow', // Galerías privadas no deben indexarse
@@ -256,6 +279,7 @@ export async function generateMetadata({ params, searchParams }) {
     return {
       title: 'Galería | Alma Fotografía',
       description: 'Galería de fotos profesionales',
+      metadataBase: new URL('https://almafotografiauy.com'),
       icons: {
         icon: '/favicon.ico',
         apple: '/apple-touch-icon.png',
@@ -263,21 +287,24 @@ export async function generateMetadata({ params, searchParams }) {
       openGraph: {
         title: 'Galería | Alma Fotografía',
         description: 'Galería de fotos profesionales',
+        url: 'https://almafotografiauy.com',
+        siteName: 'Alma Fotografía',
         images: [
           {
-            url: defaultOgImage,
+            url: 'https://res.cloudinary.com/dav2dvukf/image/upload/v1764363487/alma-fotografia/og-image-final.png',
+            secureUrl: 'https://res.cloudinary.com/dav2dvukf/image/upload/v1764363487/alma-fotografia/og-image-final.png',
             width: 1200,
             height: 630,
             alt: 'Alma Fotografía',
+            type: 'image/png',
           }
         ],
         type: 'website',
-        siteName: 'Alma Fotografía',
         locale: 'es_UY',
       },
       twitter: {
         card: 'summary_large_image',
-        images: [defaultOgImage],
+        images: ['https://res.cloudinary.com/dav2dvukf/image/upload/v1764363487/alma-fotografia/og-image-final.png'],
       },
       robots: 'noindex, nofollow',
     };
