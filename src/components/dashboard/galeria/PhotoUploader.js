@@ -325,15 +325,32 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
 
       try {
         // Extraer del archivo original (no del optimizado) para preservar metadatos
-        console.log(`\n🔍 Extrayendo EXIF de: ${name}`);
         const exifData = await exifr.parse(file);
+        const fileDate = new Date(file.lastModified);
+
+        console.log(`\n╔════════════════════════════════════════════════════════════════╗`);
+        console.log(`║  🔍 ANÁLISIS DE FECHAS: ${name.padEnd(36)}║`);
+        console.log(`╠════════════════════════════════════════════════════════════════╣`);
 
         if (exifData) {
-          console.log('✅ EXIF encontrado:', {
-            DateTimeOriginal: exifData.DateTimeOriginal,
-            CreateDate: exifData.CreateDate,
-            DateTime: exifData.DateTime
-          });
+          // Mostrar TODAS las fechas EXIF disponibles
+          console.log(`║  📸 FECHAS EN METADATOS EXIF:                                 ║`);
+          if (exifData.DateTimeOriginal) {
+            console.log(`║     DateTimeOriginal: ${new Date(exifData.DateTimeOriginal).toLocaleString('es-UY').padEnd(30)}║`);
+          }
+          if (exifData.CreateDate) {
+            console.log(`║     CreateDate: ${new Date(exifData.CreateDate).toLocaleString('es-UY').padEnd(36)}║`);
+          }
+          if (exifData.DateTime) {
+            console.log(`║     DateTime: ${new Date(exifData.DateTime).toLocaleString('es-UY').padEnd(38)}║`);
+          }
+          if (exifData.ModifyDate) {
+            console.log(`║     ModifyDate: ${new Date(exifData.ModifyDate).toLocaleString('es-UY').padEnd(36)}║`);
+          }
+          console.log(`║                                                                ║`);
+          console.log(`║  💾 FECHA DEL ARCHIVO EN WINDOWS:                             ║`);
+          console.log(`║     lastModified: ${fileDate.toLocaleString('es-UY').padEnd(34)}║`);
+          console.log(`║                                                                ║`);
 
           // Prioridad: DateTimeOriginal > CreateDate > DateTime
           const dateValue = exifData.DateTimeOriginal || exifData.CreateDate || exifData.DateTime;
@@ -343,21 +360,24 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
             captureDate = dateValue instanceof Date ? dateValue.toISOString() : null;
             dateSource = 'EXIF';
 
-            console.log(`\n╔═══════════════════════════════════════════════════╗`);
-            console.log(`║  ✅ FECHA DE CAPTURA EXTRAÍDA                    ║`);
-            console.log(`╠═══════════════════════════════════════════════════╣`);
-            console.log(`║  Archivo: ${name.padEnd(39)}║`);
-            console.log(`║  Fecha: ${new Date(captureDate).toLocaleString('es-UY').padEnd(41)}║`);
-            console.log(`║  Fuente: EXIF (metadatos de cámara)              ║`);
-            console.log(`╚═══════════════════════════════════════════════════╝\n`);
+            const usedFieldName = exifData.DateTimeOriginal ? 'DateTimeOriginal' :
+                                   exifData.CreateDate ? 'CreateDate' : 'DateTime';
+
+            console.log(`║  ✅ USANDO: ${usedFieldName.padEnd(48)}║`);
+            console.log(`║     Valor: ${new Date(captureDate).toLocaleString('es-UY').padEnd(39)}║`);
           } else {
-            console.log('⚠️ EXIF encontrado pero sin campos de fecha');
+            console.log(`║  ⚠️  No hay campos de fecha en EXIF                          ║`);
           }
         } else {
-          console.log('⚠️ No se encontró EXIF en la foto');
+          console.log(`║  ⚠️  No se encontró EXIF en la foto                           ║`);
+          console.log(`║                                                                ║`);
+          console.log(`║  💾 FECHA DEL ARCHIVO EN WINDOWS:                             ║`);
+          console.log(`║     lastModified: ${fileDate.toLocaleString('es-UY').padEnd(34)}║`);
         }
+
+        console.log(`╚════════════════════════════════════════════════════════════════╝\n`);
       } catch (exifError) {
-        console.log(`❌ Error al extraer EXIF de ${name}:`, exifError.message);
+        console.log(`\n❌ Error al extraer EXIF de ${name}:`, exifError.message);
       }
 
       // Si no hay EXIF, captureDate queda null (solo usamos fecha real de cámara)
