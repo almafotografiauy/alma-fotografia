@@ -280,10 +280,6 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
     const { file, id, name } = fileData;
     let uploadedCloudinaryUrl = null; // Rastrear URL para rollback
 
-    console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`🚀 INICIANDO SUBIDA: ${name} (${index + 1})`);
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-
     try {
       setUploadProgress(prev => ({
         ...prev,
@@ -326,32 +322,8 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
       try {
         // Extraer del archivo original (no del optimizado) para preservar metadatos
         const exifData = await exifr.parse(file);
-        const fileDate = new Date(file.lastModified);
-
-        console.log(`\n╔════════════════════════════════════════════════════════════════╗`);
-        console.log(`║  🔍 ANÁLISIS DE FECHAS: ${name.padEnd(36)}║`);
-        console.log(`╠════════════════════════════════════════════════════════════════╣`);
 
         if (exifData) {
-          // Mostrar TODAS las fechas EXIF disponibles
-          console.log(`║  📸 FECHAS EN METADATOS EXIF:                                 ║`);
-          if (exifData.DateTimeOriginal) {
-            console.log(`║     DateTimeOriginal: ${new Date(exifData.DateTimeOriginal).toLocaleString('es-UY').padEnd(30)}║`);
-          }
-          if (exifData.CreateDate) {
-            console.log(`║     CreateDate: ${new Date(exifData.CreateDate).toLocaleString('es-UY').padEnd(36)}║`);
-          }
-          if (exifData.DateTime) {
-            console.log(`║     DateTime: ${new Date(exifData.DateTime).toLocaleString('es-UY').padEnd(38)}║`);
-          }
-          if (exifData.ModifyDate) {
-            console.log(`║     ModifyDate: ${new Date(exifData.ModifyDate).toLocaleString('es-UY').padEnd(36)}║`);
-          }
-          console.log(`║                                                                ║`);
-          console.log(`║  💾 FECHA DEL ARCHIVO EN WINDOWS:                             ║`);
-          console.log(`║     lastModified: ${fileDate.toLocaleString('es-UY').padEnd(34)}║`);
-          console.log(`║                                                                ║`);
-
           // Prioridad: DateTimeOriginal > CreateDate > DateTime
           const dateValue = exifData.DateTimeOriginal || exifData.CreateDate || exifData.DateTime;
 
@@ -359,38 +331,13 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
             // exifr ya devuelve un objeto Date, convertir a ISO string
             captureDate = dateValue instanceof Date ? dateValue.toISOString() : null;
             dateSource = 'EXIF';
-
-            const usedFieldName = exifData.DateTimeOriginal ? 'DateTimeOriginal' :
-                                   exifData.CreateDate ? 'CreateDate' : 'DateTime';
-
-            console.log(`║  ✅ USANDO: ${usedFieldName.padEnd(48)}║`);
-            console.log(`║     Valor: ${new Date(captureDate).toLocaleString('es-UY').padEnd(39)}║`);
-          } else {
-            console.log(`║  ⚠️  No hay campos de fecha en EXIF                          ║`);
           }
-        } else {
-          console.log(`║  ⚠️  No se encontró EXIF en la foto                           ║`);
-          console.log(`║                                                                ║`);
-          console.log(`║  💾 FECHA DEL ARCHIVO EN WINDOWS:                             ║`);
-          console.log(`║     lastModified: ${fileDate.toLocaleString('es-UY').padEnd(34)}║`);
         }
-
-        console.log(`╚════════════════════════════════════════════════════════════════╝\n`);
       } catch (exifError) {
-        console.log(`\n❌ Error al extraer EXIF de ${name}:`, exifError.message);
+        // Error al extraer EXIF, captureDate quedará null
       }
 
       // Si no hay EXIF, captureDate queda null (solo usamos fecha real de cámara)
-      if (!captureDate) {
-        console.log(`\n╔═══════════════════════════════════════════════════╗`);
-        console.log(`║  ⚠️  SIN FECHA DE CAPTURA                        ║`);
-        console.log(`╠═══════════════════════════════════════════════════╣`);
-        console.log(`║  Archivo: ${name.padEnd(39)}║`);
-        console.log(`║  Esta foto NO tiene metadatos EXIF                ║`);
-        console.log(`║  capture_date = NULL en base de datos             ║`);
-        console.log(`║  No se podrá ordenar por fecha de captura         ║`);
-        console.log(`╚═══════════════════════════════════════════════════╝\n`);
-      }
 
       // ==========================================
       // PASO 1: Subir a Cloudinary con retry automático
@@ -499,15 +446,10 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
 
       URL.revokeObjectURL(fileData.preview);
 
-      console.log(`\n✅ SUBIDA COMPLETADA: ${fileName}`);
-      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-
       return { success: true, id };
 
     } catch (error) {
-      console.log(`\n❌ ERROR EN SUBIDA: ${name}`);
-      console.error(`Error:`, error.message);
-      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+      console.error(`Error subiendo ${name}:`, error.message);
 
       setUploadErrors(prev => ({
         ...prev,
@@ -525,11 +467,6 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
 
   const handleUploadAll = async () => {
     if (selectedFiles.length === 0) return;
-
-    console.log(`\n\n╔════════════════════════════════════════════╗`);
-    console.log(`║  🎬 INICIANDO PROCESO DE SUBIDA           ║`);
-    console.log(`║  Total de fotos: ${selectedFiles.length.toString().padEnd(25)}║`);
-    console.log(`╚════════════════════════════════════════════╝\n`);
 
     setUploading(true);
 
@@ -570,27 +507,11 @@ export default function PhotoUploader({ galleryId, gallerySlug, galleryTitle, on
     setPreviewPage(0);
     setUploading(false);
 
-    console.log(`\n╔════════════════════════════════════════════╗`);
-    console.log(`║  🎯 REORDENANDO FOTOS...                  ║`);
-    console.log(`╚════════════════════════════════════════════╝\n`);
-
-    // ==========================================
     // Reordenar fotos según criterio de la galería
-    // ==========================================
     try {
       await updateGallerySortOrder(galleryId, sortOrder, sortDirection);
-
-      console.log(`\n╔════════════════════════════════════════════╗`);
-      console.log(`║  ✅ PROCESO COMPLETADO EXITOSAMENTE       ║`);
-      console.log(`║  Total subido: ${selectedFiles.length.toString().padEnd(28)}║`);
-      console.log(`╚════════════════════════════════════════════╝\n\n`);
     } catch (error) {
-      console.error('❌ Error al reordenar fotos después de subir:', error);
-      console.log(`\n╔════════════════════════════════════════════╗`);
-      console.log(`║  ⚠️  COMPLETADO CON ADVERTENCIAS          ║`);
-      console.log(`║  Las fotos se subieron pero hubo error    ║`);
-      console.log(`║  al reordenarlas                          ║`);
-      console.log(`╚════════════════════════════════════════════╝\n\n`);
+      console.error('Error al reordenar fotos después de subir:', error);
     }
 
     if (onUploadComplete) {

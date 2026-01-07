@@ -69,7 +69,8 @@
       "Bash(node check-order.js:*)",
       "Bash(node shuffle-order.js:*)",
       "Bash(ren:*)",
-      "WebFetch(domain:www.almafotografiauy.com)"
+      "WebFetch(domain:www.almafotografiauy.com)",
+      "Bash(pnpm install)"
     ],
     "deny": [],
     "ask": []

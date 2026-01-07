@@ -92,24 +92,12 @@ const PhotoItem = ({
         }`}
         onClick={() => {
           const isDownloadMode = isSelectingDownloadsRef?.current || false;
-          console.log('PhotoItem onClick', {
-            isSelectingFavorites,
-            isSelectingDownloads,
-            isDownloadMode,
-            photoId: photo.id,
-            hasRef: isSelectingDownloadsRef !== undefined,
-            refValue: isSelectingDownloadsRef?.current,
-            hasOnToggleDownload: typeof onToggleDownload === 'function'
-          });
 
           if (isSelectingFavorites) {
-            console.log('Branch: isSelectingFavorites');
             onToggleTemp(photo.id);
           } else if (isDownloadMode) {
-            console.log('Branch: isSelectingDownloads - Calling onToggleDownload');
             onToggleDownload(photo.id);
           } else {
-            console.log('Branch: normal - opening lightbox');
             onPhotoClick(photo, index);
           }
         }}
@@ -341,7 +329,6 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
   // Sincronizar ref con state
   useEffect(() => {
     isSelectingDownloadsRef.current = isSelectingDownloads;
-    console.log('🔵 isSelectingDownloads cambió a:', isSelectingDownloads, '(ref también actualizado)');
   }, [isSelectingDownloads]);
   const [selectedSection, setSelectedSection] = useState(null); // Auto-selección de primera sección
   const favoritesDebounceRef = useRef(null);
@@ -701,7 +688,6 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
 
   // Toggle selección de descargas
   const handleToggleDownload = (photoId) => {
-    console.log('handleToggleDownload called', { photoId, tempDownloadIds });
     if (tempDownloadIds.includes(photoId)) {
       setTempDownloadIds(prev => prev.filter(id => id !== photoId));
     } else {
@@ -1724,11 +1710,9 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
                     </button>
                     <button
                       onClick={() => {
-                        console.log('Activando modo selección de descargas');
                         setShowDownloadMenu(false);
                         setTempDownloadIds([]);
                         setIsSelectingDownloads(true);
-                        console.log('isSelectingDownloads should now be true');
                       }}
                       className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors"
                     >
@@ -1907,21 +1891,12 @@ export default function PublicGalleryView({ gallery, token, isFavoritesView = fa
                             }`}
                             onClick={() => {
                               const isDownloadMode = isSelectingDownloadsRef?.current || false;
-                              console.log('🔴 INLINE PHOTO onClick', {
-                                isSelectingFavorites,
-                                isSelectingDownloads,
-                                isDownloadMode,
-                                photoId: photo.id
-                              });
 
                               if (isSelectingFavorites) {
-                                console.log('🔴 Branch: isSelectingFavorites');
                                 handleToggleTemp(photo.id);
                               } else if (isDownloadMode) {
-                                console.log('🔴 Branch: isSelectingDownloads');
                                 handleToggleDownload(photo.id);
                               } else {
-                                console.log('🔴 Branch: normal - opening lightbox');
                                 openLightbox(photo, currentIndex);
                               }
                             }}

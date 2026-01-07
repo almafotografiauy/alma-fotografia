@@ -115,6 +115,7 @@ export default function NotificationBell({ className = '', isMobile = false }) {
     return () => {
       clearInterval(pollingInterval);
       if (channel) {
+        // Ignorar errores al cerrar canal (componente desmontándose)
         supabase.removeChannel(channel).catch(() => {});
       }
     };

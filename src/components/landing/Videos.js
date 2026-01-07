@@ -265,6 +265,7 @@ function VideoCard({ video, index }) {
       videoRef.current.load();
       videoRef.current.currentTime = currentPos;
       if (isPlaying) {
+        // Ignorar error de autoplay (bloqueado por navegador hasta interacción del usuario)
         videoRef.current.play().catch(() => {});
       }
     }
@@ -279,6 +280,7 @@ function VideoCard({ video, index }) {
           const currentPos = videoRef.current.currentTime;
           // Intentar continuar desde un poco antes
           videoRef.current.currentTime = Math.max(0, currentPos - 0.5);
+          // Ignorar error de autoplay (bloqueado por navegador hasta interacción del usuario)
           videoRef.current.play().catch(() => {});
         }
       }, 8000);
