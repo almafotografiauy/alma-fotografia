@@ -179,7 +179,6 @@ export async function generateMetadata({ params, searchParams }) {
       return {
         title: 'Galería | Alma Fotografía',
         description: 'Galería de fotos profesionales',
-        metadataBase: new URL(SITE_URL),
         icons: {
           icon: '/favicon.ico',
           apple: '/apple-touch-icon.png',
@@ -243,7 +242,6 @@ export async function generateMetadata({ params, searchParams }) {
     return {
       title: `${gallery.title} | Alma Fotografía`,
       description: descriptionText,
-      metadataBase: new URL(SITE_URL),
       icons: {
         icon: '/favicon.ico',
         apple: '/apple-touch-icon.png',
@@ -279,7 +277,6 @@ export async function generateMetadata({ params, searchParams }) {
     return {
       title: 'Galería | Alma Fotografía',
       description: 'Galería de fotos profesionales',
-      metadataBase: new URL('https://almafotografiauy.com'),
       icons: {
         icon: '/favicon.ico',
         apple: '/apple-touch-icon.png',
