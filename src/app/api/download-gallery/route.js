@@ -1,14 +1,17 @@
-import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/server';
-import JSZip from 'jszip';
+import archiver from 'archiver';
+import { Readable } from 'stream';
 
 /**
  * API Route para descargar todas las fotos de una galería como ZIP
  *
  * GET /api/download-gallery?galleryId=xxx&pin=xxxx
  *
- * IMPORTANTE: Usa createAdminClient() para bypassear RLS ya que las descargas
- * son públicas y protegidas por PIN si está configurado
+ * OPTIMIZADO CON STREAMING:
+ * - Usa archiver en lugar de JSZip
+ * - Genera y envía el ZIP mientras descarga (no espera a tener todo en memoria)
+ * - Soporta galerías de 500+ fotos sin problemas
+ * - Descarga múltiples fotos en paralelo
  */
 export async function GET(request) {
   try {
@@ -17,9 +20,9 @@ export async function GET(request) {
     const pin = searchParams.get('pin');
 
     if (!galleryId) {
-      return NextResponse.json(
-        { error: 'galleryId es requerido' },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: 'galleryId es requerido' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
@@ -34,25 +37,25 @@ export async function GET(request) {
       .single();
 
     if (galleryError || !gallery) {
-      return NextResponse.json(
-        { error: 'Galería no encontrada' },
-        { status: 404 }
+      return new Response(
+        JSON.stringify({ error: 'Galería no encontrada' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
     // Verificar que la galería permite descargas
     if (!gallery.allow_downloads) {
-      return NextResponse.json(
-        { error: 'Esta galería no permite descargas' },
-        { status: 403 }
+      return new Response(
+        JSON.stringify({ error: 'Esta galería no permite descargas' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
     // Verificar PIN si está configurado
     if (gallery.download_pin && gallery.download_pin !== pin) {
-      return NextResponse.json(
-        { error: 'PIN incorrecto' },
-        { status: 403 }
+      return new Response(
+        JSON.stringify({ error: 'PIN incorrecto' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
@@ -68,128 +71,151 @@ export async function GET(request) {
     }
 
     if (!photos || photos.length === 0) {
-      return NextResponse.json(
-        { error: 'La galería no tiene fotos' },
-        { status: 404 }
+      return new Response(
+        JSON.stringify({ error: 'La galería no tiene fotos' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Crear ZIP
-    const zip = new JSZip();
-    const folder = zip.folder(gallery.slug || gallery.title);
-
-    console.log(`[download-gallery] Iniciando descarga de ${photos.length} fotos`);
+    console.log(`[download-gallery] Iniciando descarga STREAMING de ${photos.length} fotos`);
     const startTime = Date.now();
 
     // ==========================================
-    // OPTIMIZACIÓN: Descargar fotos en lotes paralelos
+    // STREAMING ZIP CON ARCHIVER
     // ==========================================
-    const BATCH_SIZE = 20; // Descargar 20 fotos a la vez (aumentado de 10)
-    const batches = [];
 
-    for (let i = 0; i < photos.length; i += BATCH_SIZE) {
-      batches.push(photos.slice(i, i + BATCH_SIZE));
-    }
+    // Crear el archiver con compresión mínima (STORE = sin compresión)
+    const archive = archiver('zip', {
+      store: true, // Sin compresión (JPG ya está comprimido)
+    });
 
-    console.log(`[download-gallery] Procesando en ${batches.length} lotes de máximo ${BATCH_SIZE} fotos`);
+    // Nombre del archivo ZIP
+    const zipFileName = `${gallery.slug || gallery.title.toLowerCase().replace(/\s+/g, '-')}.zip`;
 
-    // Procesar cada lote en paralelo
-    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-      const batch = batches[batchIndex];
+    // Headers para streaming
+    const headers = new Headers({
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="${zipFileName}"`,
+      'Cache-Control': 'no-cache',
+    });
+
+    // Convertir stream de Node.js a Web Stream
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+
+    // Pipe del archive al writer
+    archive.on('data', (chunk) => {
+      writer.write(chunk);
+    });
+
+    archive.on('end', () => {
+      const totalTime = Date.now() - startTime;
+      console.log(`[download-gallery] ZIP completado en ${totalTime}ms (${photos.length} fotos)`);
+      writer.close();
+    });
+
+    archive.on('error', (err) => {
+      console.error('[download-gallery] Error en archive:', err);
+      writer.abort(err);
+    });
+
+    // ==========================================
+    // DESCARGAR Y AGREGAR FOTOS EN PARALELO
+    // ==========================================
+
+    const BATCH_SIZE = 30; // Aumentado a 30 para máxima velocidad
+    let processedCount = 0;
+
+    // Función para procesar un lote
+    const processBatch = async (batch, batchIndex) => {
       const batchStartTime = Date.now();
 
-      // Descargar todas las fotos del lote en paralelo
-      const downloadPromises = batch.map(async (photo, indexInBatch) => {
-        const globalIndex = batchIndex * BATCH_SIZE + indexInBatch;
-        const url = photo.file_path;
+      const results = await Promise.all(
+        batch.map(async (photo, indexInBatch) => {
+          const globalIndex = batchIndex * BATCH_SIZE + indexInBatch;
+          const url = photo.file_path;
 
-        // Generar nombre coherente: slug-galeria-001.jpg (siempre JPG)
-        const paddedNumber = String(globalIndex + 1).padStart(3, '0');
-        const fileName = `${gallery.slug || 'galeria'}-${paddedNumber}.jpg`;
+          // Generar nombre coherente: slug-galeria-001.jpg
+          const paddedNumber = String(globalIndex + 1).padStart(3, '0');
+          const fileName = `${gallery.slug || 'galeria'}-${paddedNumber}.jpg`;
 
-        // Obtener la versión optimizada de Cloudinary en formato JPG
-        let downloadUrl = url;
-        if (url.includes('cloudinary.com')) {
-          // Usar q_85 y ancho máximo 2048px (excelente calidad, archivos más pequeños)
-          downloadUrl = url.replace(/\/upload\/.*?\//g, '/upload/f_jpg,q_85,w_2048/');
-        }
+          // Obtener versión optimizada de Cloudinary
+          let downloadUrl = url;
+          if (url.includes('cloudinary.com')) {
+            // q_80 y max 2048px para balance perfecto velocidad/calidad
+            downloadUrl = url.replace(/\/upload\/.*?\//g, '/upload/f_jpg,q_80,w_2048/');
+          }
 
-        try {
-          // Descargar la imagen con timeout de 10 segundos
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          try {
+            // Timeout de 15 segundos
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-          const response = await fetch(downloadUrl, { signal: controller.signal });
-          clearTimeout(timeoutId);
+            const response = await fetch(downloadUrl, { signal: controller.signal });
+            clearTimeout(timeoutId);
 
-          if (!response.ok) {
-            console.error(`[download-gallery] Error descargando foto ${photo.id}:`, response.statusText);
+            if (!response.ok) {
+              console.error(`[download-gallery] Error descargando foto ${photo.id}:`, response.statusText);
+              return null;
+            }
+
+            const arrayBuffer = await response.arrayBuffer();
+            return { fileName, buffer: Buffer.from(arrayBuffer) };
+          } catch (error) {
+            if (error.name === 'AbortError') {
+              console.error(`[download-gallery] Timeout foto ${photo.id}`);
+            } else {
+              console.error(`[download-gallery] Error foto ${photo.id}:`, error.message);
+            }
             return null;
           }
-
-          const arrayBuffer = await response.arrayBuffer();
-          return { fileName, arrayBuffer };
-        } catch (error) {
-          if (error.name === 'AbortError') {
-            console.error(`[download-gallery] Timeout descargando foto ${photo.id}`);
-          } else {
-            console.error(`[download-gallery] Error procesando foto ${photo.id}:`, error);
-          }
-          return null;
-        }
-      });
-
-      // Esperar a que termine todo el lote
-      const results = await Promise.all(downloadPromises);
+        })
+      );
 
       // Agregar las fotos exitosas al ZIP
       let successCount = 0;
       for (const result of results) {
         if (result) {
-          folder.file(result.fileName, result.arrayBuffer);
+          archive.append(result.buffer, { name: `${gallery.slug || gallery.title}/${result.fileName}` });
           successCount++;
+          processedCount++;
         }
       }
 
       const batchTime = Date.now() - batchStartTime;
-      console.log(`[download-gallery] Lote ${batchIndex + 1}/${batches.length}: ${successCount}/${batch.length} fotos descargadas en ${batchTime}ms`);
-    }
+      console.log(`[download-gallery] Lote ${batchIndex + 1}: ${successCount}/${batch.length} fotos en ${batchTime}ms (${processedCount}/${photos.length} total)`);
+    };
 
-    const downloadTime = Date.now() - startTime;
-    console.log(`[download-gallery] Todas las descargas completadas en ${downloadTime}ms`);
+    // Procesar todos los lotes de forma asíncrona mientras el ZIP se genera
+    (async () => {
+      try {
+        const batches = [];
+        for (let i = 0; i < photos.length; i += BATCH_SIZE) {
+          batches.push(photos.slice(i, i + BATCH_SIZE));
+        }
 
-    // Generar el ZIP sin compresión (instantáneo, ya que JPG ya está comprimido)
-    console.log(`[download-gallery] Generando ZIP...`);
-    const zipStartTime = Date.now();
+        console.log(`[download-gallery] Procesando ${batches.length} lotes de máximo ${BATCH_SIZE} fotos`);
 
-    const zipBlob = await zip.generateAsync({
-      type: 'nodebuffer',
-      compression: 'STORE', // Sin compresión (JPG ya está comprimido)
-      compressionOptions: { level: 0 }
-    });
+        for (let i = 0; i < batches.length; i++) {
+          await processBatch(batches[i], i);
+        }
 
-    const zipTime = Date.now() - zipStartTime;
-    const totalTime = Date.now() - startTime;
-    console.log(`[download-gallery] ZIP generado en ${zipTime}ms (${(zipBlob.length / 1024 / 1024).toFixed(2)}MB)`);
-    console.log(`[download-gallery] Tiempo total: ${totalTime}ms`);
+        // Finalizar el ZIP
+        await archive.finalize();
+      } catch (error) {
+        console.error('[download-gallery] Error procesando lotes:', error);
+        archive.destroy();
+      }
+    })();
 
-    // Nombre del archivo ZIP
-    const zipFileName = `${gallery.slug || gallery.title.toLowerCase().replace(/\s+/g, '-')}.zip`;
-
-    // Retornar el ZIP
-    return new NextResponse(zipBlob, {
-      headers: {
-        'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="${zipFileName}"`,
-        'Content-Length': zipBlob.length.toString(),
-      },
-    });
+    // Retornar el stream inmediatamente
+    return new Response(readable, { headers });
 
   } catch (error) {
     console.error('[download-gallery] Error:', error);
-    return NextResponse.json(
-      { error: 'Error al generar el ZIP: ' + error.message },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ error: 'Error al generar el ZIP: ' + error.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 }
